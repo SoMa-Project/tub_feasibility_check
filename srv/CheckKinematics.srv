@@ -1,0 +1,7 @@
+string problemID
+float64[] joints
+geometry_msgs/Pose goalFrame
+string collObject
+---
+bool success
+float64[] finalJoints
