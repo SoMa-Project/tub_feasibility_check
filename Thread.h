@@ -61,6 +61,7 @@ public:
 	virtual ~Thread();
 	
 	void drawConfiguration(const rl::math::Vector& q);
+  void drawSphere(const rl::math::Vector& center, const rl::math::Real& radius);
 	void changeColor(const SbColor& col);	//< changes background color of the scene
 	
 	void reset();
@@ -81,6 +82,7 @@ public:
 	
 signals:
 	void configurationRequested(const rl::math::Vector& q);
+  void sphereRequested(const rl::math::Vector& center, const rl::math::Real& radius);
 	void colorChangeRequested(const SbColor& col);
 };
 

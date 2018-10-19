@@ -114,7 +114,7 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags f) :
 //	this->createPlanner();
 
   timerId = startTimer(100);
-
+  connect(thread, viewer);
 }
 
 // ========================================================================================== //
@@ -222,6 +222,26 @@ void MainWindow::clear() {
 
 // ========================================================================================== //
 void MainWindow::connect(const QObject* sender, const QObject* receiver) {
+  QObject::connect(
+        sender,
+        SIGNAL(configurationRequested(const rl::math::Vector&)),
+        receiver,
+        SLOT(drawConfiguration(const rl::math::Vector&))
+        );
+
+  QObject::connect(
+        sender,
+        SIGNAL(sphereRequested(const rl::math::Vector&, const rl::math::Real&)),
+        receiver,
+        SLOT(drawSphere(const rl::math::Vector&, const rl::math::Real&))
+        );
+
+  QObject::connect(
+        sender,
+        SIGNAL(colorChangeRequested(const SbColor&)),
+        receiver,
+        SLOT(changeColor(const SbColor&))
+        );
 }
 
 // ========================================================================================== //
