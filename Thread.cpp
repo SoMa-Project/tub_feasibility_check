@@ -164,11 +164,11 @@ void Thread::run() {
   this->running = false;
 
   pc(result);
-  MainWindow::instance()->viewer->drawSphere(::rl::math::Vector3(0,0,0), 0.02);
+  drawSphere(::rl::math::Vector3(0,0,0), 0.02);
 
   // Write the result to a file
   ::rl::math::Vector lastStep = steps.back();
-  FILE* file = fopen((MainWindow::instance()->rootDir + "/build/collision-result.txt").c_str(), "w");
+  FILE* file = fopen("collision-result.txt", "w");
   fprintf(file, "%d\n", result);
   for(int i = 0; i < 7; i++) fprintf(file, "%f ", lastStep(i));
   fprintf(file, "\n");

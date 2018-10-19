@@ -106,8 +106,8 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags f) :
 	this->resize(width, height);
 	this->viewer->setMinimumSize(width, height);
 
-  std::string path = ros::package::getPath("rlSomaDemo");
-  this->rootDir = path+"/../../";
+//  std::string path = ros::package::getPath("rlSomaDemo");
+  this->rootDir = "/home/ilia/cmp_2/contact-motion-planning";
 
 	// Load the robot model, scene, etc. as well as the CERRT planner
 	this->load();
