@@ -1,7 +1,8 @@
 string problemID
 float64[] joints
 geometry_msgs/Pose goalFrame
-geometry_msgs/Point acceptablePositionDeltas
+float64[3] boxSize
+geometry_msgs/Quaternion boxOrientation
 uint32 sampleAttempts
 string collObject
 ---

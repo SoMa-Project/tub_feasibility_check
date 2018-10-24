@@ -78,6 +78,7 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     auto transform = boost::make_shared<rl::math::Transform>();
     Eigen::Quaternion<double> q(pose.orientation.w, pose.orientation.x, pose.orientation.y,
                                 pose.orientation.z);
+    // TODO assign the quaternion directly
     transform->linear() = q.toRotationMatrix();
     transform->translation() = Eigen::Vector3d(pose.position.x, pose.position.y, pose.position.z);
     return transform;
@@ -111,34 +112,33 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
   }
 
   std::array<std::uniform_real_distribution<double>, 3> coordinatesDistributions = {
-    std::uniform_real_distribution<double>(req.goalFrame.position.x - req.acceptablePositionDeltas.x,
-                                           req.goalFrame.position.x + req.acceptablePositionDeltas.x),
-    std::uniform_real_distribution<double>(req.goalFrame.position.y - req.acceptablePositionDeltas.y,
-                                           req.goalFrame.position.y + req.acceptablePositionDeltas.y),
-    std::uniform_real_distribution<double>(req.goalFrame.position.z - req.acceptablePositionDeltas.z,
-                                           req.goalFrame.position.z + req.acceptablePositionDeltas.z)
+    std::uniform_real_distribution<double>(-req.boxSize[0] / 2, req.boxSize[0] / 2),
+    std::uniform_real_distribution<double>(-req.boxSize[1] / 2, req.boxSize[1] / 2),
+    std::uniform_real_distribution<double>(-req.boxSize[2] / 2, req.boxSize[2] / 2)
   };
+  rl::math::Quaternion boxOrientation(req.boxOrientation.w, req.boxOrientation.x, req.boxOrientation.y,
+                                      req.boxOrientation.z);
+  mw->resetViewerBoxes();
+  auto boxTransform = *mw->goalFrame;
+  boxTransform.linear() = boxOrientation.toRotationMatrix();
+  mw->drawBox(rl::math::Vector3(req.boxSize[0], req.boxSize[1], req.boxSize[2]), boxTransform);
   std::mt19937 generator(time(nullptr));
 
   ROS_INFO("Beginning to sample within acceptable deltas");
   for (unsigned i = 0; i < req.sampleAttempts; ++i)
   {
-    geometry_msgs::Point sampledPoint;
-    std::array<double*, 3> coordinates = { &sampledPoint.x, &sampledPoint.y, &sampledPoint.z };
+    rl::math::Vector3 sampledPoint;
     for (unsigned i = 0; i < 3; ++i)
-      *coordinates[i] = coordinatesDistributions[i](generator);
+      sampledPoint(i) = coordinatesDistributions[i](generator);
+    sampledPoint = boxTransform * sampledPoint;
 
-    geometry_msgs::Pose sampledPose;
-    sampledPose.position = sampledPoint;
-    sampledPose.orientation = req.goalFrame.orientation;
-
-    mw->goalFrame = makeTransformFromPose(sampledPose);
+    // goal frame orientation does not change
+    mw->goalFrame->translation() = sampledPoint;
     mw->plan();
 
     if (mw->lastPlanningResult)
     {
-      ROS_INFO("Reached the goal frame in attempt %d with deltas: %f, %f, %f", i + 1, *coordinates[0], *coordinates[1],
-               *coordinates[2]);
+      ROS_INFO("Reached the goal frame in attempt %d", i + 1);
       res.success = true;
       res.finalJoints = configToJoints(mw->lastTrajectory[mw->lastTrajectory.size() - 1]);
       return true;
@@ -146,7 +146,7 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
   }
 
   ROS_INFO("Could not reach the goal frame with deltas after %d attempts", req.sampleAttempts);
-  return false;
+  return true;
 }
 
 
