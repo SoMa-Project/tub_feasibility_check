@@ -28,6 +28,7 @@
 #include <QMetaType>
 #include <QThread>
 #include <stdexcept>
+#include <random>
 #include <rl/math/Transform.h>
 #include <rl/math/Vector.h>
 #include <rl/plan/VectorList.h>
@@ -72,33 +73,80 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     (*mw->start)(i) = req.joints[i];
   }
 
+  auto makeTransformFromPose = [](const geometry_msgs::Pose& pose)
+  {
+    auto transform = boost::make_shared<rl::math::Transform>();
+    Eigen::Quaternion<double> q(pose.orientation.w, pose.orientation.x, pose.orientation.y,
+                                pose.orientation.z);
+    transform->linear() = q.toRotationMatrix();
+    transform->translation() = Eigen::Vector3d(pose.position.x, pose.position.y, pose.position.z);
+    return transform;
+  };
+
+  auto configToJoints = [](const rl::math::Vector& config)
+  {
+    kinematics_check::CheckKinematics::Response::_finalJoints_type finalJoints;
+    finalJoints.resize(config.size());
+    for (int i = 0; i < config.size(); i++)
+    {
+      finalJoints[i] = config(i);
+    }
+
+    return finalJoints;
+  };
 
   // Create a frame from the position/quaternion data
-  mw->goalFrame = boost::make_shared< rl::math::Transform >();
-
-  geometry_msgs::Pose goalPose = req.goalFrame;
-  Eigen::Quaternion <double> q (goalPose.orientation.w, goalPose.orientation.x, goalPose.orientation.y, goalPose.orientation.z);
-  mw->goalFrame->linear() = q.toRotationMatrix();
-  mw->goalFrame->translation() = Eigen::Vector3d(goalPose.position.x, goalPose.position.y, goalPose.position.z);
-
+  mw->goalFrame = makeTransformFromPose(req.goalFrame);
   mw->desiredCollObj = req.collObject;
 
-  ROS_INFO("Planning");
-
+  ROS_INFO("Trying to plan to the goal frame");
   mw->plan();
 
-  ROS_INFO("Sending back response");
-
-  res.success = mw->lastPlanningResult;
-
-  rl::math::Vector lastConfig = mw->lastTrajectory[mw->lastTrajectory.size()-1];
-
-  res.finalJoints.resize(req.joints.size());
-  for(int i=0; i<req.joints.size(); i++)
+  if (mw->lastPlanningResult)
   {
-    res.finalJoints[i] = lastConfig(i);
+    ROS_INFO("Reached the exact goal frame");
+    res.success = true;
+    res.finalJoints = configToJoints(mw->lastTrajectory[mw->lastTrajectory.size()-1]);
+    return true;
   }
-  return true;
+
+  std::array<std::uniform_real_distribution<double>, 3> coordinatesDistributions = {
+    std::uniform_real_distribution<double>(req.goalFrame.position.x - req.acceptablePositionDeltas.x,
+                                           req.goalFrame.position.x + req.acceptablePositionDeltas.x),
+    std::uniform_real_distribution<double>(req.goalFrame.position.y - req.acceptablePositionDeltas.y,
+                                           req.goalFrame.position.y + req.acceptablePositionDeltas.y),
+    std::uniform_real_distribution<double>(req.goalFrame.position.z - req.acceptablePositionDeltas.z,
+                                           req.goalFrame.position.z + req.acceptablePositionDeltas.z)
+  };
+  std::mt19937 generator(time(nullptr));
+
+  ROS_INFO("Beginning to sample within acceptable deltas");
+  for (unsigned i = 0; i < req.sampleAttempts; ++i)
+  {
+    geometry_msgs::Point sampledPoint;
+    std::array<double*, 3> coordinates = { &sampledPoint.x, &sampledPoint.y, &sampledPoint.z };
+    for (unsigned i = 0; i < 3; ++i)
+      *coordinates[i] = coordinatesDistributions[i](generator);
+
+    geometry_msgs::Pose sampledPose;
+    sampledPose.position = sampledPoint;
+    sampledPose.orientation = req.goalFrame.orientation;
+
+    mw->goalFrame = makeTransformFromPose(sampledPose);
+    mw->plan();
+
+    if (mw->lastPlanningResult)
+    {
+      ROS_INFO("Reached the goal frame in attempt %d with deltas: %f, %f, %f", i + 1, *coordinates[0], *coordinates[1],
+               *coordinates[2]);
+      res.success = true;
+      res.finalJoints = configToJoints(mw->lastTrajectory[mw->lastTrajectory.size() - 1]);
+      return true;
+    }
+  }
+
+  ROS_INFO("Could not reach the goal frame with deltas after %d attempts", req.sampleAttempts);
+  return false;
 }
 
 
