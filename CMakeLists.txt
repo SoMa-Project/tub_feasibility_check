@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(kinematics_check)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated-declarations -fno-inline-functions")
-set (CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};/opt/ros/indigo;/home/ilia/ec_grasp_planner/install)
+set (CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};/opt/ros/indigo)
 
 add_definitions(-DEIGEN_DONT_ALIGN)
 
@@ -12,7 +12,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   geometry_msgs
-  geometry_graph_msgs
   tf
   tf_conversions
 )
@@ -41,7 +40,7 @@ add_service_files(
  generate_messages(
    DEPENDENCIES
    std_msgs
-   geometry_graph_msgs
+   geometry_msgs
  )
 
 
