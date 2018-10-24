@@ -60,7 +60,10 @@ public:
 	virtual ~MainWindow();
 	
 	static MainWindow* instance();
-	
+  void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
+  void resetViewer();
+  void resetViewerBoxes();
+
 	boost::shared_ptr< rl::kin::Kinematics > kin;
 	
 	boost::shared_ptr< rl::plan::NoisyModel > model;
@@ -150,6 +153,11 @@ private:
 		AD(const std::string& str, ActionType type) : s(str), t(type) {}
 	};
 
+signals:
+  void requestConfiguration(const rl::math::Vector& q);
+  void requestBox(const rl::math::Vector& size, const rl::math::Transform& transform);
+  void requestResetViewer();
+  void requestResetViewerBoxes();
 };
 
 #endif // _MAINWINDOW_H_

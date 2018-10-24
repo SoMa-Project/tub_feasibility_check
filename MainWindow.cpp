@@ -115,6 +115,12 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags f) :
 
   timerId = startTimer(100);
   connect(thread, viewer);
+  QObject::connect(this, SIGNAL(requestConfiguration(const rl::math::Vector&)), viewer,
+                   SLOT(drawConfiguration(const rl::math::Vector&)));
+  QObject::connect(this, SIGNAL(requestBox(const rl::math::Vector&, const rl::math::Transform&)),
+                   viewer, SLOT(drawBox(const rl::math::Vector&, const rl::math::Transform&)));
+  QObject::connect(this, SIGNAL(requestResetViewer()), viewer, SLOT(reset()));
+  QObject::connect(this, SIGNAL(requestResetViewerBoxes()), viewer, SLOT(resetBoxes()));
 }
 
 // ========================================================================================== //
@@ -122,7 +128,7 @@ void MainWindow::plan()
 {
   this->model->setPosition(*this->start);
   this->model->updateFrames();
-  this->viewer->drawConfiguration(*this->start);
+  emit requestConfiguration(*this->start);
 
   this->thread->stop();
   this->reset();
@@ -252,7 +258,22 @@ void MainWindow::disconnect(const QObject* sender, const QObject* receiver) {
 // ========================================================================================== //
 MainWindow* MainWindow::instance() {
 	if (NULL == MainWindow::singleton) new MainWindow();
-	return MainWindow::singleton;
+  return MainWindow::singleton;
+}
+
+void MainWindow::drawBox(const rl::math::Vector &size, const rl::math::Transform &transform)
+{
+  emit requestBox(size, transform);
+}
+
+void MainWindow::resetViewer()
+{
+  emit requestResetViewer();
+}
+
+void MainWindow::resetViewerBoxes()
+{
+  emit requestResetViewerBoxes();
 }
 
 // ========================================================================================== //
@@ -308,7 +329,7 @@ void MainWindow::reset() {
 	
 	this->model->reset();
 	this->visModel->reset();
-	this->viewer->reset();
+  resetViewer();
 }
 
 // ========================================================================================== //

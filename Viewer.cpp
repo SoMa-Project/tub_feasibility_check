@@ -29,6 +29,7 @@
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
 #include <Inventor/VRMLnodes/SoVRMLSphere.h>
+#include <Inventor/VRMLnodes/SoVRMLBox.h>
 #include <rl/math/Unit.h>
 #include <rl/sg/Body.h>
 #include <rl/sg/so/Body.h>
@@ -44,7 +45,12 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 	model(NULL),
 	sceneGroup(new SoVRMLGroup()),
 	viewer(new SoQtExaminerViewer(this, NULL, true, SoQtFullViewer::BUILD_POPUP)),
-	edges(new SoVRMLSwitch()),
+  boxes(new SoVRMLSwitch()),
+  boxesAppearance(new SoVRMLAppearance()),
+  boxesDrawStyle(new SoDrawStyle()),
+  boxesGroup(new SoVRMLGroup()),
+  boxesMaterial(new SoVRMLMaterial()),
+  edges(new SoVRMLSwitch()),
 	edgesColliding(new SoVRMLSwitch()),
 	edgesCollidingAppearance(new SoVRMLAppearance()),
 	edgesCollidingCoordinate(new SoVRMLCoordinate()),
@@ -130,7 +136,24 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 	
 	this->viewer->setSceneGraph(this->root);
 	this->viewer->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
-	
+
+  // boxes
+
+  boxes->setName("boxes");
+  boxes->whichChoice = SO_SWITCH_ALL;
+
+  boxes->addChild(this->boxesDrawStyle);
+
+  boxesMaterial->diffuseColor.setValue(0, 0, 1);
+  boxesMaterial->transparency.setValue(0.75f);
+  boxesAppearance->material = this->boxesMaterial;
+
+  boxesAppearance->ref();
+
+  boxes->addChild(this->boxesGroup);
+
+  root->addChild(this->boxes);
+
 	// edgesColliding
 	
 	this->edgesColliding->setName("edgesColliding");
@@ -421,7 +444,27 @@ Viewer::~Viewer()
 
 // =============================================================================================
 void Viewer::changeColor(const SbColor& col) {
-	viewer->setBackgroundColor(col);
+  viewer->setBackgroundColor(col);
+}
+
+void Viewer::drawBox(const rl::math::Vector& size, const rl::math::Transform& transform)
+{
+  auto vrml_transform = new SoVRMLTransform();
+  rl::math::Vector translation = transform.translation();
+  rl::math::Quaternion rotation(transform.rotation());
+  vrml_transform->translation.setValue(translation(0), translation(1), translation(2));
+  vrml_transform->rotation.setValue(rotation.x(), rotation.y(), rotation.z(), rotation.w());
+
+  auto shape = new SoVRMLShape();
+  shape->appearance = boxesAppearance;
+
+  auto box = new SoVRMLBox();
+  box->size.setValue(size(0), size(1), size(2));
+
+  shape->geometry = box;
+
+  vrml_transform->addChild(shape);
+  boxesGroup->addChild(vrml_transform);
 }
 
 // =============================================================================================
@@ -875,7 +918,12 @@ Viewer::reset()
 	this->path3Coordinate->point.setNum(0);
 	this->path3IndexedLineSet->coordIndex.setNum(0);
 	this->sweptGroup->removeAllChildren();
-	this->workTransform->setMatrix(SbMatrix::identity());
+  this->workTransform->setMatrix(SbMatrix::identity());
+}
+
+void Viewer::resetBoxes()
+{
+  boxesGroup->removeAllChildren();
 }
 
 void

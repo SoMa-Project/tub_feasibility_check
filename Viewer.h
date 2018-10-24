@@ -64,6 +64,8 @@ public:
 public slots:
 	void changeColor(const SbColor& col);
 
+  void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
+
 	void drawConfiguration(const rl::math::Vector& q);
 	
 	void drawConfigurationEdge(const rl::math::Vector& u, const rl::math::Vector& v, const bool& free = true);
@@ -91,6 +93,8 @@ public slots:
 	void drawWorkVertex(const rl::math::Vector& q);
 	
 	void reset();
+
+  void resetBoxes();
 	
 	void resetEdges();
 	
@@ -121,7 +125,17 @@ public slots:
 protected:
 	
 private:
-	SoVRMLSwitch* edges;
+  SoVRMLSwitch* boxes;
+
+  SoVRMLAppearance* boxesAppearance;
+
+  SoDrawStyle* boxesDrawStyle;
+
+  SoVRMLGroup* boxesGroup;
+
+  SoVRMLMaterial* boxesMaterial;
+
+  SoVRMLSwitch* edges;
 	
 	SoVRMLSwitch* edgesColliding;
 	

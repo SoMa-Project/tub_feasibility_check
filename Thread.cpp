@@ -75,6 +75,7 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
   ::rl::math::Vector6 tdot;
   ::rl::math::Vector nextStep = *MainWindow::instance()->start;
   ::rl::sg::CollisionMap allColls;
+
   while (!reached) {
 
     // Update the model
@@ -127,6 +128,7 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
     this->model->updateJacobian();
     this->model->updateJacobianInverse();
     drawConfiguration(nextStep);
+    usleep(1000);
 
     if(this->model->getDof() > 3 && this->model->getManipulabilityMeasure()  < 1.0e-3f) {
       ps("Hit singularity :(");
@@ -137,7 +139,6 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
     this->model->isColliding();
     allColls = this->model->scene->getLastCollisions();
     if(!allColls.empty()) {
-      drawSphere(allColls.begin()->second.commonPoint, 0.05);
       // Check if the collision is with a desired object
       for(rl::sg::CollisionMap::iterator it = allColls.begin(); it != allColls.end(); it++) { 
 
@@ -152,7 +153,6 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
       return false;
     }
 
-    usleep(1000);
   }
 }
 
@@ -171,7 +171,6 @@ void Thread::run() {
   this->running = false;
 
   pc(result);
-  drawSphere(::rl::math::Vector3(0,0,0), 0.02);
 
   // Write the result to a file
   ::rl::math::Vector lastStep = steps.back();

@@ -83,6 +83,7 @@ public:
 signals:
 	void configurationRequested(const rl::math::Vector& q);
   void sphereRequested(const rl::math::Vector& center, const rl::math::Real& radius);
+  void boxRequested(const rl::math::Vector& center, const rl::math::Vector& dimensions);
 	void colorChangeRequested(const SbColor& col);
 };
 
