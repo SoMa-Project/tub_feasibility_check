@@ -41,7 +41,6 @@
 
 MainWindow* MainWindow::singleton = NULL;
 
-
 class ROSThread : public QThread
 {
 public:
@@ -97,7 +96,8 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
   };
 
   // Create a frame from the position/quaternion data
-  mw->goalFrame = makeTransformFromPose(req.goalFrame);
+  auto initialGoalFrame = makeTransformFromPose(req.goalFrame);
+  mw->goalFrame = initialGoalFrame;
   mw->desiredCollObj = req.collObject;
 
   ROS_INFO("Trying to plan to the goal frame");
@@ -112,27 +112,30 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
   }
 
   std::array<std::uniform_real_distribution<double>, 3> coordinatesDistributions = {
-    std::uniform_real_distribution<double>(-req.boxSize[0] / 2, req.boxSize[0] / 2),
-    std::uniform_real_distribution<double>(-req.boxSize[1] / 2, req.boxSize[1] / 2),
-    std::uniform_real_distribution<double>(-req.boxSize[2] / 2, req.boxSize[2] / 2)
+    std::uniform_real_distribution<double>(-req.positionDeltas[0], req.positionDeltas[0]),
+    std::uniform_real_distribution<double>(-req.positionDeltas[1], req.positionDeltas[1]),
+    std::uniform_real_distribution<double>(-req.positionDeltas[2], req.positionDeltas[2])
   };
-  rl::math::Quaternion boxOrientation(req.boxOrientation.w, req.boxOrientation.x, req.boxOrientation.y,
-                                      req.boxOrientation.z);
+
   mw->resetViewerBoxes();
-  auto boxTransform = *mw->goalFrame;
-  boxTransform.linear() = boxOrientation.toRotationMatrix();
-  mw->drawBox(rl::math::Vector3(req.boxSize[0], req.boxSize[1], req.boxSize[2]), boxTransform);
+  mw->drawBox(rl::math::Vector3(2 * req.positionDeltas[0], 2 * req.positionDeltas[1], 2 * req.positionDeltas[2]),
+              *mw->goalFrame);
   std::mt19937 generator(time(nullptr));
 
+  int sampleCount;
+  ros::NodeHandle n;
+  n.param("sample_count", sampleCount, 20);
+
   ROS_INFO("Beginning to sample within acceptable deltas");
-  for (unsigned i = 0; i < req.sampleAttempts; ++i)
+  for (unsigned i = 0; i < sampleCount; ++i)
   {
     rl::math::Vector3 sampledPoint;
     for (unsigned i = 0; i < 3; ++i)
       sampledPoint(i) = coordinatesDistributions[i](generator);
-    sampledPoint = boxTransform * sampledPoint;
+    sampledPoint = *initialGoalFrame * sampledPoint;
 
     // goal frame orientation does not change
+    mw->goalFrame = boost::make_shared<rl::math::Transform>(*initialGoalFrame);
     mw->goalFrame->translation() = sampledPoint;
     mw->plan();
 
@@ -145,7 +148,7 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     }
   }
 
-  ROS_INFO("Could not reach the goal frame with deltas after %d attempts", req.sampleAttempts);
+  ROS_INFO("Could not reach the goal frame with deltas after %d attempts", sampleCount);
   return true;
 }
 
@@ -173,6 +176,9 @@ main(int argc, char** argv)
 		
 		QObject::connect(&application, SIGNAL(lastWindowClosed()), &application, SLOT(quit()));
 
+
+    bool hide_window;
+    n.param("hide_window", hide_window, false);
 
     // Decide if the main window should be hidden based on the input parameter '--hide'
     if(argc > 1) {

@@ -1,9 +1,7 @@
 string problemID
 float64[] joints
 geometry_msgs/Pose goalFrame
-float64[3] boxSize
-geometry_msgs/Quaternion boxOrientation
-uint32 sampleAttempts
+float64[3] positionDeltas
 string collObject
 ---
 bool success
