@@ -2,6 +2,8 @@ string problemID
 float64[] joints
 geometry_msgs/Pose goalFrame
 float64[3] positionDeltas
+# euler XYZ
+float64[3] orientationDeltas
 string collObject
 ---
 bool success

@@ -31,6 +31,7 @@
 #include <random>
 #include <rl/math/Transform.h>
 #include <rl/math/Vector.h>
+#include <rl/math/Rotation.h>
 #include <rl/plan/VectorList.h>
 
 #include "ros/ros.h"
@@ -117,6 +118,12 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     std::uniform_real_distribution<double>(-req.positionDeltas[2], req.positionDeltas[2])
   };
 
+  std::array<std::uniform_real_distribution<double>, 3> angleDeltasDistribution = {
+    std::uniform_real_distribution<double>(-req.orientationDeltas[0], req.orientationDeltas[0]),
+    std::uniform_real_distribution<double>(-req.orientationDeltas[1], req.orientationDeltas[1]),
+    std::uniform_real_distribution<double>(-req.orientationDeltas[2], req.orientationDeltas[2])
+  };
+
   mw->resetViewerBoxes();
   mw->drawBox(rl::math::Vector3(2 * req.positionDeltas[0], 2 * req.positionDeltas[1], 2 * req.positionDeltas[2]),
               *mw->goalFrame);
@@ -130,13 +137,21 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
   for (unsigned i = 0; i < sampleCount; ++i)
   {
     rl::math::Vector3 sampledPoint;
+    std::array<double, 3> sampledRotation;
+
     for (unsigned i = 0; i < 3; ++i)
+    {
       sampledPoint(i) = coordinatesDistributions[i](generator);
-    sampledPoint = *initialGoalFrame * sampledPoint;
+      sampledRotation[i] = angleDeltasDistribution[i](generator);
+    }
 
     // goal frame orientation does not change
-    mw->goalFrame = boost::make_shared<rl::math::Transform>(*initialGoalFrame);
-    mw->goalFrame->translation() = sampledPoint;
+    mw->goalFrame = boost::make_shared<rl::math::Transform>();
+    mw->goalFrame->translation() = *initialGoalFrame * sampledPoint;
+    mw->goalFrame->linear() = initialGoalFrame->rotation() *
+                              rl::math::AngleAxis(sampledRotation[0], rl::math::Vector3::UnitX()) *
+                              rl::math::AngleAxis(sampledRotation[1], rl::math::Vector3::UnitY()) *
+                              rl::math::AngleAxis(sampledRotation[2], rl::math::Vector3::UnitZ());
     mw->plan();
 
     if (mw->lastPlanningResult)
