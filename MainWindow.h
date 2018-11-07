@@ -49,6 +49,8 @@
 #include <rl/sg/so/Model.h>
 #include <rl/sg/so/Scene.h>
 
+#include "kinematics_check/BoundingBoxWithPose.h"
+
 class Thread;
 class Viewer;
 
@@ -104,7 +106,8 @@ public slots:
 	/// Handles actions based on the action types (defined below)
 	void handleGUI(int i);
 
-  void plan();
+  void plan(const rl::math::Transform& ifco_transform,
+            const std::vector<kinematics_check::BoundingBoxWithPose>& boundingBoxesWithPoses);
 
 protected:
 	MainWindow(QWidget* parent = NULL, Qt::WindowFlags f = 0);

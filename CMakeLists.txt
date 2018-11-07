@@ -12,8 +12,10 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   geometry_msgs
+  shape_msgs
   tf
   tf_conversions
+  eigen_conversions
 )
 
 message(${PROJECT_SOURCE_DIR})
@@ -35,11 +37,17 @@ add_service_files(
    CheckKinematics.srv
  )
 
+add_message_files(
+  FILES
+  BoundingBoxWithPose.msg
+)
+   
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    std_msgs
+   shape_msgs
    geometry_msgs
  )
 

@@ -51,10 +51,14 @@
 
 #include "ros/ros.h"
 #include <ros/package.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <Eigen/Core>
 
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/VRMLnodes/SoVRMLBox.h>
 #include <Inventor/Qt/SoQt.h>
 
 #include <rl/math/Rotation.h>
@@ -124,8 +128,57 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags f) :
 }
 
 // ========================================================================================== //
-void MainWindow::plan()
+void MainWindow::plan(const rl::math::Transform& ifco_transform,
+                      const std::vector<kinematics_check::BoundingBoxWithPose>& boundingBoxes)
 {
+  rl::sg::Model* ifco;
+  rl::sg::Model* ifco2;
+  for (int i = 0; i < scene->getNumModels(); ++i)
+  {
+    auto model = scene->getModel(i);
+    if (model->getName() == "ifco")
+    {
+      ifco = model;
+      ifco2 = visScene->getModel(i);
+      break;
+    }
+  }
+
+  ifco->getBody(0)->setFrame(ifco_transform);
+  ifco2->getBody(0)->setFrame(ifco_transform);
+
+  for (int i = 1; i < ifco->getNumBodies(); ++i)
+  {
+    ifco->remove(ifco->getBody(i));
+    ifco2->remove(ifco2->getBody(i));
+  }
+
+  for (auto& boundingBox : boundingBoxes)
+  {
+    auto boundingBoxBodies = std::make_pair(ifco->create(), ifco2->create());
+    auto shape = new SoVRMLShape;
+    auto appearance = new SoVRMLAppearance;
+    auto material = new SoVRMLMaterial;
+    auto box = new SoVRMLBox;
+    material->diffuseColor.setValue(0, 1, 0);
+    material->transparency.setValue(0.5);
+    appearance->material.setValue(material);
+    shape->appearance.setValue(appearance);
+
+    box->size.setValue(boundingBox.box.dimensions[0], boundingBox.box.dimensions[1], boundingBox.box.dimensions[2]);
+    shape->geometry.setValue(box);
+
+    auto sgShapes = std::make_pair(boundingBoxBodies.first->create(shape), boundingBoxBodies.second->create(shape));
+
+    Eigen::Affine3d box_transform;
+    tf::poseMsgToEigen(boundingBox.pose, box_transform);
+    sgShapes.first->setTransform(box_transform);
+    sgShapes.second->setTransform(box_transform);
+
+    boundingBoxBodies.first->add(sgShapes.first);
+    boundingBoxBodies.second->add(sgShapes.second);
+  }
+
   this->model->setPosition(*this->start);
   this->model->updateFrames();
   emit requestConfiguration(*this->start);

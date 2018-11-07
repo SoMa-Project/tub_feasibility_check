@@ -1,6 +1,8 @@
 string problemID
 float64[] joints
 geometry_msgs/Pose goalFrame
+geometry_msgs/Pose ifcoPose
+BoundingBoxWithPose[] boundingBoxesWithPoses
 float64[3] positionDeltas
 # euler XYZ
 float64[3] orientationDeltas

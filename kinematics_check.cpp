@@ -36,6 +36,7 @@
 
 #include "ros/ros.h"
 #include <ros/package.h>
+#include <eigen_conversions/eigen_msg.h>
 #include "kinematics_check/CheckKinematics.h"
 
 #include "MainWindow.h"
@@ -73,17 +74,6 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     (*mw->start)(i) = req.joints[i];
   }
 
-  auto makeTransformFromPose = [](const geometry_msgs::Pose& pose)
-  {
-    auto transform = boost::make_shared<rl::math::Transform>();
-    Eigen::Quaternion<double> q(pose.orientation.w, pose.orientation.x, pose.orientation.y,
-                                pose.orientation.z);
-    // TODO assign the quaternion directly
-    transform->linear() = q.toRotationMatrix();
-    transform->translation() = Eigen::Vector3d(pose.position.x, pose.position.y, pose.position.z);
-    return transform;
-  };
-
   auto configToJoints = [](const rl::math::Vector& config)
   {
     kinematics_check::CheckKinematics::Response::_finalJoints_type finalJoints;
@@ -97,12 +87,16 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
   };
 
   // Create a frame from the position/quaternion data
-  auto initialGoalFrame = makeTransformFromPose(req.goalFrame);
-  mw->goalFrame = initialGoalFrame;
+  Eigen::Affine3d ifco_transform;
+  Eigen::Affine3d goal_transform;
+  tf::poseMsgToEigen(req.ifcoPose, ifco_transform);
+  tf::poseMsgToEigen(req.goalFrame, goal_transform);
+
+  mw->goalFrame = boost::make_shared<rl::math::Transform>(goal_transform);
   mw->desiredCollObj = req.collObject;
 
   ROS_INFO("Trying to plan to the goal frame");
-  mw->plan();
+  mw->plan(ifco_transform, req.boundingBoxesWithPoses);
 
   if (mw->lastPlanningResult)
   {
@@ -146,13 +140,16 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     }
 
     // goal frame orientation does not change
-    mw->goalFrame = boost::make_shared<rl::math::Transform>();
-    mw->goalFrame->translation() = *initialGoalFrame * sampledPoint;
-    mw->goalFrame->linear() = initialGoalFrame->rotation() *
-                              rl::math::AngleAxis(sampledRotation[0], rl::math::Vector3::UnitX()) *
+    mw->goalFrame = boost::make_shared<rl::math::Transform>(goal_transform);
+    mw->goalFrame->translation() += sampledPoint;
+
+    mw->goalFrame->linear() = rl::math::AngleAxis(sampledRotation[2], rl::math::Vector3::UnitZ()) *
                               rl::math::AngleAxis(sampledRotation[1], rl::math::Vector3::UnitY()) *
-                              rl::math::AngleAxis(sampledRotation[2], rl::math::Vector3::UnitZ());
-    mw->plan();
+                              rl::math::AngleAxis(sampledRotation[0], rl::math::Vector3::UnitX()) *
+                              goal_transform.linear();
+
+    ROS_INFO_STREAM("Trying goal frame: " << mw->goalFrame->translation() << ", " << mw->goalFrame->rotation());
+    mw->plan(ifco_transform, req.boundingBoxesWithPoses);
 
     if (mw->lastPlanningResult)
     {
