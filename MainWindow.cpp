@@ -284,6 +284,7 @@ void MainWindow::load() {
 	// Load kinematics of the robot
 	this->kin.reset(rl::kin::Kinematics::create(
 		this->rootDir + "/rl-examples-0.6.2/rlkin/barrett-wam-ocado2.xml"));
+  kin2.reset(rl::kin::Kinematics::create(rootDir + "/rl-examples-0.6.2/rlkin/barrett-wam-ocado2.xml"));
 	// this->kin->world().translation().z() = -0.195;
 	
 	// Load the scene
@@ -305,7 +306,7 @@ void MainWindow::load() {
 	
 	// Create the model for the visualization
 	this->visModel = boost::make_shared< rl::plan::NoisyModel >();
-	this->visModel->kin = this->kin.get();
+  this->visModel->kin = kin2.get();
 	this->visModel->model = this->visSceneModel;
 	this->visModel->scene = this->visScene.get();
 

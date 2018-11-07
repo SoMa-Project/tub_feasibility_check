@@ -65,7 +65,8 @@ public:
   void resetViewerBoxes();
 
 	boost::shared_ptr< rl::kin::Kinematics > kin;
-	
+  boost::shared_ptr< rl::kin::Kinematics > kin2;
+
 	boost::shared_ptr< rl::plan::NoisyModel > model;
 	boost::shared_ptr< rl::plan::NoisyModel > visModel;
 
