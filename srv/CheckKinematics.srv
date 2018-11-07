@@ -1,12 +1,11 @@
-string problemID
-float64[] joints
-geometry_msgs/Pose goalFrame
-geometry_msgs/Pose ifcoPose
-BoundingBoxWithPose[] boundingBoxesWithPoses
-float64[3] positionDeltas
+float64[] initial_configuration
+geometry_msgs/Pose goal_pose
+geometry_msgs/Pose ifco_pose
+BoundingBoxWithPose[] bounding_boxes_with_poses
+float64[3] position_deltas
 # euler XYZ
-float64[3] orientationDeltas
-string collObject
+float64[3] orientation_deltas
+string allowed_collision_object
 ---
 bool success
-float64[] finalJoints
+float64[] final_configuration

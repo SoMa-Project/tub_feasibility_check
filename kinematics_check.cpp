@@ -67,59 +67,51 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
 
   ROS_INFO("Recieving query");
   MainWindow* mw = MainWindow::instance();
-  mw->start = boost::make_shared< rl::math::Vector >(req.joints.size());
+  mw->start = boost::make_shared< rl::math::Vector >(req.initial_configuration.size());
 
-  for(int i=0; i<req.joints.size(); i++)
+  for(int i=0; i<req.initial_configuration.size(); i++)
   {
-    (*mw->start)(i) = req.joints[i];
+    (*mw->start)(i) = req.initial_configuration[i];
   }
 
-  auto configToJoints = [](const rl::math::Vector& config)
-  {
-    kinematics_check::CheckKinematics::Response::_finalJoints_type finalJoints;
-    finalJoints.resize(config.size());
-    for (int i = 0; i < config.size(); i++)
-    {
-      finalJoints[i] = config(i);
-    }
-
-    return finalJoints;
+  auto convertToStdVector = [](const rl::math::Vector& config) {
+    return std::vector<rl::math::Real>(config.data(), config.data() + config.size());
   };
 
   // Create a frame from the position/quaternion data
   Eigen::Affine3d ifco_transform;
   Eigen::Affine3d goal_transform;
-  tf::poseMsgToEigen(req.ifcoPose, ifco_transform);
-  tf::poseMsgToEigen(req.goalFrame, goal_transform);
+  tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
+  tf::poseMsgToEigen(req.goal_pose, goal_transform);
 
   mw->goalFrame = boost::make_shared<rl::math::Transform>(goal_transform);
-  mw->desiredCollObj = req.collObject;
+  mw->desiredCollObj = req.allowed_collision_object;
 
   ROS_INFO("Trying to plan to the goal frame");
-  mw->plan(ifco_transform, req.boundingBoxesWithPoses);
+  mw->plan(ifco_transform, req.bounding_boxes_with_poses);
 
   if (mw->lastPlanningResult)
   {
     ROS_INFO("Reached the exact goal frame");
     res.success = true;
-    res.finalJoints = configToJoints(mw->lastTrajectory[mw->lastTrajectory.size()-1]);
+    res.final_configuration = convertToStdVector(mw->lastTrajectory[mw->lastTrajectory.size()-1]);
     return true;
   }
 
   std::array<std::uniform_real_distribution<double>, 3> coordinatesDistributions = {
-    std::uniform_real_distribution<double>(-req.positionDeltas[0], req.positionDeltas[0]),
-    std::uniform_real_distribution<double>(-req.positionDeltas[1], req.positionDeltas[1]),
-    std::uniform_real_distribution<double>(-req.positionDeltas[2], req.positionDeltas[2])
+    std::uniform_real_distribution<double>(-req.position_deltas[0], req.position_deltas[0]),
+    std::uniform_real_distribution<double>(-req.position_deltas[1], req.position_deltas[1]),
+    std::uniform_real_distribution<double>(-req.position_deltas[2], req.position_deltas[2])
   };
 
   std::array<std::uniform_real_distribution<double>, 3> angleDeltasDistribution = {
-    std::uniform_real_distribution<double>(-req.orientationDeltas[0], req.orientationDeltas[0]),
-    std::uniform_real_distribution<double>(-req.orientationDeltas[1], req.orientationDeltas[1]),
-    std::uniform_real_distribution<double>(-req.orientationDeltas[2], req.orientationDeltas[2])
+    std::uniform_real_distribution<double>(-req.orientation_deltas[0], req.orientation_deltas[0]),
+    std::uniform_real_distribution<double>(-req.orientation_deltas[1], req.orientation_deltas[1]),
+    std::uniform_real_distribution<double>(-req.orientation_deltas[2], req.orientation_deltas[2])
   };
 
   mw->resetViewerBoxes();
-  mw->drawBox(rl::math::Vector3(2 * req.positionDeltas[0], 2 * req.positionDeltas[1], 2 * req.positionDeltas[2]),
+  mw->drawBox(rl::math::Vector3(2 * req.position_deltas[0], 2 * req.position_deltas[1], 2 * req.position_deltas[2]),
               *mw->goalFrame);
   std::mt19937 generator(time(nullptr));
 
@@ -149,13 +141,13 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
                               goal_transform.linear();
 
     ROS_INFO_STREAM("Trying goal frame: " << mw->goalFrame->translation() << ", " << mw->goalFrame->rotation());
-    mw->plan(ifco_transform, req.boundingBoxesWithPoses);
+    mw->plan(ifco_transform, req.bounding_boxes_with_poses);
 
     if (mw->lastPlanningResult)
     {
       ROS_INFO("Reached the goal frame in attempt %d", i + 1);
       res.success = true;
-      res.finalJoints = configToJoints(mw->lastTrajectory[mw->lastTrajectory.size() - 1]);
+      res.final_configuration = convertToStdVector(mw->lastTrajectory[mw->lastTrajectory.size() - 1]);
       return true;
     }
   }
