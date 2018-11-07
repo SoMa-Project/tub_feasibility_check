@@ -50,22 +50,6 @@ Thread::Thread(QObject* parent) :
 Thread::~Thread() { }
 
 // ========================================================================================== //
-void Thread::drawConfiguration(const rl::math::Vector& q) {
-	emit configurationRequested(q);
-}
-
-// ========================================================================================== //
-void Thread::drawSphere(const rl::math::Vector& center, const rl::math::Real& radius)
-{
-  emit sphereRequested(center, radius);
-}
-
-// ========================================================================================== //
-void Thread::changeColor(const SbColor& col) {
-	emit colorChangeRequested(col);
-}
-
-// ========================================================================================== //
 bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
 
   this->model = MainWindow::instance()->model.get();
@@ -127,7 +111,7 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
     this->model->updateFrames();
     this->model->updateJacobian();
     this->model->updateJacobianInverse();
-    drawConfiguration(nextStep);
+    emit configurationRequested(nextStep);
     usleep(1000);
 
     if(this->model->getDof() > 3 && this->model->getManipulabilityMeasure()  < 1.0e-3f) {

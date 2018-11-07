@@ -60,10 +60,6 @@ public:
 	
 	virtual ~Thread();
 	
-	void drawConfiguration(const rl::math::Vector& q);
-  void drawSphere(const rl::math::Vector& center, const rl::math::Real& radius);
-	void changeColor(const SbColor& col);	//< changes background color of the scene
-	
 	void reset();
 	
 	void run();
