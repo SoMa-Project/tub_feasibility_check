@@ -53,7 +53,6 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
   bool reached = false;
   ::rl::math::Vector6 tdot;
   ::rl::math::Vector nextStep = *MainWindow::instance()->start;
-  ::rl::sg::CollisionMap allColls;
 
   while (!reached) {
 
@@ -110,20 +109,22 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
 
     // Check for collision
     model->isColliding();
-    allColls = model->scene->getLastCollisions();
-    if(!allColls.empty()) {
+    auto collisions = model->scene->getLastCollisions();
+    if (!collisions.empty())
+    {
       // Check if the collision is with a desired object
-      for(rl::sg::CollisionMap::iterator it = allColls.begin(); it != allColls.end(); it++) { 
+      for (rl::sg::CollisionMap::iterator it = collisions.begin(); it != collisions.end(); it++)
+      {
+        // TODO not sure if it's needed to check the reverse pair
+        auto reversed_pair = std::make_pair(it->first.second, it->first.first);
 
-        // ps(it->first.first); ps(it->first.second);
-        if((MainWindow::instance()->desiredCollObj.compare(it->first.first) == 0) || 
-            (MainWindow::instance()->desiredCollObj.compare(it->first.second) == 0)) {
-          return true;
-        }
+        if (!MainWindow::instance()->allowed_collision_pairs.count(it->first) &&
+            !MainWindow::instance()->allowed_collision_pairs.count(reversed_pair))
+          return false;
       }
-      return false;
-    }
 
+      return true;
+    }
   }
 }
 

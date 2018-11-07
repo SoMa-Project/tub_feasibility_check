@@ -48,11 +48,25 @@
 #include <rl/sg/bullet/Scene.h>
 #include <rl/sg/so/Model.h>
 #include <rl/sg/so/Scene.h>
+#include <unordered_set>
 
 #include "kinematics_check/BoundingBoxWithPose.h"
 
 class Thread;
 class Viewer;
+
+struct PairHash
+{
+  template <class T1, class T2>
+  std::size_t operator() (const std::pair<T1, T2>& p) const
+  {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, p.first);
+    boost::hash_combine(seed, p.second);
+
+    return seed;
+  }
+};
 
 class MainWindow : public QMainWindow
 {
@@ -84,7 +98,7 @@ public:
 	boost::shared_ptr< rl::math::Vector > start;
 	boost::shared_ptr< rl::math::Vector > goal;
 	boost::shared_ptr< rl::math::Transform > goalFrame;
-  std::string desiredCollObj;
+  std::unordered_set<std::pair<std::string, std::string>, PairHash> allowed_collision_pairs;
   std::string problemID;    // An identifier for the problem for documentation
 
   bool lastPlanningResult;

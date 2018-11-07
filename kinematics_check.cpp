@@ -85,7 +85,9 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
 
   mw->goalFrame = boost::make_shared<rl::math::Transform>(goal_transform);
-  mw->desiredCollObj = req.allowed_collision_object;
+  mw->allowed_collision_pairs.clear();
+  for (auto &collision_pair: req.allowed_collisions)
+    mw->allowed_collision_pairs.insert({ collision_pair.first, collision_pair.second });
 
   ROS_INFO("Trying to plan to the goal frame");
   mw->plan(ifco_transform, req.bounding_boxes_with_poses);
@@ -131,7 +133,6 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
       sampled_rotation[i] = angle_distributions[i](generator);
     }
 
-    // goal frame orientation does not change
     mw->goalFrame = boost::make_shared<rl::math::Transform>(goal_transform);
     mw->goalFrame->translation() += sampled_point;
 

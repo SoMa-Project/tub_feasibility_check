@@ -153,8 +153,10 @@ void MainWindow::plan(const rl::math::Transform& ifco_transform,
     ifco2->remove(ifco2->getBody(i));
   }
 
-  for (auto& boundingBox : boundingBoxes)
+  for (int i = 0; i < boundingBoxes.size(); ++i)
   {
+    auto& boundingBox = boundingBoxes[i];
+
     auto boundingBoxBodies = std::make_pair(ifco->create(), ifco2->create());
     auto shape = new SoVRMLShape;
     auto appearance = new SoVRMLAppearance;
@@ -164,6 +166,10 @@ void MainWindow::plan(const rl::math::Transform& ifco_transform,
     material->transparency.setValue(0.5);
     appearance->material.setValue(material);
     shape->appearance.setValue(appearance);
+    std::stringstream ss;
+    ss << "box" << i + 1;
+    boundingBoxBodies.first->setName(ss.str());
+    boundingBoxBodies.second->setName(ss.str());
 
     box->size.setValue(boundingBox.box.dimensions[0], boundingBox.box.dimensions[1], boundingBox.box.dimensions[2]);
     shape->geometry.setValue(box);
