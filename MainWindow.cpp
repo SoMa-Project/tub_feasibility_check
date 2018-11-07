@@ -283,13 +283,13 @@ void MainWindow::load() {
 
 	// Load kinematics of the robot
 	this->kin.reset(rl::kin::Kinematics::create(
-		this->rootDir + "/rl-examples-0.6.2/rlkin/barrett-wam-ocado2.xml"));
-  kin2.reset(rl::kin::Kinematics::create(rootDir + "/rl-examples-0.6.2/rlkin/barrett-wam-ocado2.xml"));
+    this->rootDir + "/soma/rlkin/barrett-wam-ocado2.xml"));
+  kin2.reset(rl::kin::Kinematics::create(rootDir + "/soma/rlkin/barrett-wam-ocado2.xml"));
 	// this->kin->world().translation().z() = -0.195;
 	
 	// Load the scene
 	this->scene = boost::make_shared< rl::sg::bullet::Scene >();
-	this->scene->load(this->rootDir + "/rl-examples-0.6.2/rlsg/barrett-wam-wrist_wall_real.convex.xml");
+  this->scene->load(this->rootDir + "/soma/rlsg/wam-rbohand-ifco.convex.xml");
 
 	this->sceneModel = static_cast< rl::sg::bullet::Model* >(this->scene->getModel(0));
 	
@@ -301,7 +301,7 @@ void MainWindow::load() {
 	
 	// Load the visual scene
 	this->visScene = boost::make_shared< rl::sg::so::Scene >();
-	this->visScene->load(this->rootDir + "/rl-examples-0.6.2/rlsg/barrett-wam-wrist_wall_real.convex.xml");
+  this->visScene->load(this->rootDir + "/soma/rlsg/wam-rbohand-ifco.convex.xml");
 	this->visSceneModel = static_cast< rl::sg::so::Model* >(this->visScene->getModel(0));
 	
 	// Create the model for the visualization
