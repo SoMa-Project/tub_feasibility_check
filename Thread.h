@@ -38,21 +38,7 @@ class Thread : public QThread
 	
 public:
 
-	enum OPERATION_TYPE { 
-		TEST_SOLVE = 0, 
-		TEST_PLAN, 
-		TEST_JOY, 
-		TEST_RANDOM_GUARDED_PLANE_DETECTION,
-		TEST_PLANES,
-		VIEW_PATH,
-		VIEW_INDEX,
-		NONE
-	};
-
 	rl::plan::NoisyModel* model;
-	bool spacenav;	//< indicates that spacenav device is available
-	OPERATION_TYPE operation;
-	int pathIndex;
 
 public:
 
@@ -65,10 +51,6 @@ public:
 	void run();
 	
 	void stop();
-	
-	bool quit;
-	
-	bool swept;
 	
   bool jacobianControl(std::vector<::rl::math::Vector>& nextStep);
 protected:

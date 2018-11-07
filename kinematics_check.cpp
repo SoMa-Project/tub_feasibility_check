@@ -49,14 +49,14 @@ public:
     void run(){
 
       //Set the update rate at which the interface receives motion commands
-      ros::Rate loopRate = 20;
+      ros::Rate loop_rate = 20;
 
       while (ros::ok())
       {
         ros::spinOnce();
         //std::cout<<"spin"<<std::endl;
 
-        loopRate.sleep();
+        loop_rate.sleep();
       }
   }
 };
@@ -98,13 +98,13 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     return true;
   }
 
-  std::array<std::uniform_real_distribution<double>, 3> coordinatesDistributions = {
+  std::array<std::uniform_real_distribution<double>, 3> coordinate_distributions = {
     std::uniform_real_distribution<double>(-req.position_deltas[0], req.position_deltas[0]),
     std::uniform_real_distribution<double>(-req.position_deltas[1], req.position_deltas[1]),
     std::uniform_real_distribution<double>(-req.position_deltas[2], req.position_deltas[2])
   };
 
-  std::array<std::uniform_real_distribution<double>, 3> angleDeltasDistribution = {
+  std::array<std::uniform_real_distribution<double>, 3> angle_distributions = {
     std::uniform_real_distribution<double>(-req.orientation_deltas[0], req.orientation_deltas[0]),
     std::uniform_real_distribution<double>(-req.orientation_deltas[1], req.orientation_deltas[1]),
     std::uniform_real_distribution<double>(-req.orientation_deltas[2], req.orientation_deltas[2])
@@ -115,29 +115,29 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
               *mw->goalFrame);
   std::mt19937 generator(time(nullptr));
 
-  int sampleCount;
+  int sample_count;
   ros::NodeHandle n;
-  n.param("sample_count", sampleCount, 20);
+  n.param("sample_count", sample_count, 20);
 
   ROS_INFO("Beginning to sample within acceptable deltas");
-  for (unsigned i = 0; i < sampleCount; ++i)
+  for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Vector3 sampledPoint;
-    std::array<double, 3> sampledRotation;
+    rl::math::Vector3 sampled_point;
+    std::array<double, 3> sampled_rotation;
 
     for (unsigned i = 0; i < 3; ++i)
     {
-      sampledPoint(i) = coordinatesDistributions[i](generator);
-      sampledRotation[i] = angleDeltasDistribution[i](generator);
+      sampled_point(i) = coordinate_distributions[i](generator);
+      sampled_rotation[i] = angle_distributions[i](generator);
     }
 
     // goal frame orientation does not change
     mw->goalFrame = boost::make_shared<rl::math::Transform>(goal_transform);
-    mw->goalFrame->translation() += sampledPoint;
+    mw->goalFrame->translation() += sampled_point;
 
-    mw->goalFrame->linear() = rl::math::AngleAxis(sampledRotation[2], rl::math::Vector3::UnitZ()) *
-                              rl::math::AngleAxis(sampledRotation[1], rl::math::Vector3::UnitY()) *
-                              rl::math::AngleAxis(sampledRotation[0], rl::math::Vector3::UnitX()) *
+    mw->goalFrame->linear() = rl::math::AngleAxis(sampled_rotation[2], rl::math::Vector3::UnitZ()) *
+                              rl::math::AngleAxis(sampled_rotation[1], rl::math::Vector3::UnitY()) *
+                              rl::math::AngleAxis(sampled_rotation[0], rl::math::Vector3::UnitX()) *
                               goal_transform.linear();
 
     ROS_INFO_STREAM("Trying goal frame: " << mw->goalFrame->translation() << ", " << mw->goalFrame->rotation());
@@ -152,7 +152,7 @@ bool query(kinematics_check::CheckKinematics::Request  &req,
     }
   }
 
-  ROS_INFO("Could not reach the goal frame with deltas after %d attempts", sampleCount);
+  ROS_INFO("Could not reach the goal frame with deltas after %d attempts", sample_count);
   return true;
 }
 
@@ -184,25 +184,13 @@ main(int argc, char** argv)
     bool hide_window;
     n.param("hide_window", hide_window, false);
 
-    // Decide if the main window should be hidden based on the input parameter '--hide'
-    if(argc > 1) {
-      bool foundHide = false;
-      for(int i = 1; i < argc; i++) {
-        if(strcmp(argv[i], "--hide") == 0) {
-          foundHide = true;
-          break;
-        }
-      }
-      if(foundHide)
-        MainWindow::instance()->hide();
-      else
-        MainWindow::instance()->show();
-    }
+    if (hide_window)
+      MainWindow::instance()->hide();
     else
       MainWindow::instance()->show();
 
-    ROSThread rosThread;
-    rosThread.start();
+    ROSThread ros_thread;
+    ros_thread.start();
 
 		return application.exec();
 	}

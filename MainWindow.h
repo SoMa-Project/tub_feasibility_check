@@ -101,11 +101,6 @@ public slots:
 	
 	void reset();
 	
-	void toggleView(const bool& doOn);
-	
-	/// Handles actions based on the action types (defined below)
-	void handleGUI(int i);
-
   void plan(const rl::math::Transform& ifco_transform,
             const std::vector<kinematics_check::BoundingBoxWithPose>& boundingBoxesWithPoses);
 
@@ -122,40 +117,11 @@ private:
 	
 	void disconnect(const QObject* sender, const QObject* receiver);
 	
-	void init();
-	
 	void load();
-
-  /// Performs jacobian control to go from the initial joint configuration to the given task frame
-  /// TODO: When does it return true?
-  //bool jacobianControl();
-	
-	/// Processes input arguments to the program 
-	void processArgs ();
-
-	/// Reads the geometry and the connectivity of the polygons/planes from an .xml file
-	void readPlanes();
-
-	/// Initializes the CERRT planner with hardcoded constants
-	void createPlanner();	
 
 	QString engine;
 	
 	static MainWindow* singleton;
-	
-	std::vector <QAction*> qactions; //
-
-	enum ActionType {
-		StartThread = 0,
-		ViewPath,
-		ViewPathNext,
-		ViewPathPrev
-	};
-	struct AD {
-		std::string s;
-		ActionType t;
-		AD(const std::string& str, ActionType type) : s(str), t(type) {}
-	};
 
 signals:
   void requestConfiguration(const rl::math::Vector& q);

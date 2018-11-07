@@ -98,24 +98,24 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags f) :
 	SoDB::init();
 	
 	// Set the viewer
-	this->viewer = new Viewer(this);
-//	this->setCentralWidget(this->viewer);
+  viewer = new Viewer(this);
+//	setCentralWidget(viewer);
 	
 	// Set the physics engine
-	this->engine = "bullet";
+  engine = "bullet";
 	
 	// Set window sizes
 	int width = 1024;
 	int height = 768;
-	this->resize(width, height);
-	this->viewer->setMinimumSize(width, height);
+  resize(width, height);
+  viewer->setMinimumSize(width, height);
 
 //  std::string path = ros::package::getPath("rlSomaDemo");
-  this->rootDir = "/home/ilia/cmp_2/contact-motion-planning";
+  rootDir = "/home/ilia/cmp_2/contact-motion-planning";
 
 	// Load the robot model, scene, etc. as well as the CERRT planner
-	this->load();
-//	this->createPlanner();
+  load();
+//	createPlanner();
 
   timerId = startTimer(100);
   connect(thread, viewer);
@@ -179,16 +179,16 @@ void MainWindow::plan(const rl::math::Transform& ifco_transform,
     boundingBoxBodies.second->add(sgShapes.second);
   }
 
-  this->model->setPosition(*this->start);
-  this->model->updateFrames();
-  emit requestConfiguration(*this->start);
+  model->setPosition(*start);
+  model->updateFrames();
+  emit requestConfiguration(*start);
 
-  this->thread->stop();
-  this->reset();
-  this->thread->start();
+  thread->stop();
+  reset();
+  thread->start();
   usleep(100000);
 
-  while(this->thread->running)
+  while(thread->running)
   {
     usleep(100000);
     std::cout<<"waiting for planner"<<std::endl;
@@ -200,83 +200,21 @@ void MainWindow::plan(const rl::math::Transform& ifco_transform,
 void MainWindow::timerEvent(QTimerEvent *event)
 {
   killTimer(timerId);
-  //this->thread->start();
+  //thread->start();
 }
 
 // ========================================================================================== //
 MainWindow::~MainWindow() {
-	this->thread->stop();
+  thread->stop();
 	MainWindow::singleton = NULL;
 }
 
 // ========================================================================================== //
-void MainWindow::processArgs () {
-	QRegExp exp1("--rootDir");
-	QRegExp exp2("--joints");
-	QRegExp exp3("--help");
-	QRegExp exp4("--goalFrame");
-	QRegExp exp5("--collObj");
-	QRegExp exp6("--problemID");
-	for (int i = 1; i < QApplication::arguments().size(); ++i) {
-
-    if(-1 != exp1.indexIn(QApplication::arguments()[i])) {
-      this->rootDir = QApplication::arguments()[i+1].toStdString();
-    }else{
-      this->rootDir = "/home/arne/projects/soma_ws/src/contact-motion-planning";
-    }
-
-		if(-1 != exp2.indexIn(QApplication::arguments()[i])) {
-      std::string joints = QApplication::arguments()[i+1].toStdString();
-      std::istringstream ss (joints); 
-      std::string token;
-      // TODO: Process this after the model is loaded so you don't have to assume 7 joints
-      this->start = boost::make_shared< rl::math::Vector >(7);
-      int counter = 0;
-      while(std::getline(ss, token, ',')) {
-        (*this->start)(counter++) = std::atof(token.c_str());
-      }
-      std::cout << "startJoint: '" << joints << "'\n\tparsed as " << (*this->start).transpose() << std::endl;
-    }
-
-		if(-1 != exp3.indexIn(QApplication::arguments()[i])) {
-      std::cout << "Example usage: ./demos/rlSomaDemo/rlSomaDemod --rootDir /home/cerdogan/Documents/ros/src/contact-motion-planning --hide --joints 0.9,0.9,0.3,0.5,0.6,0.3,0.2 --goalFrame 0.690,-0.010,0.684,0.681,0.000,0.733,-0.000 (quaternion: x,y,z,w)" << std::endl;
-      exit(1);
-		}
-    if(-1 != exp4.indexIn(QApplication::arguments()[i])) {
-      std::string frame = QApplication::arguments()[i+1].toStdString();
-      std::istringstream ss (frame); 
-      std::string token;
-      rl::math::Vector posQuat (7);
-      int counter = 0;
-      while(std::getline(ss, token, ',')) {
-        posQuat(counter++) = std::atof(token.c_str());
-      }
-      std::cout << "goalFrame: '" << frame << "'\n\tparsed as " << posQuat.transpose() << std::endl;
-
-      // Create a frame from the position/quaternion data
-      this->goalFrame = boost::make_shared< rl::math::Transform >();
-      Eigen::Quaternion <double> q (posQuat(6), posQuat(3), posQuat(4), posQuat(5)); 
-      this->goalFrame->linear() = q.toRotationMatrix();
-      this->goalFrame->translation() = Eigen::Vector3d(posQuat(0), posQuat(1), posQuat(2));
-		}
-    if(-1 != exp5.indexIn(QApplication::arguments()[i])) {
-      this->desiredCollObj = "_" + QApplication::arguments()[i+1].toStdString();
-      pc(this->desiredCollObj);
-		}
-    if(-1 != exp6.indexIn(QApplication::arguments()[i])) {
-      this->problemID = QApplication::arguments()[i+1].toStdString();
-      pc(this->problemID);
-		}
-  }
-
-}
-
-// ========================================================================================== //
 void MainWindow::clear() {
-	this->kin.reset();
-	this->model.reset();
-	this->scene.reset();
-	this->sceneModel = NULL;
+  kin.reset();
+  model.reset();
+  scene.reset();
+  sceneModel = NULL;
 }
 
 // ========================================================================================== //
@@ -332,65 +270,55 @@ void MainWindow::resetViewerBoxes()
 // ========================================================================================== //
 void MainWindow::load() {
 	
-	this->clear();
+  clear();
 
 	// Load kinematics of the robot
-	this->kin.reset(rl::kin::Kinematics::create(
-    this->rootDir + "/soma/rlkin/barrett-wam-ocado2.xml"));
+  kin.reset(rl::kin::Kinematics::create(
+    rootDir + "/soma/rlkin/barrett-wam-ocado2.xml"));
   kin2.reset(rl::kin::Kinematics::create(rootDir + "/soma/rlkin/barrett-wam-ocado2.xml"));
-	// this->kin->world().translation().z() = -0.195;
+  // kin->world().translation().z() = -0.195;
 	
 	// Load the scene
-	this->scene = boost::make_shared< rl::sg::bullet::Scene >();
-  this->scene->load(this->rootDir + "/soma/rlsg/wam-rbohand-ifco.convex.xml");
+  scene = boost::make_shared< rl::sg::bullet::Scene >();
+  scene->load(rootDir + "/soma/rlsg/wam-rbohand-ifco.convex.xml");
 
-	this->sceneModel = static_cast< rl::sg::bullet::Model* >(this->scene->getModel(0));
+  sceneModel = static_cast< rl::sg::bullet::Model* >(scene->getModel(0));
 	
 	// Create the model for the problem
-	this->model = boost::make_shared< rl::plan::NoisyModel >();
-	this->model->kin = this->kin.get();
-	this->model->model = this->sceneModel;
-	this->model->scene = this->scene.get();
+  model = boost::make_shared< rl::plan::NoisyModel >();
+  model->kin = kin.get();
+  model->model = sceneModel;
+  model->scene = scene.get();
 	
 	// Load the visual scene
-	this->visScene = boost::make_shared< rl::sg::so::Scene >();
-  this->visScene->load(this->rootDir + "/soma/rlsg/wam-rbohand-ifco.convex.xml");
-	this->visSceneModel = static_cast< rl::sg::so::Model* >(this->visScene->getModel(0));
+  visScene = boost::make_shared< rl::sg::so::Scene >();
+  visScene->load(rootDir + "/soma/rlsg/wam-rbohand-ifco.convex.xml");
+  visSceneModel = static_cast< rl::sg::so::Model* >(visScene->getModel(0));
 	
 	// Create the model for the visualization
-	this->visModel = boost::make_shared< rl::plan::NoisyModel >();
-  this->visModel->kin = kin2.get();
-	this->visModel->model = this->visSceneModel;
-	this->visModel->scene = this->visScene.get();
+  visModel = boost::make_shared< rl::plan::NoisyModel >();
+  visModel->kin = kin2.get();
+  visModel->model = visSceneModel;
+  visModel->scene = visScene.get();
 
 	// Setup the viewer
-	this->viewer->sceneGroup->addChild(this->visScene->root);
-	this->viewer->model = this->visModel.get();
-	this->toggleView(false);
-	this->viewer->viewer->setBackgroundColor(SbColor(1,1,1));
-	this->viewer->viewer->setCameraType(SoPerspectiveCamera::getClassTypeId());
-	this->viewer->viewer->getCamera()->setToDefaults();
-	this->viewer->viewer->viewAll();
+  viewer->sceneGroup->addChild(visScene->root);
+  viewer->model = visModel.get();
+  viewer->viewer->setBackgroundColor(SbColor(1,1,1));
+  viewer->viewer->setCameraType(SoPerspectiveCamera::getClassTypeId());
+  viewer->viewer->getCamera()->setToDefaults();
+  viewer->viewer->viewAll();
 }
 
 // ========================================================================================== //
 void MainWindow::reset() {
 
-//	this->thread->blockSignals(true);
+//	thread->blockSignals(true);
 //	QCoreApplication::processEvents();
-//	this->thread->stop();
-//	this->thread->blockSignals(false);
+//	thread->stop();
+//	thread->blockSignals(false);
 	
-	this->model->reset();
-	this->visModel->reset();
+  model->reset();
+  visModel->reset();
   resetViewer();
 }
-
-// ========================================================================================== //
-void MainWindow::toggleView(const bool& doOn) {
-}
-
-// ========================================================================================== //
-void MainWindow::handleGUI(int i) {
-}
-// ========================================================================================== //

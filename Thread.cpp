@@ -36,14 +36,9 @@
 #include "Thread.h"
 #include "Viewer.h"
 
-#define pc(x) std::cout << #x << ": "  << (x) << std::endl;
-#define pv(x) std::cout << #x << ": "  << (x).transpose() << std::endl;
-#define ps(x) std::cout << x << std::endl;
-
 // ========================================================================================== //
 Thread::Thread(QObject* parent) :
-		QThread(parent), quit(false), swept(false), running(false), operation(TEST_PLAN), 
-		pathIndex(0) {
+    QThread(parent), running(false) {
 }
 
 // ========================================================================================== //
@@ -52,7 +47,7 @@ Thread::~Thread() { }
 // ========================================================================================== //
 bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
 
-  this->model = MainWindow::instance()->model.get();
+  model = MainWindow::instance()->model.get();
   static const double delta = 0.017;
   int counter = 0;
   bool reached = false;
@@ -64,26 +59,23 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
 
     // Update the model
     steps.push_back(nextStep);
-    this->model->setPosition(nextStep);
-    this->model->updateFrames();
-    this->model->updateJacobian();
-    this->model->updateJacobianInverse();
+    model->setPosition(nextStep);
+    model->updateFrames();
+    model->updateJacobian();
+    model->updateJacobianInverse();
 
     // Compute the jacobian
-    ::rl::math::Transform ee_world = this->model->forwardPosition();
+    ::rl::math::Transform ee_world = model->forwardPosition();
     ::rl::math::transform::toDelta(ee_world, *MainWindow::instance()->goalFrame, tdot);
 
     // Compute the velocity
-    ::rl::math::Vector qdot(this->model->getDof());
+    ::rl::math::Vector qdot(model->getDof());
     qdot.setZero();
-    this->model->inverseVelocity(tdot, qdot);
+    model->inverseVelocity(tdot, qdot);
 
     // Limit the velocity and decide if reached goal
-    if(qdot.norm() < delta) {
-      reached = true;
-      ps("Reached the goal :)");
+    if(qdot.norm() < delta)
       return true;
-    }
     else {
       qdot.normalize();
       qdot *= delta;
@@ -93,8 +85,7 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
     nextStep = nextStep + qdot;
 
     // Check for joint limits
-    if(!this->model->isValid(nextStep)) {
-      ps("Hit joint limit :(");
+    if(!model->isValid(nextStep)) {
       return false;
     }
 
@@ -102,26 +93,24 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
     counter++;
     if(counter > 10.0/delta) {
       std::cout<<"Model left the scene - this should not happen, FIXME!"<<std::endl;
-      ps("Stuck in loop :(");
       return false;
     }
 
     // Check for singularity
-    this->model->setPosition(nextStep);
-    this->model->updateFrames();
-    this->model->updateJacobian();
-    this->model->updateJacobianInverse();
+    model->setPosition(nextStep);
+    model->updateFrames();
+    model->updateJacobian();
+    model->updateJacobianInverse();
     emit configurationRequested(nextStep);
     usleep(1000);
 
-    if(this->model->getDof() > 3 && this->model->getManipulabilityMeasure()  < 1.0e-3f) {
-      ps("Hit singularity :(");
+    if(model->getDof() > 3 && model->getManipulabilityMeasure()  < 1.0e-3f) {
       return false;
     }
 
     // Check for collision
-    this->model->isColliding();
-    allColls = this->model->scene->getLastCollisions();
+    model->isColliding();
+    allColls = model->scene->getLastCollisions();
     if(!allColls.empty()) {
       // Check if the collision is with a desired object
       for(rl::sg::CollisionMap::iterator it = allColls.begin(); it != allColls.end(); it++) { 
@@ -129,11 +118,9 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
         // ps(it->first.first); ps(it->first.second);
         if((MainWindow::instance()->desiredCollObj.compare(it->first.first) == 0) || 
             (MainWindow::instance()->desiredCollObj.compare(it->first.second) == 0)) {
-          ps("Collision with desired object :)");
           return true;
         }
       }
-      ps("Collision with bad object :(");
       return false;
     }
 
@@ -143,7 +130,7 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
 // ========================================================================================== //
 void Thread::run() {
 
-  this->running = true;
+  running = true;
 
   std::vector <::rl::math::Vector> steps;
   bool result = jacobianControl(steps);
@@ -152,23 +139,7 @@ void Thread::run() {
   MainWindow::instance()->lastPlanningResult = result;
   MainWindow::instance()->lastTrajectory = steps;
 
-  this->running = false;
-
-  pc(result);
-
-  // Write the result to a file
-  ::rl::math::Vector lastStep = steps.back();
-  FILE* file = fopen("collision-result.txt", "w");
-  fprintf(file, "%d\n", result);
-  for(int i = 0; i < 7; i++) fprintf(file, "%f ", lastStep(i));
-  fprintf(file, "\n");
-  fclose(file);
-
-  // Write the trajectory to a different file
-  std::ofstream ofs (MainWindow::instance()->problemID + ".traj", std::ofstream::out);
-  for(int i = 0; i < steps.size(); i++) 
-    ofs << steps[i].transpose() << "\n";
-  ofs.close();
+  running = false;
 
   exit(0);
 }
@@ -176,8 +147,8 @@ void Thread::run() {
  
 // ========================================================================================== //
 void Thread::stop() {
-	if (this->running) {
-		this->running = false;
-		while (!this->isFinished()) QThread::usleep(0);
+  if (running) {
+    running = false;
+    while (!isFinished()) QThread::usleep(0);
 	}
 }
