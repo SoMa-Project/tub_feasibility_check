@@ -101,7 +101,7 @@ bool Thread::jacobianControl(std::vector<::rl::math::Vector>& steps) {
     model->updateJacobian();
     model->updateJacobianInverse();
     emit configurationRequested(nextStep);
-    usleep(1000);
+    usleep(10000);
 
     if(model->getDof() > 3 && model->getManipulabilityMeasure()  < 1.0e-3f) {
       return false;

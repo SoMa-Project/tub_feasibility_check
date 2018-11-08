@@ -27,121 +27,26 @@
 #ifndef _MAINWINDOW_H_
 #define _MAINWINDOW_H_
 
-#include <QAction>
-#include <QDockWidget>
-#include <QGraphicsView>
 #include <QMainWindow>
-#include <QMutex>
-#include <QTableView>
-#include <boost/shared_ptr.hpp>
-#include <rl/kin/Kinematics.h>
-#include <rl/mdl/Dynamic.h>
-#include <rl/plan/NoisyModel.h>
-#include <rl/plan/Optimizer.h>
-#include <rl/plan/Planner.h>
-#include <rl/plan/Sampler.h>
-#include <rl/plan/Verifier.h>
-#include <rl/plan/WorkspaceSphereExplorer.h>
-#include <rl/sg/Model.h>
-#include <rl/sg/Scene.h>
-#include <rl/sg/bullet/Model.h>
-#include <rl/sg/bullet/Scene.h>
-#include <rl/sg/so/Model.h>
-#include <rl/sg/so/Scene.h>
-#include <unordered_set>
 
-#include "kinematics_check/BoundingBoxWithPose.h"
-
-class Thread;
 class Viewer;
-
-struct PairHash
-{
-  template <class T1, class T2>
-  std::size_t operator() (const std::pair<T1, T2>& p) const
-  {
-    std::size_t seed = 0;
-    boost::hash_combine(seed, p.first);
-    boost::hash_combine(seed, p.second);
-
-    return seed;
-  }
-};
 
 class MainWindow : public QMainWindow
 {
-	Q_OBJECT
-	
 public:
 	virtual ~MainWindow();
 	
 	static MainWindow* instance();
-  void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
-  void resetViewer();
-  void resetViewerBoxes();
 
-	boost::shared_ptr< rl::kin::Kinematics > kin;
-  boost::shared_ptr< rl::kin::Kinematics > kin2;
-
-	boost::shared_ptr< rl::plan::NoisyModel > model;
-	boost::shared_ptr< rl::plan::NoisyModel > visModel;
-
-	QMutex mutex;
-	
-	boost::shared_ptr< rl::sg::bullet::Scene > scene;
-	rl::sg::bullet::Model* sceneModel;
-
-	boost::shared_ptr< rl::sg::so::Scene > visScene; // Due to VRML object not in bullet
-	rl::sg::so::Model* visSceneModel;
-	
-	boost::shared_ptr< rl::plan::Planner > planner;
-	boost::shared_ptr< rl::math::Vector > start;
-	boost::shared_ptr< rl::math::Vector > goal;
-	boost::shared_ptr< rl::math::Transform > goalFrame;
-  std::unordered_set<std::pair<std::string, std::string>, PairHash> allowed_collision_pairs;
-  std::string problemID;    // An identifier for the problem for documentation
-
-  bool lastPlanningResult;
-  std::vector <::rl::math::Vector> lastTrajectory;
-
-	Thread* thread;
-	
 	Viewer* viewer;
 
-	bool wait;	// whether the planner should start immediately without SPACE and quite thereafter
-  std::string rootDir; // where the rl-examples... folder lives
-
-public slots:
-	
-	void reset();
-	
-  void plan(const rl::math::Transform& ifco_transform,
-            const std::vector<kinematics_check::BoundingBoxWithPose>& boundingBoxesWithPoses);
-
 protected:
-	MainWindow(QWidget* parent = NULL, Qt::WindowFlags f = 0);
-  void timerEvent (QTimerEvent* event);
+  MainWindow(QWidget* parent = nullptr, Qt::WindowFlags f = nullptr);
 	
 private:
   int timerId;
 
-	void clear();
-	
-	void connect(const QObject* sender, const QObject* receiver);
-	
-	void disconnect(const QObject* sender, const QObject* receiver);
-	
-	void load();
-
-	QString engine;
-	
 	static MainWindow* singleton;
-
-signals:
-  void requestConfiguration(const rl::math::Vector& q);
-  void requestBox(const rl::math::Vector& size, const rl::math::Transform& transform);
-  void requestResetViewer();
-  void requestResetViewerBoxes();
 };
 
 #endif // _MAINWINDOW_H_
