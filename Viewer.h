@@ -43,6 +43,7 @@
 #include <rl/plan/Model.h>
 #include <rl/plan/VectorList.h>
 #include <rl/plan/Viewer.h>
+#include <rl/sg/so/Scene.h>
 
 class Viewer : public QWidget, public rl::plan::Viewer
 {
@@ -50,16 +51,20 @@ class Viewer : public QWidget, public rl::plan::Viewer
 	
 public:
 	Viewer(QWidget* parent = NULL, Qt::WindowFlags f = 0);
-	
+
 	virtual ~Viewer();
 	
 	rl::math::Real delta;
+
+  std::unique_ptr<rl::kin::Kinematics> kinematics;
+
+  std::unique_ptr<rl::sg::so::Scene> scene_graph;
 	
-	rl::plan::Model* model;
+  std::unique_ptr<rl::plan::Model> model;
 	
-	SoVRMLGroup* sceneGroup;
+  SoVRMLGroup* sceneGroup;
 	
-	SoQtExaminerViewer* viewer;
+  std::unique_ptr<SoQtExaminerViewer> viewer;
 	
 public slots:
 	void changeColor(const SbColor& col);

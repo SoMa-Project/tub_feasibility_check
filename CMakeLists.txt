@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(kinematics_check)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated-declarations -fno-inline-functions")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated-declarations -Wno-zero-as-null-pointer-constant -fno-inline-functions")
 set (CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};/opt/ros/indigo)
 
 add_definitions(-DEIGEN_DONT_ALIGN)
@@ -62,24 +62,27 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 	set(
 		HDRS		
 		MainWindow.h
-		Thread.h
 		Viewer.h
+                ifco_scene.h
+                service_worker.h
+                utilities.h
 	)
 	
 	set(
 		SRCS
 		MainWindow.cpp
 		kinematics_check.cpp
-		Thread.cpp
 		Viewer.cpp
+                ifco_scene.cpp
+                service_worker.cpp
 #		${rl_SOURCE_DIR}/robotics-library.rc
 	)
 	
 	qt4_wrap_cpp(
 		MOC_SRCS
 		MainWindow.h
-		Thread.h
 		Viewer.h
+                service_worker.h
 		OPTIONS
 		-DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
 	)

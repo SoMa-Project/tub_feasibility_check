@@ -30,6 +30,9 @@
 #include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
 #include <Inventor/VRMLnodes/SoVRMLSphere.h>
 #include <Inventor/VRMLnodes/SoVRMLBox.h>
+#include <Inventor/nodes/SoCamera.h>
+#include <Inventor/nodes/SoOrthographicCamera.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <rl/math/Unit.h>
 #include <rl/sg/Body.h>
 #include <rl/sg/so/Body.h>
@@ -42,7 +45,6 @@
 Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 	QWidget(parent, f),
 	delta(1.0f),
-	model(NULL),
 	sceneGroup(new SoVRMLGroup()),
 	viewer(new SoQtExaminerViewer(this, NULL, true, SoQtFullViewer::BUILD_POPUP)),
   boxes(new SoVRMLSwitch()),
@@ -425,14 +427,14 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 	
 	this->scene->addChild(this->sceneDrawStyle);
 	
-	this->scene->addChild(this->sceneGroup);
+  this->scene->addChild(sceneGroup);
 	
 	this->root->addChild(this->scene);
 	
 	// root
 	
 	this->root->setName("root");
-	this->root->whichChoice = SO_SWITCH_ALL;
+  this->root->whichChoice = SO_SWITCH_ALL;
 }
 
 // =============================================================================================
