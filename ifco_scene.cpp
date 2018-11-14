@@ -29,6 +29,7 @@ std::string IfcoScene::PlanningResult::description() const
       return "ended on unsensorized collision: " + pairToString();
   }
 }
+
 IfcoScene::~IfcoScene()
 {
 }
@@ -83,7 +84,7 @@ void IfcoScene::connectToViewer(Viewer* new_viewer)
 
 void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)
 {
-  auto findAndMoveIfco = [this, ifco_pose] (rl::sg::Scene& scene){
+  auto findAndMoveIfco = [this, ifco_pose](rl::sg::Scene& scene) {
     scene.getModel(ifco_model_index)->getBody(0)->setFrame(ifco_pose);
   };
 
@@ -125,8 +126,7 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
 
 void IfcoScene::removeBoxes()
 {
-  auto removeBoxesInScene = [this] (rl::sg::Scene& scene)
-  {
+  auto removeBoxesInScene = [this](rl::sg::Scene& scene) {
     auto ifco_model = scene.getModel(ifco_model_index);
     for (std::size_t i = ifco_model->getNumBodies() - 1; i > 0; --i)
     {
@@ -151,8 +151,8 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
   std::size_t maximum_steps = static_cast<std::size_t>(10 / delta);
 
   Vector next_step = initial_configuration;
-  auto result = [next_step](PlanningResult::Outcome outcome, std::pair<std::string, std::string> collision_pair =
-                                                                 std::pair<std::string, std::string>()) {
+  auto result = [&next_step](PlanningResult::Outcome outcome, std::pair<std::string, std::string> collision_pair =
+                                                                  std::pair<std::string, std::string>()) {
     return PlanningResult{ outcome, next_step, collision_pair };
   };
 
