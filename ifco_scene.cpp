@@ -24,6 +24,8 @@ std::string IfcoScene::PlanningResult::description() const
       return "ended on acceptable collision";
     case PlanningResult::Outcome::UNACCEPTABLE_COLLISION:
       return "ended on unacceptable collision";
+    case PlanningResult::Outcome::UNSENSORIZED_COLLISION:
+      return "ended on unsensorized collision";
   }
 }
 IfcoScene::~IfcoScene()
@@ -209,6 +211,10 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
       // Check if the collision is with a desired object
       for (rl::sg::CollisionMap::iterator it = collisions.begin(); it != collisions.end(); it++)
       {
+        auto& shapes_in_contact = it->first;
+        if (!isSensorized(shapes_in_contact.first) && !isSensorized(shapes_in_contact.second))
+          return result(PlanningResult::Outcome::UNSENSORIZED_COLLISION);
+
         if (!allowed_collision_pairs.count(utilities::make_unordered_pair(shapes_in_contact)))
           return result(PlanningResult::Outcome::UNACCEPTABLE_COLLISION);
       }
@@ -219,4 +225,8 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
 
   return result(PlanningResult::Outcome::STEPS_LIMIT);
 }
+
+bool IfcoScene::isSensorized(const std::string& part_name) const
+{
+  return part_name.find("sensor") != std::string::npos;
 }

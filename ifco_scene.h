@@ -35,6 +35,7 @@ public:
       REACHED,
       ACCEPTABLE_COLLISION,
       UNACCEPTABLE_COLLISION,
+      UNSENSORIZED_COLLISION,
       SINGULARITY,
       JOINT_LIMIT,
       STEPS_LIMIT
@@ -52,6 +53,8 @@ private:
   IfcoScene()
   {
   }
+
+  bool isSensorized(const std::string& part_name) const;
 
   std::string scene_graph_file;
   std::string kinematics_file;
