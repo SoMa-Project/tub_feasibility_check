@@ -17,7 +17,7 @@
 class IfcoScene
 {
 public:
-  typedef std::unordered_set<std::pair<std::string, std::string>, utilities::PairHash> AllowedCollisionPairs;
+  typedef std::unordered_set<utilities::UnorderedPair<std::string>> AllowedCollisionPairs;
 
   ~IfcoScene();
   static std::unique_ptr<IfcoScene> load(const std::string& scene_graph_file, const std::string& kinematics_file);

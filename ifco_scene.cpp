@@ -1,5 +1,6 @@
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/VRMLnodes/SoVRMLBox.h>
+#include "utilities.h"
 #include "ifco_scene.h"
 
 IfcoScene::PlanningResult::operator bool() const
@@ -146,14 +147,13 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
   std::size_t maximum_steps = static_cast<std::size_t>(10 / delta);
 
   Vector next_step = initial_configuration;
+  auto result = [next_step](PlanningResult::Outcome outcome) { return PlanningResult{ outcome, next_step }; };
+
   if (viewer)
   {
     emit viewer->reset();
     emit viewer->drawConfiguration(next_step);
   }
-
-  PlanningResult result;
-  result.final_configuration = next_step;
 
   for (std::size_t i = 0; i < maximum_steps; ++i)
   {
@@ -175,10 +175,7 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
 
     // Limit the velocity and decide if reached goal
     if (qdot.norm() < delta)
-    {
-      result.outcome = PlanningResult::Outcome::REACHED;
-      return result;
-    }
+      return result(PlanningResult::Outcome::REACHED);
     else
     {
       qdot.normalize();
@@ -187,14 +184,10 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
 
     // Update the configuration
     next_step = next_step + qdot;
-    result.final_configuration = next_step;
 
     // Check for joint limits
     if (!model.isValid(next_step))
-    {
-      result.outcome = PlanningResult::Outcome::JOINT_LIMIT;
-      return result;
-    }
+      return result(PlanningResult::Outcome::JOINT_LIMIT);
 
     // Check for singularity
     model.setPosition(next_step);
@@ -206,10 +199,7 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
       emit viewer->drawConfiguration(next_step);
 
     if (model.getDof() > 3 && model.getManipulabilityMeasure() < 1.0e-3)
-    {
-      result.outcome = PlanningResult::Outcome::SINGULARITY;
-      return result;
-    }
+      return result(PlanningResult::Outcome::SINGULARITY);
 
     // Check for collision
     model.isColliding();
@@ -219,21 +209,14 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
       // Check if the collision is with a desired object
       for (rl::sg::CollisionMap::iterator it = collisions.begin(); it != collisions.end(); it++)
       {
-        // TODO not sure if it's needed to check the reverse pair
-        auto reversed_pair = std::make_pair(it->first.second, it->first.first);
-
-        if (!allowed_collision_pairs.count(it->first) && !allowed_collision_pairs.count(reversed_pair))
-        {
-          result.outcome = PlanningResult::Outcome::UNACCEPTABLE_COLLISION;
-          return result;
-        }
+        if (!allowed_collision_pairs.count(utilities::make_unordered_pair(shapes_in_contact)))
+          return result(PlanningResult::Outcome::UNACCEPTABLE_COLLISION);
       }
 
-      result.outcome = PlanningResult::Outcome::ACCEPTABLE_COLLISION;
-      return result;
+      return result(PlanningResult::Outcome::ACCEPTABLE_COLLISION);
     }
   }
 
-  result.outcome = PlanningResult::Outcome::STEPS_LIMIT;
-  return result;
+  return result(PlanningResult::Outcome::STEPS_LIMIT);
+}
 }
