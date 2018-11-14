@@ -43,6 +43,8 @@ private:
   std::string getBoxShapeName(std::size_t box_id) const;
   std::size_t getBoxId(const std::string& box_name) const;
 
+  bool checkParameters(const kinematics_check::CheckKinematics::Request& req);
+
   std::unique_ptr<IfcoScene> ifco_scene;
   QTimer loop_timer;
 

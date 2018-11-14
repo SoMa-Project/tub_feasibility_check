@@ -32,6 +32,7 @@ public:
   void createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose, const std::string& name);
 
   void removeBoxes();
+  std::size_t dof() const { return model.getDof(); }
 
   struct PlanningResult
   {

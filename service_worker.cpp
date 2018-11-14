@@ -48,7 +48,9 @@ void ServiceWorker::start(unsigned rate)
 bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
                           kinematics_check::CheckKinematics::Response& res)
 {
-  ROS_INFO("Recieving query");
+  ROS_INFO("Receiving query");
+  if (!checkParameters(req))
+    return false;
 
   // Create a frame from the position/quaternion data
   Eigen::Affine3d ifco_transform;
@@ -166,4 +168,23 @@ std::size_t ServiceWorker::getBoxId(const std::string& box_name) const
 {
   auto id_substring = box_name.substr(4, box_name.size() - 1);
   return std::stoul(id_substring);
+}
+
+bool ServiceWorker::checkParameters(const kinematics_check::CheckKinematics::Request& req)
+{
+  if (req.initial_configuration.empty())
+  {
+    ROS_ERROR("The initial configuration is empty");
+    return false;
+  }
+
+  if (req.initial_configuration.size() != ifco_scene->dof())
+  {
+    ROS_ERROR_STREAM("The initial configuration size: " << req.initial_configuration.size()
+                                                        << " does not match the degrees of freedom of the robot: "
+                                                        << ifco_scene->dof());
+    return false;
+  }
+
+  return true;
 }
