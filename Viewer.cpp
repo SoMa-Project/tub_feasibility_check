@@ -441,7 +441,12 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 Viewer::~Viewer()
 {
 	this->spheresAppearance->unref();
-	this->root->unref();
+  this->root->unref();
+}
+
+void Viewer::applyFunctionToScene(std::function<void (rl::sg::Scene &)> function)
+{
+  function(*scene_graph);
 }
 
 // =============================================================================================

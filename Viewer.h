@@ -67,6 +67,8 @@ public:
   std::unique_ptr<SoQtExaminerViewer> viewer;
 	
 public slots:
+  void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);
+
 	void changeColor(const SbColor& col);
 
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);

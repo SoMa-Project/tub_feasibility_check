@@ -83,12 +83,14 @@ void IfcoScene::connectToViewer(Viewer* new_viewer)
 
 void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)
 {
-  auto model = bullet_scene.getModel(ifco_model_index);
-  model->getBody(0)->setFrame(ifco_pose);
+  auto findAndMoveIfco = [this, ifco_pose] (rl::sg::Scene& scene){
+    scene.getModel(ifco_model_index)->getBody(0)->setFrame(ifco_pose);
+  };
 
-  // TODO make sure that this is not called while the viewer is doing something
+  findAndMoveIfco(bullet_scene);
+
   if (viewer)
-    viewer->scene_graph->getModel(ifco_model_index)->getBody(0)->setFrame(ifco_pose);
+    emit viewer->applyFunctionToScene(findAndMoveIfco);
 }
 
 void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose,
@@ -96,8 +98,8 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
 {
   BOOST_ASSERT_MSG(dimensions.size() == 3, "Box dimensions must have 3 elements");
 
-  auto createBody = [dimensions, box_pose, name](rl::sg::Model* model) {
-    auto body = model->create();
+  auto createBoxInScene = [dimensions, box_pose, name, this](rl::sg::Scene& scene) {
+    auto body = scene.getModel(ifco_model_index)->create();
     auto vrml_shape = new SoVRMLShape;
     auto appearance = new SoVRMLAppearance;
     auto material = new SoVRMLMaterial;
@@ -116,28 +118,27 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
     sg_shape->setTransform(box_pose);
   };
 
-  createBody(bullet_scene.getModel(ifco_model_index));
-
-  // TODO check that this is not called while the viewer is doing something
-  // TODO ensure somehow that scene graph models have same indices or at least document that they should
+  createBoxInScene(bullet_scene);
   if (viewer)
-    createBody(viewer->scene_graph->getModel(ifco_model_index));
+    emit viewer->applyFunctionToScene(createBoxInScene);
 }
 
 void IfcoScene::removeBoxes()
 {
-  auto ifco_model = bullet_scene.getModel(ifco_model_index);
-  for (std::size_t i = 1; i < ifco_model->getNumBodies(); ++i)
+  auto removeBoxesInScene = [this] (rl::sg::Scene& scene)
   {
-    ifco_model->remove(ifco_model->getBody(i));
-
-    // TODO check that this is not called while the viewer is doing something
-    if (viewer)
+    auto ifco_model = scene.getModel(ifco_model_index);
+    for (std::size_t i = ifco_model->getNumBodies() - 1; i > 0; --i)
     {
-      auto viewer_ifco_model = viewer->scene_graph->getModel(ifco_model_index);
-      viewer_ifco_model->remove(viewer_ifco_model->getBody(i));
+      auto body = ifco_model->getBody(i);
+      if (body->getName().find("box") != std::string::npos)
+        ifco_model->remove(body);
     }
-  }
+  };
+
+  removeBoxesInScene(bullet_scene);
+  if (viewer)
+    emit viewer->applyFunctionToScene(removeBoxesInScene);
 }
 
 IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_configuration,
