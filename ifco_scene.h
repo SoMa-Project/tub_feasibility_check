@@ -17,7 +17,11 @@
 class IfcoScene
 {
 public:
-  enum class CollisionBehaviour { Terminate, Ignore };
+  enum class CollisionBehaviour
+  {
+    Terminate,
+    Ignore
+  };
   typedef std::unordered_map<std::string, CollisionBehaviour> AllowedCollisions;
 
   ~IfcoScene();
@@ -57,6 +61,9 @@ private:
   }
 
   bool isSensorized(const std::string& part_name) const;
+
+  std::vector<std::array<float, 3>> colors = { { 0, 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } };
+  decltype(colors)::const_iterator current_color = colors.begin();
 
   std::string scene_graph_file;
   std::string kinematics_file;

@@ -105,7 +105,7 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
     auto appearance = new SoVRMLAppearance;
     auto material = new SoVRMLMaterial;
     auto box = new SoVRMLBox;
-    material->diffuseColor.setValue(0, 1, 0);
+    material->diffuseColor.setValue(current_color->at(0), current_color->at(1), current_color->at(2));
     material->transparency.setValue(0.5);
     appearance->material.setValue(material);
     vrml_shape->appearance.setValue(appearance);
@@ -122,6 +122,9 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
   createBoxInScene(bullet_scene);
   if (viewer)
     emit viewer->applyFunctionToScene(createBoxInScene);
+
+  if (++current_color == colors.end())
+    current_color = colors.begin();
 }
 
 void IfcoScene::removeBoxes()
@@ -139,6 +142,8 @@ void IfcoScene::removeBoxes()
   removeBoxesInScene(bullet_scene);
   if (viewer)
     emit viewer->applyFunctionToScene(removeBoxesInScene);
+
+  current_color = colors.begin();
 }
 
 IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_configuration,
