@@ -22,12 +22,8 @@ bounding_boxes_with_poses:
     position: {x: 0.5, y: -0.2, z: 0.3}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
 position_deltas: [0.05, 0.25, 0.05]
-orientation_deltas: [0.5, 0.5, 0.5]
+orientation_deltas: [0, 0, 0]
 allowed_collisions:
-- {first: 'link7_sensor1', second: 'box1_'}
-- {first: 'link7_sensor2', second: 'box1_'}
-- {first: 'link7_sensor3', second: 'box1_'}
-- {first: 'link7_sensor4', second: 'box1_'}
-- {first: 'link7_sensor5', second: 'box1_'}
-- {first: 'link7_sensor6', second: 'box1_'}
+- {type: 1, box_id: 1, terminate_on_collision: false}
+- {type: 1, box_id: 0, terminate_on_collision: false}
 " 

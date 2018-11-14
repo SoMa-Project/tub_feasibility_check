@@ -10,6 +10,7 @@ IfcoScene::PlanningResult::operator bool() const
 
 std::string IfcoScene::PlanningResult::description() const
 {
+  auto pairToString = [this]() { return collision_pair->first + " with " + collision_pair->second; };
   switch (outcome)
   {
     case PlanningResult::Outcome::REACHED:
@@ -21,11 +22,11 @@ std::string IfcoScene::PlanningResult::description() const
     case PlanningResult::Outcome::STEPS_LIMIT:
       return "went over the steps limit";
     case PlanningResult::Outcome::ACCEPTABLE_COLLISION:
-      return "ended on acceptable collision";
+      return "ended on acceptable collision: " + pairToString();
     case PlanningResult::Outcome::UNACCEPTABLE_COLLISION:
-      return "ended on unacceptable collision";
+      return "ended on unacceptable collision: " + pairToString();
     case PlanningResult::Outcome::UNSENSORIZED_COLLISION:
-      return "ended on unsensorized collision";
+      return "ended on unsensorized collision: " + pairToString();
   }
 }
 IfcoScene::~IfcoScene()
@@ -141,7 +142,7 @@ void IfcoScene::removeBoxes()
 
 IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_configuration,
                                           const rl::math::Transform& goal_pose,
-                                          const IfcoScene::AllowedCollisionPairs& allowed_collision_pairs)
+                                          const AllowedCollisions& allowed_collisions)
 {
   using namespace rl::math;
 
@@ -149,7 +150,10 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
   std::size_t maximum_steps = static_cast<std::size_t>(10 / delta);
 
   Vector next_step = initial_configuration;
-  auto result = [next_step](PlanningResult::Outcome outcome) { return PlanningResult{ outcome, next_step }; };
+  auto result = [next_step](PlanningResult::Outcome outcome, std::pair<std::string, std::string> collision_pair =
+                                                                 std::pair<std::string, std::string>()) {
+    return PlanningResult{ outcome, next_step, collision_pair };
+  };
 
   if (viewer)
   {
@@ -208,18 +212,27 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
     auto collisions = model.scene->getLastCollisions();
     if (!collisions.empty())
     {
-      // Check if the collision is with a desired object
+      boost::optional<std::pair<std::string, std::string>> terminate_collision;
+
       for (rl::sg::CollisionMap::iterator it = collisions.begin(); it != collisions.end(); it++)
       {
         auto& shapes_in_contact = it->first;
         if (!isSensorized(shapes_in_contact.first) && !isSensorized(shapes_in_contact.second))
-          return result(PlanningResult::Outcome::UNSENSORIZED_COLLISION);
+          return result(PlanningResult::Outcome::UNSENSORIZED_COLLISION, shapes_in_contact);
 
-        if (!allowed_collision_pairs.count(utilities::make_unordered_pair(shapes_in_contact)))
-          return result(PlanningResult::Outcome::UNACCEPTABLE_COLLISION);
+        boost::optional<CollisionBehaviour> collision_behaviour;
+        if (allowed_collisions.count(shapes_in_contact.first))
+          collision_behaviour = allowed_collisions.at(shapes_in_contact.first);
+        if (allowed_collisions.count(shapes_in_contact.second))
+          collision_behaviour = allowed_collisions.at(shapes_in_contact.second);
+        if (!collision_behaviour)
+          return result(PlanningResult::Outcome::UNACCEPTABLE_COLLISION, shapes_in_contact);
+        if (collision_behaviour == CollisionBehaviour::Terminate)
+          terminate_collision = shapes_in_contact;
       }
 
-      return result(PlanningResult::Outcome::ACCEPTABLE_COLLISION);
+      if (terminate_collision)
+        return result(PlanningResult::Outcome::ACCEPTABLE_COLLISION, *terminate_collision);
     }
   }
 

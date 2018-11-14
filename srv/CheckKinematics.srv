@@ -5,7 +5,7 @@ BoundingBoxWithPose[] bounding_boxes_with_poses
 float64[3] position_deltas
 # euler XYZ
 float64[3] orientation_deltas
-CollisionPair[] allowed_collisions
+AllowedCollision[] allowed_collisions
 ---
 bool success
 float64[] final_configuration

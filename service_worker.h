@@ -39,6 +39,10 @@ public slots:
   void stop();
 
 private:
+  std::string getBoxName(std::size_t box_id) const;
+  std::string getBoxShapeName(std::size_t box_id) const;
+  std::size_t getBoxId(const std::string& box_name) const;
+
   std::unique_ptr<IfcoScene> ifco_scene;
   QTimer loop_timer;
 

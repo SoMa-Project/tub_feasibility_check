@@ -9,7 +9,7 @@
 #include <rl/sg/so/Scene.h>
 #include <string>
 #include <memory>
-#include <unordered_set>
+#include <unordered_map>
 
 #include "Viewer.h"
 #include "utilities.h"
@@ -17,7 +17,8 @@
 class IfcoScene
 {
 public:
-  typedef std::unordered_set<utilities::UnorderedPair<std::string>> AllowedCollisionPairs;
+  enum class CollisionBehaviour { Terminate, Ignore };
+  typedef std::unordered_map<std::string, CollisionBehaviour> AllowedCollisions;
 
   ~IfcoScene();
   static std::unique_ptr<IfcoScene> load(const std::string& scene_graph_file, const std::string& kinematics_file);
@@ -41,13 +42,14 @@ public:
       STEPS_LIMIT
     } outcome;
     rl::math::Vector final_configuration;
+    boost::optional<std::pair<std::string, std::string>> collision_pair;
 
     operator bool() const;
     std::string description() const;
   };
 
   PlanningResult plan(const rl::math::Vector& initial_configuration, const rl::math::Transform& goal_pose,
-                      const AllowedCollisionPairs& allowed_collision_pairs);
+                      const AllowedCollisions& allowed_collisions);
 
 private:
   IfcoScene()

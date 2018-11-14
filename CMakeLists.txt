@@ -40,7 +40,7 @@ add_service_files(
 add_message_files(
   FILES
   BoundingBoxWithPose.msg
-  CollisionPair.msg
+  AllowedCollision.msg
 )
    
 
@@ -80,7 +80,6 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 	
 	qt4_wrap_cpp(
 		MOC_SRCS
-		MainWindow.h
 		Viewer.h
                 service_worker.h
 		OPTIONS

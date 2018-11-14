@@ -26,6 +26,7 @@
 
 #include <QMutexLocker>
 #include "service_worker.h"
+#include "utilities.h"
 
 void ServiceWorker::spinOnce()
 {
@@ -49,27 +50,23 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
 {
   ROS_INFO("Recieving query");
 
-  auto eigenToStd = [](const rl::math::Vector& config) {
-    return std::vector<rl::math::Real>(config.data(), config.data() + config.size());
-  };
-
-  auto stdToEigen = [](const std::vector<double>& vector) {
-    rl::math::Vector eigen_vector(vector.size());
-    for (std::size_t i = 0; i < vector.size(); ++i)
-      eigen_vector(i) = vector[i];
-    return eigen_vector;
-  };
-
   // Create a frame from the position/quaternion data
   Eigen::Affine3d ifco_transform;
   Eigen::Affine3d goal_transform;
   tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
-  auto initial_configuration = stdToEigen(req.initial_configuration);
+  auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
 
-  IfcoScene::AllowedCollisionPairs allowed_collision_pairs;
-  for (auto& collision_pair : req.allowed_collisions)
-    allowed_collision_pairs.insert({ collision_pair.first, collision_pair.second });
+  IfcoScene::AllowedCollisions allowed_collisions;
+  for (auto& allowed_collision_msg : req.allowed_collisions)
+  {
+    auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
+                           getBoxShapeName(allowed_collision_msg.box_id) :
+                           allowed_collision_msg.constraint_name;
+    allowed_collisions.insert({ object_name, allowed_collision_msg.terminate_on_collision ?
+                                                 IfcoScene::CollisionBehaviour::Terminate :
+                                                 IfcoScene::CollisionBehaviour::Ignore });
+  }
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
   ifco_scene->moveIfco(ifco_transform);
@@ -78,19 +75,17 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   {
     Eigen::Affine3d box_transform;
     tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, box_transform);
-    std::stringstream name_ss;
-    name_ss << "box" << i + 1;
-    ifco_scene->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, name_ss.str());
+    ifco_scene->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  auto result = ifco_scene->plan(initial_configuration, goal_transform, allowed_collision_pairs);
+  auto result = ifco_scene->plan(initial_configuration, goal_transform, allowed_collisions);
 
   if (result)
   {
     ROS_INFO_STREAM("Goal frame success: " << result.description());
     res.success = true;
-    res.final_configuration = eigenToStd(result.final_configuration);
+    res.final_configuration = utilities::eigenToStd(result.final_configuration);
     return true;
   }
   ROS_INFO_STREAM("Goal frame failure: " << result.description());
@@ -135,18 +130,40 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
     ROS_INFO_STREAM("Trying to plan to the sampled frame number "
                     << i << ". Translation sample: " << sampled_point.transpose() << ", rotation sample: "
                     << sampled_rotation[0] << " " << sampled_rotation[1] << " " << sampled_rotation[2]);
-    auto result = ifco_scene->plan(initial_configuration, sampled_transform, allowed_collision_pairs);
+    auto result = ifco_scene->plan(initial_configuration, sampled_transform, allowed_collisions);
 
     if (result)
     {
       ROS_INFO_STREAM("Success: " << result.description());
       res.success = true;
-      res.final_configuration = eigenToStd(result.final_configuration);
+      res.final_configuration = utilities::eigenToStd(result.final_configuration);
       return true;
     }
+    else
+      ROS_INFO_STREAM("Failure: " << result.description());
   }
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
   res.success = false;
   return true;
+}
+
+std::string ServiceWorker::getBoxName(std::size_t box_id) const
+{
+  std::stringstream ss;
+  ss << "box_" << box_id;
+  return ss.str();
+}
+
+std::string ServiceWorker::getBoxShapeName(std::size_t box_id) const
+{
+  std::stringstream ss;
+  ss << "box_" << box_id << "_";
+  return ss.str();
+}
+
+std::size_t ServiceWorker::getBoxId(const std::string& box_name) const
+{
+  auto id_substring = box_name.substr(4, box_name.size() - 1);
+  return std::stoul(id_substring);
 }
