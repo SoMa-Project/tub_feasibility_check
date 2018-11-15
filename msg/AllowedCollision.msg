@@ -23,3 +23,7 @@ string constraint_name
 # success if all other collisions in the current step are allowed.
 # If false, this collision will be ignored by the planner.
 bool terminate_on_collision
+
+# If true, planner will not output success if this collision did not
+# happen at some point.
+bool required_collision

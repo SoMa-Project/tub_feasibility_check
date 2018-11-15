@@ -20,12 +20,13 @@ class IfcoScene : public QObject
 {
   Q_OBJECT
 public:
-  enum class CollisionBehaviour
+  struct CollisionSettings
   {
-    Terminate,
-    Ignore
+    bool terminating;
+    bool required;
   };
-  typedef std::unordered_map<std::string, CollisionBehaviour> AllowedCollisions;
+
+  typedef std::unordered_map<std::string, CollisionSettings> AllowedCollisions;
 
   ~IfcoScene();
   static std::unique_ptr<IfcoScene> load(const std::string& scene_graph_file, const std::string& kinematics_file);
@@ -50,10 +51,12 @@ public:
       UNSENSORIZED_COLLISION,
       SINGULARITY,
       JOINT_LIMIT,
-      STEPS_LIMIT
+      STEPS_LIMIT,
+      MISSED_REQUIRED_COLLISIONS
     } outcome;
     rl::math::Vector final_configuration;
-    boost::optional<std::pair<std::string, std::string>> collision_pair;
+    boost::optional<std::pair<std::string, std::string>> ending_collision_pair;
+    std::set<std::string> missed_required_collisions;
 
     operator bool() const;
     std::string description() const;

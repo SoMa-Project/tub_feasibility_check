@@ -73,6 +73,6 @@ min_orientation_deltas: [0, 0, 0]
 max_orientation_deltas: [0, 0, 0]
 allowed_collisions:
 - {type: 2, constraint_name: 'bottom', terminate_on_collision: false}
-- {type: 1, box_id: 0, terminate_on_collision: false}
+- {type: 1, box_id: 0, terminate_on_collision: false, required_collision: true}
 - {type: 2, constraint_name: 'south', terminate_on_collision: true}
 " 

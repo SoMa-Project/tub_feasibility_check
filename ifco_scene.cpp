@@ -10,7 +10,7 @@ IfcoScene::PlanningResult::operator bool() const
 
 std::string IfcoScene::PlanningResult::description() const
 {
-  auto pairToString = [this]() { return collision_pair->first + " with " + collision_pair->second; };
+  auto pairToString = [this]() { return ending_collision_pair->first + " with " + ending_collision_pair->second; };
   switch (outcome)
   {
     case PlanningResult::Outcome::REACHED:
@@ -27,6 +27,13 @@ std::string IfcoScene::PlanningResult::description() const
       return "ended on unacceptable collision: " + pairToString();
     case PlanningResult::Outcome::UNSENSORIZED_COLLISION:
       return "ended on unsensorized collision: " + pairToString();
+    case PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS:
+      std::stringstream ss;
+      ss << "missing required collisions: ";
+      for (auto& c : missed_required_collisions)
+        ss << c << ",";
+      ss << "\r";
+      return ss.str();
   }
 }
 
@@ -82,12 +89,11 @@ void IfcoScene::connectToViewer(Viewer* new_viewer)
   viewer = new_viewer;
 
   QObject::disconnect(this, 0, 0, 0);
-  QObject::connect(this, SIGNAL(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)),
-                   viewer, SLOT(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)));
-  QObject::connect(this, SIGNAL(reset()),
-                   viewer, SLOT(reset()));
-  QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)),
-                   viewer, SLOT(drawConfiguration(const rl::math::Vector&)));
+  QObject::connect(this, SIGNAL(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)), viewer,
+                   SLOT(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)));
+  QObject::connect(this, SIGNAL(reset()), viewer, SLOT(reset()));
+  QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)), viewer,
+                   SLOT(drawConfiguration(const rl::math::Vector&)));
 }
 
 void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)
@@ -170,6 +176,15 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
     return PlanningResult{ outcome, next_step, collision_pair };
   };
 
+  std::set<std::string> required_collisions;
+  for (auto& item : allowed_collisions)
+  {
+    auto& name = item.first;
+    auto& settings = item.second;
+    if (settings.required)
+      required_collisions.insert(name);
+  }
+
   if (viewer)
   {
     emit reset();
@@ -196,7 +211,13 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
 
     // Limit the velocity and decide if reached goal
     if (qdot.norm() < delta)
-      return result(PlanningResult::Outcome::REACHED);
+    {
+      if (required_collisions.empty())
+        return result(PlanningResult::Outcome::REACHED);
+      else
+        return PlanningResult{ PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS, next_step,
+                               std::pair<std::string, std::string>(), required_collisions };
+    }
     else
     {
       qdot.normalize();
@@ -225,6 +246,7 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
     // Check for collision
     model.isColliding();
     auto collisions = model.scene->getLastCollisions();
+    // TODO refactor this block, it is unreadable
     if (!collisions.empty())
     {
       boost::optional<std::pair<std::string, std::string>> terminate_collision;
@@ -235,19 +257,36 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
         if (!isSensorized(shapes_in_contact.first) && !isSensorized(shapes_in_contact.second))
           return result(PlanningResult::Outcome::UNSENSORIZED_COLLISION, shapes_in_contact);
 
-        boost::optional<CollisionBehaviour> collision_behaviour;
+        bool terminating;
         if (allowed_collisions.count(shapes_in_contact.first))
-          collision_behaviour = allowed_collisions.at(shapes_in_contact.first);
-        if (allowed_collisions.count(shapes_in_contact.second))
-          collision_behaviour = allowed_collisions.at(shapes_in_contact.second);
-        if (!collision_behaviour)
+        {
+          auto& collision_settings = allowed_collisions.at(shapes_in_contact.first);
+          terminating = collision_settings.terminating;
+          if (collision_settings.required)
+            required_collisions.erase(shapes_in_contact.first);
+        }
+        else if (allowed_collisions.count(shapes_in_contact.second))
+        {
+          auto& collision_settings = allowed_collisions.at(shapes_in_contact.second);
+          terminating = collision_settings.terminating;
+          if (collision_settings.required)
+            required_collisions.erase(shapes_in_contact.second);
+        }
+        else
           return result(PlanningResult::Outcome::UNACCEPTABLE_COLLISION, shapes_in_contact);
-        if (collision_behaviour == CollisionBehaviour::Terminate)
+
+        if (terminating)
           terminate_collision = shapes_in_contact;
       }
 
       if (terminate_collision)
-        return result(PlanningResult::Outcome::ACCEPTABLE_COLLISION, *terminate_collision);
+      {
+        if (required_collisions.empty())
+          return result(PlanningResult::Outcome::ACCEPTABLE_COLLISION, *terminate_collision);
+        else
+          return PlanningResult{ PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS, next_step, *terminate_collision,
+                                 required_collisions };
+      }
     }
   }
 

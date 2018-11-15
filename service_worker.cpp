@@ -65,9 +65,9 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
     auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
                            getBoxShapeName(allowed_collision_msg.box_id) :
                            allowed_collision_msg.constraint_name;
-    allowed_collisions.insert({ object_name, allowed_collision_msg.terminate_on_collision ?
-                                                 IfcoScene::CollisionBehaviour::Terminate :
-                                                 IfcoScene::CollisionBehaviour::Ignore });
+    allowed_collisions.insert(
+        { object_name, IfcoScene::CollisionSettings{ static_cast<bool>(allowed_collision_msg.terminate_on_collision),
+                                                     static_cast<bool>(allowed_collision_msg.required_collision) } });
   }
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
@@ -186,15 +186,17 @@ bool ServiceWorker::checkParameters(const kinematics_check::CheckKinematics::Req
   {
     if (req.min_position_deltas[i] > req.max_position_deltas[i])
     {
-      ROS_ERROR_STREAM("min_position_deltas[" << i << "]=" << req.min_position_deltas[i] <<
-                       " is larger than max_position_deltas[" << i << "]=" << req.max_position_deltas[i]);
+      ROS_ERROR_STREAM("min_position_deltas[" << i << "]=" << req.min_position_deltas[i]
+                                              << " is larger than max_position_deltas[" << i
+                                              << "]=" << req.max_position_deltas[i]);
       all_ok = false;
     }
 
     if (req.min_orientation_deltas[i] > req.max_orientation_deltas[i])
     {
-      ROS_ERROR_STREAM("min_orientation_deltas[" << i << "]=" << req.min_orientation_deltas[i] <<
-                       " is larger than max_orientation_deltas[" << i << "]=" << req.max_orientation_deltas[i]);
+      ROS_ERROR_STREAM("min_orientation_deltas[" << i << "]=" << req.min_orientation_deltas[i]
+                                                 << " is larger than max_orientation_deltas[" << i
+                                                 << "]=" << req.max_orientation_deltas[i]);
       all_ok = false;
     }
   }
