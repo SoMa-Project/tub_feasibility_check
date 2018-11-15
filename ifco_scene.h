@@ -10,12 +10,15 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <QThread>
+#include <QMetaType>
 
 #include "Viewer.h"
 #include "utilities.h"
 
-class IfcoScene
+class IfcoScene : public QObject
 {
+  Q_OBJECT
 public:
   enum class CollisionBehaviour
   {
@@ -32,7 +35,10 @@ public:
   void createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose, const std::string& name);
 
   void removeBoxes();
-  std::size_t dof() const { return model.getDof(); }
+  std::size_t dof() const
+  {
+    return model.getDof();
+  }
 
   struct PlanningResult
   {
@@ -57,8 +63,10 @@ public:
                       const AllowedCollisions& allowed_collisions);
 
 private:
-  IfcoScene()
+  IfcoScene() : QObject(nullptr)
   {
+    qRegisterMetaType<rl::math::Vector>("rl::math::Vector");
+    qRegisterMetaType<std::function<void(rl::sg::Scene&)>>("std::function<void(rl::sg::Scene&");
   }
 
   bool isSensorized(const std::string& part_name) const;
@@ -76,6 +84,11 @@ private:
   std::size_t ifco_model_index;
 
   Viewer* viewer = nullptr;
+
+signals:
+  void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);
+  void reset();
+  void drawConfiguration(const rl::math::Vector& config);
 };
 
 #endif  // IFCO_SCENE_H

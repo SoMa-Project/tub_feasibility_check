@@ -28,6 +28,8 @@
 #define _MAINWINDOW_H_
 
 #include <QMainWindow>
+#include <functional>
+#include <rl/sg/Scene.h>
 
 class Viewer;
 

@@ -82,6 +82,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		MOC_SRCS
 		Viewer.h
                 service_worker.h
+                ifco_scene.h
 		OPTIONS
 		-DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
 	)

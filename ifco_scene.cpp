@@ -69,7 +69,7 @@ void IfcoScene::connectToViewer(Viewer* new_viewer)
   new_viewer->scene_graph.reset(new rl::sg::so::Scene);
   new_viewer->scene_graph->load(scene_graph_file);
   new_viewer->model.reset(new rl::plan::DistanceModel);
-  new_viewer->model->kin = kinematics.get();
+  new_viewer->model->kin = new_viewer->kinematics.get();
   new_viewer->model->model = new_viewer->scene_graph->getModel(0);
   new_viewer->model->scene = new_viewer->scene_graph.get();
 
@@ -80,6 +80,14 @@ void IfcoScene::connectToViewer(Viewer* new_viewer)
   new_viewer->viewer->viewAll();
 
   viewer = new_viewer;
+
+  QObject::disconnect(this, 0, 0, 0);
+  QObject::connect(this, SIGNAL(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)),
+                   viewer, SLOT(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)));
+  QObject::connect(this, SIGNAL(reset()),
+                   viewer, SLOT(reset()));
+  QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)),
+                   viewer, SLOT(drawConfiguration(const rl::math::Vector&)));
 }
 
 void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)
@@ -91,7 +99,7 @@ void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)
   findAndMoveIfco(bullet_scene);
 
   if (viewer)
-    emit viewer->applyFunctionToScene(findAndMoveIfco);
+    emit applyFunctionToScene(findAndMoveIfco);
 }
 
 void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose,
@@ -99,13 +107,14 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
 {
   BOOST_ASSERT_MSG(dimensions.size() == 3, "Box dimensions must have 3 elements");
 
-  auto createBoxInScene = [dimensions, box_pose, name, this](rl::sg::Scene& scene) {
+  auto used_color = *current_color;
+  auto createBoxInScene = [dimensions, box_pose, name, used_color, this](rl::sg::Scene& scene) {
     auto body = scene.getModel(ifco_model_index)->create();
     auto vrml_shape = new SoVRMLShape;
     auto appearance = new SoVRMLAppearance;
     auto material = new SoVRMLMaterial;
     auto box = new SoVRMLBox;
-    material->diffuseColor.setValue(current_color->at(0), current_color->at(1), current_color->at(2));
+    material->diffuseColor.setValue(used_color.at(0), used_color.at(1), used_color.at(2));
     material->transparency.setValue(0.5);
     appearance->material.setValue(material);
     vrml_shape->appearance.setValue(appearance);
@@ -121,7 +130,7 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
 
   createBoxInScene(bullet_scene);
   if (viewer)
-    emit viewer->applyFunctionToScene(createBoxInScene);
+    emit applyFunctionToScene(createBoxInScene);
 
   if (++current_color == colors.end())
     current_color = colors.begin();
@@ -141,7 +150,7 @@ void IfcoScene::removeBoxes()
 
   removeBoxesInScene(bullet_scene);
   if (viewer)
-    emit viewer->applyFunctionToScene(removeBoxesInScene);
+    emit applyFunctionToScene(removeBoxesInScene);
 
   current_color = colors.begin();
 }
@@ -163,8 +172,8 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
 
   if (viewer)
   {
-    emit viewer->reset();
-    emit viewer->drawConfiguration(next_step);
+    emit reset();
+    emit drawConfiguration(next_step);
   }
 
   for (std::size_t i = 0; i < maximum_steps; ++i)
@@ -208,7 +217,7 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
     model.updateJacobianInverse();
 
     if (viewer)
-      emit viewer->drawConfiguration(next_step);
+      emit drawConfiguration(next_step);
 
     if (model.getDof() > 3 && model.getManipulabilityMeasure() < 1.0e-3)
       return result(PlanningResult::Outcome::SINGULARITY);
