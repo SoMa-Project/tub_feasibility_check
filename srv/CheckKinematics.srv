@@ -5,7 +5,8 @@
 # can be ignored, trigger a successful end of the check or trigger a
 # failure. If the desired goal pose is not feasible, the service will
 # try to sample a feasible pose from the manifold described by
-# maximum translations and rotations of the end effector.
+# minimum and maximum translations and rotations of the end effector
+# with respect to the goal pose.
 
 # The initial joint configuration of the robot.
 float64[] initial_configuration
@@ -21,12 +22,19 @@ geometry_msgs/Pose ifco_pose
 # in this array.
 BoundingBoxWithPose[] bounding_boxes_with_poses
 
-# Maximum absolute X, Y, Z values for the sampled end effector translation.
-float64[3] position_deltas
+# Coordinate X, Y, Z will be sampled from the range:
+# [min_position_deltas[0, 1, 2], max_position_deltas[0, 1, 2]]
+# For every i: min_position_deltas[i] <= max_position_deltas[i] should be true
+float64[3] min_position_deltas
+float64[3] max_position_deltas
 
-# Maximum absolute values for the sampled XYZ Euler angle end effector
-# rotation.
-float64[3] orientation_deltas
+# The sampled orientation is in XYZ Euler angles.
+# Angle X, Y, Z will be sampled from the range:
+# [min_orientation_deltas[0, 1, 2], max_orientation_deltas[0, 1, 2]]
+# For every i: min_orientation_deltas[i] <= max_orientation_deltas[i] should be
+# true
+float64[3] min_orientation_deltas
+float64[3] max_orientation_deltas
 
 # An array of allowed collisions. Check AllowedCollision.msg for more details.
 # A collision that is not listed here will trigger a failure.

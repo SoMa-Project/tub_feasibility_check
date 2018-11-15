@@ -5,8 +5,9 @@
 # collision. All other collisions are prohibited.
 
 # The initial goal pose is not feasible due to the collision with the red
-# object. The manifold includes all possible Z rotations of the end effector, 
-# and the service is able to sample a feasible goal pose from the manifold.
+# object. The manifold includes Z rotations of the end effector in the range
+# [-1.5, 1.5] and the service is able to sample a feasible goal pose from 
+# the manifold.
 rosservice call /check_kinematics "
 initial_configuration: [0, 0.1, 0, 2.3, 0, 0.5, 0]
 goal_pose:
@@ -34,8 +35,10 @@ bounding_boxes_with_poses:
   pose:
     position: {x: 0.6, y: 0.2, z: 0.24}
     orientation: {x: 0, y: 0, z: 0.3826834, w: 0.9238795}
-position_deltas: [0.01, 0.01, 0.01]
-orientation_deltas: [0, 0, 3.14]
+min_position_deltas: [-0.01, -0.01, -0.01]
+max_position_deltas: [0.01, 0.01, 0.01]
+min_orientation_deltas: [0, 0, -1.5]
+max_orientation_deltas: [0, 0, 1.5]
 allowed_collisions:
 - {type: 1, box_id: 0, terminate_on_collision: true}
 " 

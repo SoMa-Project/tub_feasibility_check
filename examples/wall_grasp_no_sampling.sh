@@ -34,8 +34,10 @@ bounding_boxes_with_poses:
   pose:
     position: {x: 0.6, y: -0.2, z: 0.3}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
-position_deltas: [0.05, 0.05, 0.05]
-orientation_deltas: [0, 0, 0]
+min_position_deltas: [-0.05, -0.05, -0.05]
+max_position_deltas: [0.05, 0.05, 0.05]
+min_orientation_deltas: [0, 0, 0]
+max_orientation_deltas: [0, 0, 0]
 allowed_collisions:
 - {type: 2, constraint_name: 'bottom', terminate_on_collision: true}
 " 
@@ -65,8 +67,10 @@ bounding_boxes_with_poses:
   pose:
     position: {x: 0.6, y: -0.2, z: 0.3}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
-position_deltas: [0.05, 0.05, 0.05]
-orientation_deltas: [0, 0, 0]
+min_position_deltas: [-0.05, -0.05, -0.05]
+max_position_deltas: [0.05, 0.05, 0.05]
+min_orientation_deltas: [0, 0, 0]
+max_orientation_deltas: [0, 0, 0]
 allowed_collisions:
 - {type: 2, constraint_name: 'bottom', terminate_on_collision: false}
 - {type: 1, box_id: 0, terminate_on_collision: false}

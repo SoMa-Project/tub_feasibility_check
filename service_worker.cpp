@@ -93,15 +93,15 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   ROS_INFO_STREAM("Goal frame failure: " << result.description());
 
   std::array<std::uniform_real_distribution<double>, 3> coordinate_distributions = {
-    std::uniform_real_distribution<double>(-req.position_deltas[0], req.position_deltas[0]),
-    std::uniform_real_distribution<double>(-req.position_deltas[1], req.position_deltas[1]),
-    std::uniform_real_distribution<double>(-req.position_deltas[2], req.position_deltas[2])
+    std::uniform_real_distribution<double>(req.min_position_deltas[0], req.max_position_deltas[0]),
+    std::uniform_real_distribution<double>(req.min_position_deltas[1], req.max_position_deltas[1]),
+    std::uniform_real_distribution<double>(req.min_position_deltas[2], req.max_position_deltas[2])
   };
 
   std::array<std::uniform_real_distribution<double>, 3> angle_distributions = {
-    std::uniform_real_distribution<double>(-req.orientation_deltas[0], req.orientation_deltas[0]),
-    std::uniform_real_distribution<double>(-req.orientation_deltas[1], req.orientation_deltas[1]),
-    std::uniform_real_distribution<double>(-req.orientation_deltas[2], req.orientation_deltas[2])
+    std::uniform_real_distribution<double>(req.min_orientation_deltas[0], req.max_orientation_deltas[0]),
+    std::uniform_real_distribution<double>(req.min_orientation_deltas[1], req.max_orientation_deltas[1]),
+    std::uniform_real_distribution<double>(req.min_orientation_deltas[2], req.max_orientation_deltas[2])
   };
 
   std::mt19937 generator(time(nullptr));
@@ -172,19 +172,35 @@ std::size_t ServiceWorker::getBoxId(const std::string& box_name) const
 
 bool ServiceWorker::checkParameters(const kinematics_check::CheckKinematics::Request& req)
 {
-  if (req.initial_configuration.empty())
-  {
-    ROS_ERROR("The initial configuration is empty");
-    return false;
-  }
+  bool all_ok = true;
 
   if (req.initial_configuration.size() != ifco_scene->dof())
   {
     ROS_ERROR_STREAM("The initial configuration size: " << req.initial_configuration.size()
                                                         << " does not match the degrees of freedom of the robot: "
                                                         << ifco_scene->dof());
-    return false;
+    all_ok = false;
   }
+
+  for (std::size_t i = 0; i < req.min_position_deltas.size(); ++i)
+  {
+    if (req.min_position_deltas[i] > req.max_position_deltas[i])
+    {
+      ROS_ERROR_STREAM("min_position_deltas[" << i << "]=" << req.min_position_deltas[i] <<
+                       " is larger than max_position_deltas[" << i << "]=" << req.max_position_deltas[i]);
+      all_ok = false;
+    }
+
+    if (req.min_orientation_deltas[i] > req.max_orientation_deltas[i])
+    {
+      ROS_ERROR_STREAM("min_orientation_deltas[" << i << "]=" << req.min_orientation_deltas[i] <<
+                       " is larger than max_orientation_deltas[" << i << "]=" << req.max_orientation_deltas[i]);
+      all_ok = false;
+    }
+  }
+
+  if (!all_ok)
+    return false;
 
   return true;
 }
