@@ -1,11 +1,39 @@
+# This service checks whether it is feasible to achieve the goal pose
+# of the end effector starting from initial configuration of the joints
+# and using Jacobian control in the scene with the IFCO container populated
+# with objects. Collisions with objects and environmental constraints
+# can be ignored, trigger a successful end of the check or trigger a
+# failure. If the desired goal pose is not feasible, the service will
+# try to sample a feasible pose from the manifold described by
+# maximum translations and rotations of the end effector.
+
+# The initial joint configuration of the robot.
 float64[] initial_configuration
+
+# The goal pose of the end effector in the robot base frame.
 geometry_msgs/Pose goal_pose
+
+# The pose of the IFCO container in the robot base frame.
 geometry_msgs/Pose ifco_pose
+
+# An array of bounding boxes with poses. Check BoundingBoxWithPose.msg
+# for more details. The box_id in allowed_collisions is the same as position
+# in this array.
 BoundingBoxWithPose[] bounding_boxes_with_poses
+
+# Maximum absolute X, Y, Z values for the sampled end effector translation.
 float64[3] position_deltas
-# euler XYZ
+
+# Maximum absolute values for the sampled XYZ Euler angle end effector
+# rotation.
 float64[3] orientation_deltas
+
+# An array of allowed collisions. Check AllowedCollision.msg for more details.
+# A collision that is not listed here will trigger a failure.
 AllowedCollision[] allowed_collisions
 ---
 bool success
+
+# The final joint configuration of the robot after reaching the
+# goal pose or a pose sampled from a manifold.
 float64[] final_configuration
