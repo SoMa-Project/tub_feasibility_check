@@ -30,11 +30,31 @@ std::string IfcoScene::PlanningResult::description() const
     case PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS:
       std::stringstream ss;
       ss << "missing required collisions: ";
-      for (auto& c : missed_required_collisions)
+      for (const auto& c : *missed_required_collisions)
         ss << c << ",";
       ss << "\r";
       return ss.str();
   }
+}
+
+IfcoScene::PlanningResult& IfcoScene::PlanningResult::setOutcome(Outcome outcome)
+{
+  this->outcome = outcome;
+  return *this;
+}
+
+IfcoScene::PlanningResult&
+IfcoScene::PlanningResult::setEndingCollisionPair(std::pair<std::string, std::string> ending_collision_pair)
+{
+  this->ending_collision_pair = ending_collision_pair;
+  return *this;
+}
+
+IfcoScene::PlanningResult&
+IfcoScene::PlanningResult::setMissedRequiredCollisions(std::set<std::string> missed_required_collisions)
+{
+  this->missed_required_collisions = missed_required_collisions;
+  return *this;
 }
 
 IfcoScene::~IfcoScene()
@@ -171,10 +191,8 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
   std::size_t maximum_steps = static_cast<std::size_t>(10 / delta);
 
   Vector next_step = initial_configuration;
-  auto result = [&next_step](PlanningResult::Outcome outcome, std::pair<std::string, std::string> collision_pair =
-                                                                  std::pair<std::string, std::string>()) {
-    return PlanningResult{ outcome, next_step, collision_pair };
-  };
+  PlanningResult result;
+  result.final_configuration = initial_configuration;
 
   std::set<std::string> required_collisions;
   for (auto& item : allowed_collisions)
@@ -213,10 +231,10 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
     if (qdot.norm() < delta)
     {
       if (required_collisions.empty())
-        return result(PlanningResult::Outcome::REACHED);
+        return result.setOutcome(PlanningResult::Outcome::REACHED);
       else
-        return PlanningResult{ PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS, next_step,
-                               std::pair<std::string, std::string>(), required_collisions };
+        return result.setOutcome(PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS)
+            .setMissedRequiredCollisions(required_collisions);
     }
     else
     {
@@ -226,10 +244,11 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
 
     // Update the configuration
     next_step = next_step + qdot;
+    result.final_configuration = next_step;
 
     // Check for joint limits
     if (!model.isValid(next_step))
-      return result(PlanningResult::Outcome::JOINT_LIMIT);
+      return result.setOutcome(PlanningResult::Outcome::JOINT_LIMIT);
 
     // Check for singularity
     model.setPosition(next_step);
@@ -241,7 +260,7 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
       emit drawConfiguration(next_step);
 
     if (model.getDof() > 3 && model.getManipulabilityMeasure() < 1.0e-3)
-      return result(PlanningResult::Outcome::SINGULARITY);
+      return result.setOutcome(PlanningResult::Outcome::SINGULARITY);
 
     // Check for collision
     model.isColliding();
@@ -255,7 +274,8 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
       {
         auto& shapes_in_contact = it->first;
         if (!isSensorized(shapes_in_contact.first) && !isSensorized(shapes_in_contact.second))
-          return result(PlanningResult::Outcome::UNSENSORIZED_COLLISION, shapes_in_contact);
+          return result.setOutcome(PlanningResult::Outcome::UNSENSORIZED_COLLISION)
+              .setEndingCollisionPair(shapes_in_contact);
 
         bool terminating;
         if (allowed_collisions.count(shapes_in_contact.first))
@@ -273,7 +293,8 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
             required_collisions.erase(shapes_in_contact.second);
         }
         else
-          return result(PlanningResult::Outcome::UNACCEPTABLE_COLLISION, shapes_in_contact);
+          return result.setOutcome(PlanningResult::Outcome::UNACCEPTABLE_COLLISION)
+              .setEndingCollisionPair(shapes_in_contact);
 
         if (terminating)
           terminate_collision = shapes_in_contact;
@@ -282,15 +303,17 @@ IfcoScene::PlanningResult IfcoScene::plan(const rl::math::Vector& initial_config
       if (terminate_collision)
       {
         if (required_collisions.empty())
-          return result(PlanningResult::Outcome::ACCEPTABLE_COLLISION, *terminate_collision);
+          return result.setOutcome(PlanningResult::Outcome::ACCEPTABLE_COLLISION)
+              .setEndingCollisionPair(*terminate_collision);
         else
-          return PlanningResult{ PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS, next_step, *terminate_collision,
-                                 required_collisions };
+          return result.setOutcome(PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS)
+              .setEndingCollisionPair(*terminate_collision)
+              .setMissedRequiredCollisions(required_collisions);
       }
     }
   }
 
-  return result(PlanningResult::Outcome::STEPS_LIMIT);
+  return result.setOutcome(PlanningResult::Outcome::STEPS_LIMIT);
 }
 
 bool IfcoScene::isSensorized(const std::string& part_name) const

@@ -56,10 +56,13 @@ public:
     } outcome;
     rl::math::Vector final_configuration;
     boost::optional<std::pair<std::string, std::string>> ending_collision_pair;
-    std::set<std::string> missed_required_collisions;
+    boost::optional<std::set<std::string>> missed_required_collisions;
 
     operator bool() const;
     std::string description() const;
+    PlanningResult& setOutcome(Outcome outcome);
+    PlanningResult& setEndingCollisionPair(std::pair<std::string, std::string> ending_collision_pair);
+    PlanningResult& setMissedRequiredCollisions(std::set<std::string> missed_required_collisions);
   };
 
   PlanningResult plan(const rl::math::Vector& initial_configuration, const rl::math::Transform& goal_pose,
