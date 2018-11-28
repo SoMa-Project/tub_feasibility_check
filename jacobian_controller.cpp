@@ -72,9 +72,9 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   }
 }
 
-JacobianController::PlanningResult
-JacobianController::plan(const rl::math::Vector& initial_configuration, const rl::math::Transform& goal_pose,
-                         const AllowedCollisions& allowed_collisions)
+JacobianController::PlanningResult JacobianController::plan(const rl::math::Vector& initial_configuration,
+                                                            const rl::math::Transform& goal_pose,
+                                                            const AllowedCollisions& allowed_collisions)
 {
   using namespace rl::math;
 
@@ -159,7 +159,8 @@ JacobianController::plan(const rl::math::Vector& initial_configuration, const rl
 
       for (rl::sg::CollisionMap::iterator it = collisions.begin(); it != collisions.end(); it++)
       {
-        auto& shapes_in_contact = it->first;
+        auto shapes_in_contact = std::make_pair(getPartName(it->first.first), getPartName(it->first.second));
+
         if (!isSensorized(shapes_in_contact.first) && !isSensorized(shapes_in_contact.second))
           return result.setOutcome(PlanningResult::Outcome::UNSENSORIZED_COLLISION)
               .setEndingCollisionPair(shapes_in_contact);
@@ -201,6 +202,18 @@ JacobianController::plan(const rl::math::Vector& initial_configuration, const rl
   }
 
   return result.setOutcome(PlanningResult::Outcome::STEPS_LIMIT);
+}
+
+std::string JacobianController::getPartName(const std::string& address)
+{
+  auto split_position = address.find("_");
+  auto body_address_str = address.substr(0, split_position);
+  auto shape_number_str = address.substr(split_position + 1);
+
+  auto body_address = reinterpret_cast<rl::sg::Body*>(std::stol(body_address_str, nullptr, 16));
+  std::size_t shape_number = std::stoul(shape_number_str);
+
+  return body_address->getShape(shape_number)->getName();
 }
 
 bool JacobianController::isSensorized(const std::string& part_name) const

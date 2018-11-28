@@ -162,7 +162,7 @@ std::string ServiceWorker::getBoxName(std::size_t box_id) const
 std::string ServiceWorker::getBoxShapeName(std::size_t box_id) const
 {
   std::stringstream ss;
-  ss << "box_" << box_id << "_";
+  ss << "box_" << box_id;
   return ss.str();
 }
 

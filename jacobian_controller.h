@@ -44,11 +44,15 @@ public:
                       const AllowedCollisions& allowed_collisions);
 
 private:
+  std::string getPartName(const std::string& address);
   bool isSensorized(const std::string& part_name) const;
 
   std::shared_ptr<rl::kin::Kinematics> kinematics_;
   std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
   rl::plan::DistanceModel distance_model_;
+
+  // this is needed to find shape names from collision pairs - the version in master returns addresses
+  std::unordered_map<std::string, std::string> address_shape_mapping_;
 
 signals:
   void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);

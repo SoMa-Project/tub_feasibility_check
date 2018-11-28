@@ -19,6 +19,6 @@ rl::math::Vector stdToEigen(const std::vector<T>& std_vector)
     eigen_vector(i) = std_vector[i];
   return eigen_vector;
 }
-}
+}  // namespace utilities
 
 #endif

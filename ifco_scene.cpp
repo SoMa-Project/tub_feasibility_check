@@ -85,7 +85,6 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
     material->transparency.setValue(0.5);
     appearance->material.setValue(material);
     vrml_shape->appearance.setValue(appearance);
-    body->setName(name);
 
     box->size.setValue(static_cast<float>(dimensions[0]), static_cast<float>(dimensions[1]),
                        static_cast<float>(dimensions[2]));
@@ -93,6 +92,7 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
 
     auto sg_shape = body->create(vrml_shape);
     sg_shape->setTransform(box_pose);
+    sg_shape->setName(name);
   };
 
   createBoxInScene(*bullet_scene);
@@ -109,7 +109,7 @@ void IfcoScene::removeBoxes()
     for (std::size_t i = ifco_model->getNumBodies() - 1; i > 0; --i)
     {
       auto body = ifco_model->getBody(i);
-      if (body->getName().find("box") != std::string::npos)
+      if (body->getNumShapes() && body->getShape(0)->getName().find("box") != std::string::npos)
         ifco_model->remove(body);
     }
   };
