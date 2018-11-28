@@ -65,7 +65,9 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		Viewer.h
                 ifco_scene.h
                 service_worker.h
+                jacobian_controller.h
                 utilities.h
+                problem_statement.h
 	)
 	
 	set(
@@ -75,6 +77,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		Viewer.cpp
                 ifco_scene.cpp
                 service_worker.cpp
+                jacobian_controller.cpp
 #		${rl_SOURCE_DIR}/robotics-library.rc
 	)
 	
@@ -83,6 +86,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		Viewer.h
                 service_worker.h
                 ifco_scene.h
+                jacobian_controller.h
 		OPTIONS
 		-DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
 	)

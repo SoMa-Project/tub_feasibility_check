@@ -20,62 +20,34 @@ class IfcoScene : public QObject
 {
   Q_OBJECT
 public:
-  struct CollisionSettings
-  {
-    bool terminating;
-    bool required;
-  };
-
-  typedef std::unordered_map<std::string, CollisionSettings> AllowedCollisions;
-
   ~IfcoScene();
   static std::unique_ptr<IfcoScene> load(const std::string& scene_graph_file, const std::string& kinematics_file);
+
+  template <typename T>
+  std::shared_ptr<T> makePlanner()
+  {
+    return std::make_shared<T>(kinematics, bullet_scene, viewer_);
+  }
+
   void connectToViewer(Viewer* new_viewer);
 
   void moveIfco(const rl::math::Transform& ifco_pose);
   void createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose, const std::string& name);
-
   void removeBoxes();
+
   std::size_t dof() const
   {
-    return model.getDof();
+    return kinematics->getDof();
   }
-
-  struct PlanningResult
-  {
-    enum class Outcome
-    {
-      REACHED,
-      ACCEPTABLE_COLLISION,
-      UNACCEPTABLE_COLLISION,
-      UNSENSORIZED_COLLISION,
-      SINGULARITY,
-      JOINT_LIMIT,
-      STEPS_LIMIT,
-      MISSED_REQUIRED_COLLISIONS
-    } outcome;
-    rl::math::Vector final_configuration;
-    boost::optional<std::pair<std::string, std::string>> ending_collision_pair;
-    boost::optional<std::set<std::string>> missed_required_collisions;
-
-    operator bool() const;
-    std::string description() const;
-    PlanningResult& setOutcome(Outcome outcome);
-    PlanningResult& setEndingCollisionPair(std::pair<std::string, std::string> ending_collision_pair);
-    PlanningResult& setMissedRequiredCollisions(std::set<std::string> missed_required_collisions);
-  };
-
-  PlanningResult plan(const rl::math::Vector& initial_configuration, const rl::math::Transform& goal_pose,
-                      const AllowedCollisions& allowed_collisions);
 
 private:
   IfcoScene() : QObject(nullptr)
   {
     qRegisterMetaType<rl::math::Vector>("rl::math::Vector");
+
+    // WARNING! the mistake in the typename string is intentional, this is the typename string that Qt 4.8.6 expects
     qRegisterMetaType<std::function<void(rl::sg::Scene&)>>("std::function<void(rl::sg::Scene&");
   }
-
-  bool isSensorized(const std::string& part_name) const;
 
   std::vector<std::array<float, 3>> colors = { { 0, 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } };
   decltype(colors)::const_iterator current_color = colors.begin();
@@ -83,13 +55,12 @@ private:
   std::string scene_graph_file;
   std::string kinematics_file;
 
-  std::unique_ptr<rl::kin::Kinematics> kinematics;
-  rl::plan::DistanceModel model;
-  rl::sg::bullet::Scene bullet_scene;
+  std::shared_ptr<rl::kin::Kinematics> kinematics;
+  std::shared_ptr<rl::sg::bullet::Scene> bullet_scene;
 
   std::size_t ifco_model_index;
 
-  Viewer* viewer = nullptr;
+  Viewer* viewer_ = nullptr;
 
 signals:
   void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);

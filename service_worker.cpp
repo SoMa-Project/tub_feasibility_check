@@ -26,6 +26,7 @@
 
 #include <QMutexLocker>
 #include "service_worker.h"
+#include "jacobian_controller.h"
 #include "utilities.h"
 
 void ServiceWorker::spinOnce()
@@ -59,15 +60,15 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
 
-  IfcoScene::AllowedCollisions allowed_collisions;
+  AllowedCollisions allowed_collisions;
   for (auto& allowed_collision_msg : req.allowed_collisions)
   {
     auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
                            getBoxShapeName(allowed_collision_msg.box_id) :
                            allowed_collision_msg.constraint_name;
     allowed_collisions.insert(
-        { object_name, IfcoScene::CollisionSettings{ static_cast<bool>(allowed_collision_msg.terminate_on_collision),
-                                                     static_cast<bool>(allowed_collision_msg.required_collision) } });
+        { object_name, CollisionSettings{ static_cast<bool>(allowed_collision_msg.terminate_on_collision),
+                                          static_cast<bool>(allowed_collision_msg.required_collision) } });
   }
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
@@ -81,7 +82,8 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  auto result = ifco_scene->plan(initial_configuration, goal_transform, allowed_collisions);
+  auto jacobian_controller = ifco_scene->makePlanner<JacobianController>();
+  auto result = jacobian_controller->plan(initial_configuration, goal_transform, allowed_collisions);
 
   if (result)
   {
@@ -132,7 +134,7 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
     ROS_INFO_STREAM("Trying to plan to the sampled frame number "
                     << i << ". Translation sample: " << sampled_point.transpose() << ", rotation sample: "
                     << sampled_rotation[0] << " " << sampled_rotation[1] << " " << sampled_rotation[2]);
-    auto result = ifco_scene->plan(initial_configuration, sampled_transform, allowed_collisions);
+    auto result = jacobian_controller->plan(initial_configuration, sampled_transform, allowed_collisions);
 
     if (result)
     {
