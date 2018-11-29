@@ -5,6 +5,7 @@
 #include <rl/kin/Kinematics.h>
 #include <rl/sg/bullet/Scene.h>
 #include <rl/plan/DistanceModel.h>
+#include <rl/plan/BeliefState.h>
 #include "Viewer.h"
 #include "problem_statement.h"
 #include <unordered_map>
@@ -13,7 +14,7 @@ class JacobianController : public QObject
 {
   Q_OBJECT
 public:
-  struct PlanningResult
+  struct Result
   {
     enum class Outcome
     {
@@ -25,31 +26,56 @@ public:
       JOINT_LIMIT,
       STEPS_LIMIT,
       MISSED_REQUIRED_COLLISIONS
-    } outcome;
-    rl::math::Vector final_configuration;
-    boost::optional<std::pair<std::string, std::string>> ending_collision_pair;
-    boost::optional<std::set<std::string>> missed_required_collisions;
+    };
+
+    rl::plan::BeliefState final_belief;
+    std::set<Outcome> outcomes;
 
     operator bool() const;
+    Result& setSingleOutcome(Outcome outcome);
     std::string description() const;
-    PlanningResult& setOutcome(Outcome outcome);
-    PlanningResult& setEndingCollisionPair(std::pair<std::string, std::string> ending_collision_pair);
-    PlanningResult& setMissedRequiredCollisions(std::set<std::string> missed_required_collisions);
+  };
+
+  struct Settings
+  {
+    rl::math::Vector joints_std_error;
+    std::size_t number_of_particles;
+    rl::math::Vector initial_std_error;
+    double delta;
+
+    static Settings NoUncertainty(std::size_t dof, double delta);
   };
 
   JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, Viewer* viewer = nullptr);
+                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
+                     boost::optional<Viewer*> viewer = boost::none);
 
-  PlanningResult plan(const rl::math::Vector& initial_configuration, const rl::math::Transform& goal_pose,
-                      const AllowedCollisions& allowed_collisions);
+  Result go(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
+            const AllowedCollisions& allowed_collisions, const Settings& settings);
 
 private:
+  // for now, the container is flat. if information regarding particles is needed, than it should be nested
+  typedef std::vector<std::pair<std::string, std::string>> CollisionPairs;
+  struct CollisionConstraintsCheck
+  {
+    std::set<Result::Outcome> failures;
+    std::set<std::string> seen_required_world_collisions;
+    bool success_termination = false;
+  };
+
+  CollisionConstraintsCheck checkCollisionConstraints(const CollisionPairs& collisions,
+                                                      const AllowedCollisions& allowed_collisions);
+  std::vector<rl::math::Vector> calculateQDots(const rl::plan::BeliefState& belief,
+                                               const rl::math::Transform& goal_pose, double delta);
+  void moveBelief(rl::plan::BeliefState& belief, const std::vector<rl::math::Real>& q_dots);
+
   std::string getPartName(const std::string& address);
   bool isSensorized(const std::string& part_name) const;
 
   std::shared_ptr<rl::kin::Kinematics> kinematics_;
   std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
-  rl::plan::DistanceModel distance_model_;
+  rl::plan::NoisyModel noisy_model_;
+  double delta_;
 
   // this is needed to find shape names from collision pairs - the version in master returns addresses
   std::unordered_map<std::string, std::string> address_shape_mapping_;

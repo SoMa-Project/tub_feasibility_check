@@ -59,6 +59,8 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
+  auto no_uncertainty_settings =
+      JacobianController::Settings::NoUncertainty(static_cast<std::size_t>(initial_configuration.size()), 0.017);
 
   AllowedCollisions allowed_collisions;
   for (auto& allowed_collision_msg : req.allowed_collisions)
@@ -83,16 +85,18 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
 
   ROS_INFO("Trying to plan to the goal frame");
   auto jacobian_controller = ifco_scene->makePlanner<JacobianController>();
-  auto result = jacobian_controller->plan(initial_configuration, goal_transform, allowed_collisions);
+  auto result =
+      jacobian_controller->go(initial_configuration, goal_transform, allowed_collisions, no_uncertainty_settings);
 
   if (result)
   {
     ROS_INFO_STREAM("Goal frame success: " << result.description());
     res.success = true;
-    res.final_configuration = utilities::eigenToStd(result.final_configuration);
+    res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
     return true;
   }
-  ROS_INFO_STREAM("Goal frame failure: " << result.description());
+
+  ROS_INFO_STREAM("Goal frame failures: " << result.description());
 
   std::array<std::uniform_real_distribution<double>, 3> coordinate_distributions = {
     std::uniform_real_distribution<double>(req.min_position_deltas[0], req.max_position_deltas[0]),
@@ -134,13 +138,14 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
     ROS_INFO_STREAM("Trying to plan to the sampled frame number "
                     << i << ". Translation sample: " << sampled_point.transpose() << ", rotation sample: "
                     << sampled_rotation[0] << " " << sampled_rotation[1] << " " << sampled_rotation[2]);
-    auto result = jacobian_controller->plan(initial_configuration, sampled_transform, allowed_collisions);
+    auto result =
+        jacobian_controller->go(initial_configuration, sampled_transform, allowed_collisions, no_uncertainty_settings);
 
     if (result)
     {
       ROS_INFO_STREAM("Success: " << result.description());
       res.success = true;
-      res.final_configuration = utilities::eigenToStd(result.final_configuration);
+      res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
       return true;
     }
     else

@@ -1,89 +1,107 @@
+#include <rl/plan/Particle.h>
 #include "jacobian_controller.h"
 
-JacobianController::PlanningResult::operator bool() const
+JacobianController::Result::operator bool() const
 {
-  return outcome == PlanningResult::Outcome::REACHED || outcome == PlanningResult::Outcome::ACCEPTABLE_COLLISION;
+  assert(outcomes.size());
+
+  if (outcomes.size() != 1)
+    return false;
+  Outcome outcome = *outcomes.begin();
+  return outcome == Result::Outcome::REACHED || outcome == Result::Outcome::ACCEPTABLE_COLLISION;
 }
 
-std::string JacobianController::PlanningResult::description() const
+std::string JacobianController::Result::description() const
 {
-  auto pairToString = [this]() { return ending_collision_pair->first + " with " + ending_collision_pair->second; };
-  switch (outcome)
+  auto describeOutcome = [](Outcome outcome) {
+    switch (outcome)
+    {
+      case Result::Outcome::REACHED:
+        return "reached the goal frame";
+      case Result::Outcome::JOINT_LIMIT:
+        return "violated the joint limit";
+      case Result::Outcome::SINGULARITY:
+        return "ended in the singularity";
+      case Result::Outcome::STEPS_LIMIT:
+        return "went over the steps limit";
+      case Result::Outcome::ACCEPTABLE_COLLISION:
+        return "ended on acceptable collision";
+      case Result::Outcome::UNACCEPTABLE_COLLISION:
+        return "ended on unacceptable collision";
+      case Result::Outcome::UNSENSORIZED_COLLISION:
+        return "ended on unsensorized collision";
+      case Result::Outcome::MISSED_REQUIRED_COLLISIONS:
+        return "missing required collisions";
+    }
+  };
+
+  std::stringstream ss;
+  bool first = true;
+  for (auto o : outcomes)
   {
-    case PlanningResult::Outcome::REACHED:
-      return "reached the goal frame";
-    case PlanningResult::Outcome::JOINT_LIMIT:
-      return "violated the joint limit";
-    case PlanningResult::Outcome::SINGULARITY:
-      return "ended in the singularity";
-    case PlanningResult::Outcome::STEPS_LIMIT:
-      return "went over the steps limit";
-    case PlanningResult::Outcome::ACCEPTABLE_COLLISION:
-      return "ended on acceptable collision: " + pairToString();
-    case PlanningResult::Outcome::UNACCEPTABLE_COLLISION:
-      return "ended on unacceptable collision: " + pairToString();
-    case PlanningResult::Outcome::UNSENSORIZED_COLLISION:
-      return "ended on unsensorized collision: " + pairToString();
-    case PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS:
-      std::stringstream ss;
-      ss << "missing required collisions: ";
-      for (const auto& c : *missed_required_collisions)
-        ss << c << ",";
-      ss << "\r";
-      return ss.str();
+    if (!first)
+      ss << ", ";
+    else
+      first = false;
+
+    ss << describeOutcome(o);
   }
+
+  return ss.str();
 }
 
-JacobianController::PlanningResult& JacobianController::PlanningResult::setOutcome(Outcome outcome)
+JacobianController::Result&
+JacobianController::Result::setSingleOutcome(JacobianController::Result::Outcome single_outcome)
 {
-  this->outcome = outcome;
-  return *this;
-}
+  outcomes.clear();
+  outcomes.insert(single_outcome);
 
-JacobianController::PlanningResult&
-JacobianController::PlanningResult::setEndingCollisionPair(std::pair<std::string, std::string> ending_collision_pair)
-{
-  this->ending_collision_pair = ending_collision_pair;
-  return *this;
-}
-
-JacobianController::PlanningResult&
-JacobianController::PlanningResult::setMissedRequiredCollisions(std::set<std::string> missed_required_collisions)
-{
-  this->missed_required_collisions = missed_required_collisions;
   return *this;
 }
 
 JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                                       std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, Viewer* viewer)
+                                       std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
+                                       boost::optional<Viewer*> viewer)
   : kinematics_(kinematics), bullet_scene_(bullet_scene)
 {
-  distance_model_.kin = kinematics_.get();
-  distance_model_.model = bullet_scene_->getModel(0);
-  distance_model_.scene = bullet_scene_.get();
+  noisy_model_.kin = kinematics_.get();
+  noisy_model_.model = bullet_scene_->getModel(0);
+  noisy_model_.scene = bullet_scene_.get();
+  noisy_model_.motionError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
+  noisy_model_.initialError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
 
   if (viewer)
   {
-    QObject::connect(this, SIGNAL(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)), viewer,
+    QObject::connect(this, SIGNAL(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)), *viewer,
                      SLOT(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)));
-    QObject::connect(this, SIGNAL(reset()), viewer, SLOT(reset()));
-    QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)), viewer,
+    QObject::connect(this, SIGNAL(reset()), *viewer, SLOT(reset()));
+    QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)), *viewer,
                      SLOT(drawConfiguration(const rl::math::Vector&)));
   }
 }
 
-JacobianController::PlanningResult JacobianController::plan(const rl::math::Vector& initial_configuration,
-                                                            const rl::math::Transform& goal_pose,
-                                                            const AllowedCollisions& allowed_collisions)
+JacobianController::Result JacobianController::go(const rl::math::Vector& initial_configuration,
+                                                  const rl::math::Transform& to_pose,
+                                                  const AllowedCollisions& allowed_collisions, const Settings& settings)
 {
   using namespace rl::math;
+  using rl::plan::BeliefState;
+  using rl::plan::Particle;
 
   static const double delta = 0.017;
   std::size_t maximum_steps = static_cast<std::size_t>(10 / delta);
+  *noisy_model_.motionError = settings.joints_std_error;
+  *noisy_model_.initialError = settings.initial_std_error;
 
-  Vector next_step = initial_configuration;
-  PlanningResult result;
-  result.final_configuration = initial_configuration;
+  std::vector<Particle> initial_particles(settings.number_of_particles);
+  for (std::size_t i = 0; i < settings.number_of_particles; ++i)
+  {
+    initial_particles[i].config.resize(initial_configuration.size());
+    noisy_model_.sampleInitialError(initial_particles[i].config);
+    initial_particles[i].config += initial_configuration;
+  }
+
+  BeliefState current_belief(initial_particles, &noisy_model_);
 
   std::set<std::string> required_collisions;
   for (auto& item : allowed_collisions)
@@ -95,115 +113,133 @@ JacobianController::PlanningResult JacobianController::plan(const rl::math::Vect
   }
 
   emit reset();
-  emit drawConfiguration(next_step);
+  emit drawConfiguration(current_belief.configMean());
 
+  Result result;
   for (std::size_t i = 0; i < maximum_steps; ++i)
   {
+    auto q_dots = calculateQDots(current_belief, to_pose, delta);
+
+    auto& particles = current_belief.getParticles();
+    std::vector<Particle> next_particles(particles.size());
+    std::vector<std::pair<std::string, std::string>> collisions;
+    for (std::size_t i = 0; i < particles.size(); ++i)
+    {
+      next_particles[i].config = particles[i].config + q_dots[i];
+      if (!noisy_model_.isValid(next_particles[i].config))
+        result.outcomes.insert(Result::Outcome::JOINT_LIMIT);
+
+      noisy_model_.setPosition(next_particles[i].config);
+      noisy_model_.updateFrames();
+      noisy_model_.updateJacobian();
+      noisy_model_.updateJacobianInverse();
+      noisy_model_.isColliding();
+
+      if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
+        result.outcomes.insert(Result::Outcome::SINGULARITY);
+
+      auto collision_pairs = noisy_model_.scene->getLastCollisions();
+      std::transform(collision_pairs.begin(), collision_pairs.end(), std::back_inserter(collisions),
+                     [this](decltype(collision_pairs)::value_type c) {
+                       return std::make_pair(getPartName(c.first.first), getPartName(c.first.second));
+                     });
+    }
+
+    current_belief = BeliefState(next_particles, &noisy_model_);
+    // TODO rewrite to remove copying
+    result.final_belief = current_belief;
+
+    emit drawConfiguration(current_belief.configMean());
+    auto collision_constraints_check = checkCollisionConstraints(collisions, allowed_collisions);
+    std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
+              std::inserter(result.outcomes, result.outcomes.begin()));
+
+    decltype(required_collisions) intersection;
+    std::set_difference(required_collisions.begin(), required_collisions.end(),
+                        collision_constraints_check.seen_required_world_collisions.begin(),
+                        collision_constraints_check.seen_required_world_collisions.end(),
+                        std::inserter(intersection, intersection.begin()));
+    required_collisions = intersection;
+
+    if (!result.outcomes.empty())
+      return result;
+
+    if (collision_constraints_check.success_termination)
+      return result.setSingleOutcome(required_collisions.empty() ? Result::Outcome::ACCEPTABLE_COLLISION :
+                                                                   Result::Outcome::MISSED_REQUIRED_COLLISIONS);
+  }
+
+  return result.setSingleOutcome(Result::Outcome::STEPS_LIMIT);
+}
+
+std::vector<rl::math::Vector> JacobianController::calculateQDots(const rl::plan::BeliefState& belief,
+                                                                 const rl::math::Transform& goal_pose, double delta)
+{
+  using namespace rl::math;
+  using rl::math::transform::toDelta;
+
+  auto& particles = belief.getParticles();
+  std::vector<rl::math::Vector> qdots(particles.size(), Vector(static_cast<int>(noisy_model_.getDof())));
+
+  for (std::size_t i = 0; i < particles.size(); ++i)
+  {
     // Update the model
-    distance_model_.setPosition(next_step);
-    distance_model_.updateFrames();
-    distance_model_.updateJacobian();
-    distance_model_.updateJacobianInverse();
+    noisy_model_.setPosition(particles[i].config);
+    noisy_model_.updateFrames();
+    noisy_model_.updateJacobian();
+    noisy_model_.updateJacobianInverse();
 
     // Compute the jacobian
-    Transform ee_world = distance_model_.forwardPosition();
+    Transform ee_world = noisy_model_.forwardPosition();
     Vector6 tdot;
     transform::toDelta(ee_world, goal_pose, tdot);
 
     // Compute the velocity
-    Vector qdot(static_cast<int>(distance_model_.getDof()));
-    qdot.setZero();
-    distance_model_.inverseVelocity(tdot, qdot);
+    qdots[i].setZero();
+    noisy_model_.inverseVelocity(tdot, qdots[i]);
 
-    // Limit the velocity and decide if reached goal
-    if (qdot.norm() < delta)
-    {
-      if (required_collisions.empty())
-        return result.setOutcome(PlanningResult::Outcome::REACHED);
-      else
-        return result.setOutcome(PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS)
-            .setMissedRequiredCollisions(required_collisions);
-    }
+    if (qdots[i].norm() < delta)
+      qdots[i].setZero();
     else
     {
-      qdot.normalize();
-      qdot *= delta;
-    }
-
-    // Update the configuration
-    next_step = next_step + qdot;
-    result.final_configuration = next_step;
-
-    // Check for joint limits
-    if (!distance_model_.isValid(next_step))
-      return result.setOutcome(PlanningResult::Outcome::JOINT_LIMIT);
-
-    // Check for singularity
-    distance_model_.setPosition(next_step);
-    distance_model_.updateFrames();
-    distance_model_.updateJacobian();
-    distance_model_.updateJacobianInverse();
-
-    emit drawConfiguration(next_step);
-
-    if (distance_model_.getDof() > 3 && distance_model_.getManipulabilityMeasure() < 1.0e-3)
-      return result.setOutcome(PlanningResult::Outcome::SINGULARITY);
-
-    // Check for collision
-    distance_model_.isColliding();
-    auto collisions = distance_model_.scene->getLastCollisions();
-    // TODO refactor this block, it is unreadable
-    if (!collisions.empty())
-    {
-      boost::optional<std::pair<std::string, std::string>> terminate_collision;
-
-      for (rl::sg::CollisionMap::iterator it = collisions.begin(); it != collisions.end(); it++)
-      {
-        auto shapes_in_contact = std::make_pair(getPartName(it->first.first), getPartName(it->first.second));
-
-        if (!isSensorized(shapes_in_contact.first) && !isSensorized(shapes_in_contact.second))
-          return result.setOutcome(PlanningResult::Outcome::UNSENSORIZED_COLLISION)
-              .setEndingCollisionPair(shapes_in_contact);
-
-        bool terminating;
-        if (allowed_collisions.count(shapes_in_contact.first))
-        {
-          auto& collision_settings = allowed_collisions.at(shapes_in_contact.first);
-          terminating = collision_settings.terminating;
-          if (collision_settings.required)
-            required_collisions.erase(shapes_in_contact.first);
-        }
-        else if (allowed_collisions.count(shapes_in_contact.second))
-        {
-          auto& collision_settings = allowed_collisions.at(shapes_in_contact.second);
-          terminating = collision_settings.terminating;
-          if (collision_settings.required)
-            required_collisions.erase(shapes_in_contact.second);
-        }
-        else
-          return result.setOutcome(PlanningResult::Outcome::UNACCEPTABLE_COLLISION)
-              .setEndingCollisionPair(shapes_in_contact);
-
-        if (terminating)
-          terminate_collision = shapes_in_contact;
-      }
-
-      if (terminate_collision)
-      {
-        if (required_collisions.empty())
-          return result.setOutcome(PlanningResult::Outcome::ACCEPTABLE_COLLISION)
-              .setEndingCollisionPair(*terminate_collision);
-        else
-          return result.setOutcome(PlanningResult::Outcome::MISSED_REQUIRED_COLLISIONS)
-              .setEndingCollisionPair(*terminate_collision)
-              .setMissedRequiredCollisions(required_collisions);
-      }
+      qdots[i].normalize();
+      qdots[i] *= delta;
     }
   }
 
-  return result.setOutcome(PlanningResult::Outcome::STEPS_LIMIT);
+  return qdots;
 }
 
+JacobianController::CollisionConstraintsCheck JacobianController::checkCollisionConstraints(
+    const CollisionPairs& collisions, const AllowedCollisions& allowed_collisions)
+{
+  CollisionConstraintsCheck check;
+  bool terminating_collision_present = false;
+
+  for (auto& shapes_in_contact : collisions)
+  {
+    if (!isSensorized(shapes_in_contact.first))
+      check.failures.insert(Result::Outcome::UNSENSORIZED_COLLISION);
+
+    if (allowed_collisions.count(shapes_in_contact.second))
+    {
+      auto& collision_settings = allowed_collisions.at(shapes_in_contact.second);
+      if (collision_settings.terminating)
+        terminating_collision_present = true;
+      if (collision_settings.required)
+        check.seen_required_world_collisions.insert(shapes_in_contact.second);
+    }
+    else
+      check.failures.insert(Result::Outcome::UNACCEPTABLE_COLLISION);
+  }
+
+  if (terminating_collision_present && check.failures.empty())
+    check.success_termination = true;
+
+  return check;
+}
+
+// will be killed by the hybrid automatons code
 std::string JacobianController::getPartName(const std::string& address)
 {
   auto split_position = address.find("_");
@@ -219,4 +255,15 @@ std::string JacobianController::getPartName(const std::string& address)
 bool JacobianController::isSensorized(const std::string& part_name) const
 {
   return part_name.find("sensor") != std::string::npos;
+}
+
+JacobianController::Settings JacobianController::Settings::NoUncertainty(std::size_t dof, double delta)
+{
+  Settings s;
+  s.joints_std_error = rl::math::Vector::Zero(static_cast<int>(dof));
+  s.initial_std_error = rl::math::Vector::Zero(static_cast<int>(dof));
+  s.delta = delta;
+  s.number_of_particles = 1;
+
+  return s;
 }
