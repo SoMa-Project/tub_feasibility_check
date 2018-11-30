@@ -88,8 +88,7 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   using rl::plan::BeliefState;
   using rl::plan::Particle;
 
-  static const double delta = 0.017;
-  std::size_t maximum_steps = static_cast<std::size_t>(10 / delta);
+  std::size_t maximum_steps = static_cast<std::size_t>(10 / settings.delta);
   *noisy_model_.motionError = settings.joints_std_error;
   *noisy_model_.initialError = settings.initial_std_error;
 
@@ -118,18 +117,25 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   Result result;
   for (std::size_t i = 0; i < maximum_steps; ++i)
   {
-    auto q_dots = calculateQDots(current_belief, to_pose, delta);
+    auto q_dot = calculateQDot(current_belief, to_pose, settings.delta);
+    if (q_dot.isZero())
+      return result.setSingleOutcome(required_collisions.empty() ? Result::Outcome::REACHED :
+                                                                   Result::Outcome::MISSED_REQUIRED_COLLISIONS);
 
     auto& particles = current_belief.getParticles();
     std::vector<Particle> next_particles(particles.size());
     std::vector<std::pair<std::string, std::string>> collisions;
-    for (std::size_t i = 0; i < particles.size(); ++i)
+    for (std::size_t j = 0; j < particles.size(); ++j)
     {
-      next_particles[i].config = particles[i].config + q_dots[i];
-      if (!noisy_model_.isValid(next_particles[i].config))
+      Vector noise(noisy_model_.getDof());
+      noisy_model_.sampleMotionError(noise);
+
+      auto added_noise = (q_dot.array().abs().sqrt() * noise.array()).matrix();
+      next_particles[j].config = particles[j].config + q_dot + added_noise;
+      if (!noisy_model_.isValid(next_particles[j].config))
         result.outcomes.insert(Result::Outcome::JOINT_LIMIT);
 
-      noisy_model_.setPosition(next_particles[i].config);
+      noisy_model_.setPosition(next_particles[j].config);
       noisy_model_.updateFrames();
       noisy_model_.updateJacobian();
       noisy_model_.updateJacobianInverse();
@@ -172,42 +178,36 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   return result.setSingleOutcome(Result::Outcome::STEPS_LIMIT);
 }
 
-std::vector<rl::math::Vector> JacobianController::calculateQDots(const rl::plan::BeliefState& belief,
-                                                                 const rl::math::Transform& goal_pose, double delta)
+rl::math::Vector JacobianController::calculateQDot(const rl::plan::BeliefState& belief,
+                                                   const rl::math::Transform& goal_pose, double delta)
 {
   using namespace rl::math;
   using rl::math::transform::toDelta;
 
-  auto& particles = belief.getParticles();
-  std::vector<rl::math::Vector> qdots(particles.size(), Vector(static_cast<int>(noisy_model_.getDof())));
+  // Update the model
+  noisy_model_.setPosition(belief.configMean());
+  noisy_model_.updateFrames();
+  noisy_model_.updateJacobian();
+  noisy_model_.updateJacobianInverse();
 
-  for (std::size_t i = 0; i < particles.size(); ++i)
+  // Compute the jacobian
+  Transform ee_world = noisy_model_.forwardPosition();
+  Vector6 tdot;
+  transform::toDelta(ee_world, goal_pose, tdot);
+
+  // Compute the velocity
+  Vector qdot = Vector::Zero(kinematics_->getDof());
+  noisy_model_.inverseVelocity(tdot, qdot);
+
+  if (qdot.norm() < delta)
+    qdot.setZero();
+  else
   {
-    // Update the model
-    noisy_model_.setPosition(particles[i].config);
-    noisy_model_.updateFrames();
-    noisy_model_.updateJacobian();
-    noisy_model_.updateJacobianInverse();
-
-    // Compute the jacobian
-    Transform ee_world = noisy_model_.forwardPosition();
-    Vector6 tdot;
-    transform::toDelta(ee_world, goal_pose, tdot);
-
-    // Compute the velocity
-    qdots[i].setZero();
-    noisy_model_.inverseVelocity(tdot, qdots[i]);
-
-    if (qdots[i].norm() < delta)
-      qdots[i].setZero();
-    else
-    {
-      qdots[i].normalize();
-      qdots[i] *= delta;
-    }
+    qdot.normalize();
+    qdot *= delta;
   }
 
-  return qdots;
+  return qdot;
 }
 
 JacobianController::CollisionConstraintsCheck JacobianController::checkCollisionConstraints(

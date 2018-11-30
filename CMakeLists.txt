@@ -31,6 +31,8 @@ find_package(Bullet REQUIRED)
 find_package(SoQt REQUIRED)
 find_package(LibXml2 REQUIRED)
 
+enable_testing()
+
 
 add_service_files(
    FILES
@@ -97,14 +99,33 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		${SRCS}
 		${MOC_SRCS}
 	)
-	
+
+        qt4_wrap_cpp(
+            TEST_MOC_SRCS
+            ifco_scene.h
+            jacobian_controller.h
+        )
+        add_executable(test_jacobian_controller
+            ifco_scene.cpp
+            jacobian_controller.cpp
+            test/jacobian_controller.cpp
+            ${TEST_MOC_SRCS})
+        add_test(NAME test_jacobian_controller COMMAND test_jacobian_controller)
+
 	target_compile_definitions(
 		kinematics_check
 		PUBLIC
 		${QT_DEFINITIONS}
 		${SOQT_DEFINITIONS}
 	)
-	
+
+        target_compile_definitions(
+                test_jacobian_controller
+                PUBLIC
+                ${QT_DEFINITIONS}
+                ${SOQT_DEFINITIONS}
+        )
+
 	target_include_directories(
 		kinematics_check
 		PUBLIC
@@ -116,9 +137,21 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		${BULLET_INCLUDE_DIRS}
 		${LIBXML2_INCLUDE_DIRS}
 	)
-	
+
+        target_include_directories(
+                test_jacobian_controller
+                PUBLIC
+                ${Boost_INCLUDE_DIR}
+                ${catkin_INCLUDE_DIRS}
+                ${OPENGL_INCLUDE_DIR}
+                ${QT_INCLUDES}
+                ${SOQT_INCLUDE_DIRS}
+                ${BULLET_INCLUDE_DIRS}
+                ${LIBXML2_INCLUDE_DIRS}
+        )
+
 	target_link_libraries(
-		kinematics_check
+                test_jacobian_controller
 		rlplan
 		rlkin
 		rlsg
@@ -131,5 +164,20 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		${BULLET_LIBRARIES}
 		${LIBXML2_LIBRARIES}
 	)
-	
+
+        target_link_libraries(
+                kinematics_check
+                rlplan
+                rlkin
+                rlsg
+                ${catkin_LIBRARIES}
+                ${ROS_LIBRARIES}
+                ${catkin_LIBRARIES}
+                ${OPENGL_LIBRARIES}
+                ${QT_LIBRARIES}
+                ${SOQT_LIBRARIES}
+                ${BULLET_LIBRARIES}
+                ${LIBXML2_LIBRARIES}
+        )
+
 endif(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)

@@ -60,7 +60,7 @@ private:
 
   std::size_t ifco_model_index;
 
-  Viewer* viewer_ = nullptr;
+  boost::optional<Viewer*> viewer_;
 
 signals:
   void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);

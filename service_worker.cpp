@@ -49,6 +49,7 @@ void ServiceWorker::start(unsigned rate)
 bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
                           kinematics_check::CheckKinematics::Response& res)
 {
+  const double delta = 0.017;
   ROS_INFO("Receiving query");
   if (!checkParameters(req))
     return false;
@@ -59,8 +60,8 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
-  auto no_uncertainty_settings =
-      JacobianController::Settings::NoUncertainty(static_cast<std::size_t>(initial_configuration.size()), 0.017);
+  JacobianController::Settings no_uncertainty_settings =
+      JacobianController::Settings::NoUncertainty(static_cast<std::size_t>(initial_configuration.size()), delta);
 
   AllowedCollisions allowed_collisions;
   for (auto& allowed_collision_msg : req.allowed_collisions)

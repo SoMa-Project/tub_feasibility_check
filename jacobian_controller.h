@@ -38,10 +38,10 @@ public:
 
   struct Settings
   {
-    rl::math::Vector joints_std_error;
     std::size_t number_of_particles;
-    rl::math::Vector initial_std_error;
     double delta;
+    rl::math::Vector initial_std_error;
+    rl::math::Vector joints_std_error;
 
     static Settings NoUncertainty(std::size_t dof, double delta);
   };
@@ -65,8 +65,8 @@ private:
 
   CollisionConstraintsCheck checkCollisionConstraints(const CollisionPairs& collisions,
                                                       const AllowedCollisions& allowed_collisions);
-  std::vector<rl::math::Vector> calculateQDots(const rl::plan::BeliefState& belief,
-                                               const rl::math::Transform& goal_pose, double delta);
+  rl::math::Vector calculateQDot(const rl::plan::BeliefState& belief, const rl::math::Transform& goal_pose,
+                                 double delta);
   void moveBelief(rl::plan::BeliefState& belief, const std::vector<rl::math::Real>& q_dots);
 
   std::string getPartName(const std::string& address);
