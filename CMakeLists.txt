@@ -71,7 +71,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
                 jacobian_controller.h
                 utilities.h
                 problem_statement.h
-                workspace_constraints.h
+				workspace_samplers.h
         )
 
         set(
@@ -83,7 +83,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
                 service_worker.cpp
                 jacobian_controller.cpp
 #		${rl_SOURCE_DIR}/robotics-library.rc
-	)
+				workspace_samplers.cpp)
 	
 	qt4_wrap_cpp(
 		MOC_SRCS
@@ -110,6 +110,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
         add_executable(test_jacobian_controller
             ifco_scene.cpp
             jacobian_controller.cpp
+            workspace_samplers.cpp
             test/test_jacobian_controller.cpp
             ${TEST_MOC_SRCS})
         add_test(NAME test_jacobian_controller COMMAND test_jacobian_controller)

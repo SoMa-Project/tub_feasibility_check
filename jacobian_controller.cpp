@@ -60,8 +60,7 @@ JacobianController::Result::setSingleOutcome(JacobianController::Result::Outcome
 }
 
 JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                                       std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
-                                       double delta,
+                                       std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta,
                                        boost::optional<Viewer*> viewer)
   : kinematics_(kinematics), bullet_scene_(bullet_scene), delta_(delta)
 {
@@ -71,7 +70,7 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   noisy_model_.motionError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
   noisy_model_.initialError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
 
-  uniform_sampler_.model = &noisy_model_;
+  random_engine_.seed(time(nullptr));
 
   if (viewer)
   {
@@ -184,25 +183,18 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   return result.setSingleOutcome(Result::Outcome::STEPS_LIMIT);
 }
 
-boost::optional<rl::math::Vector>
-JacobianController::sample(const rl::math::Vector& initial_configuration, const AllowedCollisions& allowed_collisions,
-                           std::function<bool(rl::math::Transform&)> workspace_constraints, unsigned maximum_attempts)
+boost::optional<rl::math::Vector> JacobianController::sample(const rl::math::Vector& initial_configuration,
+                                                             const AllowedCollisions& allowed_collisions,
+                                                             const WorkspaceSampler& sampler, unsigned maximum_attempts)
 {
   for (unsigned i = 0; i < maximum_attempts; ++i)
   {
-    rl::math::Vector random_sample(kinematics_->getDof());
-    uniform_sampler_.generate(random_sample);
+    auto sampled_pose = sampler.generate(random_engine_);
 
-    noisy_model_.setPosition(random_sample);
-    noisy_model_.updateFrames();
-    auto pose = noisy_model_.forwardPosition();
-    if (!workspace_constraints(pose))
-      continue;
-
-    auto result =
-        go(initial_configuration, pose, allowed_collisions, Settings::NoUncertainty(kinematics_->getDof(), delta_));
+    auto result = go(initial_configuration, sampled_pose, allowed_collisions,
+                     Settings::NoUncertainty(kinematics_->getDof(), delta_));
     if (result)
-      return random_sample;
+      return result.final_belief.configMean();
   }
 
   return boost::none;

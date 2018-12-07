@@ -7,7 +7,7 @@
 #include "../ifco_scene.h"
 #include "../jacobian_controller.h"
 #include "../MainWindow.h"
-#include "../workspace_constraints.h"
+#include "../workspace_samplers.h"
 
 using namespace rl::math;
 using namespace rl::plan;
@@ -118,52 +118,30 @@ BOOST_AUTO_TEST_CASE(no_initial_error_motion_error)
   BOOST_CHECK(theoretical_covariance.isApprox(result.final_belief.configCovariance()));
 }
 
-BOOST_AUTO_TEST_CASE(test_halfsphere_sample_without_rotation)
+BOOST_AUTO_TEST_CASE(test_box)
 {
-  const double radius = 0.5;
-
-  auto center = Transform::Identity();
-  center.translate(Vector3(0.45, -0.4, 0.35));
-
-  Vector initial_configuration(7);
-  initial_configuration << 0.1, 0.1, 0, 2.3, 0, 0.5, 0;
-
-  auto halfSphere = WorkspaceConstraints::upperHalfSphere(center, radius);
-  for (unsigned i = 0; i < trials; ++i)
-  {
-    auto sample = controller->sample(initial_configuration, {}, halfSphere, maximum_sample_attempts);
-    BOOST_REQUIRE(sample);
-
-    model.setPosition(*sample);
-    model.updateFrames();
-    auto sampled_point = center.inverse() * model.forwardPosition();
-    BOOST_CHECK(sampled_point.translation().norm() <= radius);
-    BOOST_CHECK(sampled_point.translation().z() >= 0);
-  }
-}
-
-BOOST_AUTO_TEST_CASE(test_halfsphere_sample_with_rotation)
-{
-  const double radius = 0.5;
-
   auto center = Transform::Identity();
   center.rotate(Eigen::AngleAxisd(1.1, Vector3(0.57735027, 0.57735027, 0.57735027)));
   center.translate(Vector3(0.45, -0.4, 0.35));
 
   Vector initial_configuration(7);
   initial_configuration << 0.1, 0.1, 0, 2.3, 0, 0.5, 0;
-  auto halfSphere = WorkspaceConstraints::upperHalfSphere(center, radius);
+
+  std::array<double, 3> dimensions{ 0.1, 0.3, 0.2 };
+
+  auto box_sampler = BoxSampler(center, dimensions);
   for (unsigned i = 0; i < trials; ++i)
   {
-    auto sample = controller->sample(initial_configuration, {}, halfSphere, maximum_sample_attempts);
+    auto sample = controller->sample(initial_configuration, {}, box_sampler, maximum_sample_attempts);
     BOOST_REQUIRE(sample);
 
     model.setPosition(*sample);
     model.updateFrames();
-    auto sampled_point = model.forwardPosition();
-    sampled_point = center.inverse() * sampled_point;
-    BOOST_CHECK(sampled_point.translation().norm() <= radius);
-    BOOST_CHECK(sampled_point.translation().z() >= 0);
+    auto sampled_point = center.inverse() * model.forwardPosition();
+
+    BOOST_CHECK(abs(sampled_point.translation().x()) <= dimensions[0] / 2);
+    BOOST_CHECK(abs(sampled_point.translation().y()) <= dimensions[1] / 2);
+    BOOST_CHECK(abs(sampled_point.translation().z()) <= dimensions[2] / 2);
   }
 }
 

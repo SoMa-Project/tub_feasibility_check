@@ -9,6 +9,7 @@
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
 #include "problem_statement.h"
+#include "workspace_samplers.h"
 #include <unordered_map>
 
 class JacobianController : public QObject
@@ -49,16 +50,14 @@ public:
   };
 
   JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
-                     double delta,
+                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta,
                      boost::optional<Viewer*> viewer = boost::none);
 
   Result go(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
             const AllowedCollisions& allowed_collisions, const Settings& settings);
 
   boost::optional<rl::math::Vector> sample(const rl::math::Vector& initial_configuration,
-                                           const AllowedCollisions& allowed_collisions,
-                                           std::function<bool(rl::math::Transform&)> constraint_check,
+                                           const AllowedCollisions& allowed_collisions, const WorkspaceSampler& sampler,
                                            unsigned maximum_attempts);
 
 private:
@@ -84,7 +83,8 @@ private:
   std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
   rl::plan::NoisyModel noisy_model_;
   double delta_;
-  rl::plan::UniformSampler uniform_sampler_;
+
+  std::mt19937 random_engine_;
 
   // this is needed to find shape names from collision pairs - the version in master returns addresses
   std::unordered_map<std::string, std::string> address_shape_mapping_;
