@@ -24,9 +24,9 @@ public:
   static std::unique_ptr<IfcoScene> load(const std::string& scene_graph_file, const std::string& kinematics_file);
 
   template <typename T>
-  std::shared_ptr<T> makePlanner()
+  std::shared_ptr<T> makePlanner(double delta)
   {
-    return std::make_shared<T>(kinematics, bullet_scene, viewer_);
+    return std::make_shared<T>(kinematics, bullet_scene, delta, viewer_);
   }
 
   void connectToViewer(Viewer* new_viewer);

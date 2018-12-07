@@ -6,6 +6,7 @@
 #include <rl/sg/bullet/Scene.h>
 #include <rl/plan/DistanceModel.h>
 #include <rl/plan/BeliefState.h>
+#include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
 #include "problem_statement.h"
 #include <unordered_map>
@@ -29,6 +30,7 @@ public:
     };
 
     rl::plan::BeliefState final_belief;
+    std::vector<rl::math::Vector> mean_trajectory;
     std::set<Outcome> outcomes;
 
     operator bool() const;
@@ -48,10 +50,16 @@ public:
 
   JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
                      std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
+                     double delta,
                      boost::optional<Viewer*> viewer = boost::none);
 
   Result go(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
             const AllowedCollisions& allowed_collisions, const Settings& settings);
+
+  boost::optional<rl::math::Vector> sample(const rl::math::Vector& initial_configuration,
+                                           const AllowedCollisions& allowed_collisions,
+                                           std::function<bool(rl::math::Transform&)> constraint_check,
+                                           unsigned maximum_attempts);
 
 private:
   // for now, the container is flat. if information regarding particles is needed, than it should be nested
@@ -76,6 +84,7 @@ private:
   std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
   rl::plan::NoisyModel noisy_model_;
   double delta_;
+  rl::plan::UniformSampler uniform_sampler_;
 
   // this is needed to find shape names from collision pairs - the version in master returns addresses
   std::unordered_map<std::string, std::string> address_shape_mapping_;

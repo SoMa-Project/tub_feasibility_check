@@ -60,19 +60,21 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
+
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
-	set(
-		HDRS		
-		MainWindow.h
-		Viewer.h
+        set(
+                HDRS
+                MainWindow.h
+                Viewer.h
                 ifco_scene.h
                 service_worker.h
                 jacobian_controller.h
                 utilities.h
                 problem_statement.h
-	)
-	
-	set(
+                workspace_constraints.h
+        )
+
+        set(
 		SRCS
 		MainWindow.cpp
 		kinematics_check.cpp
@@ -95,8 +97,8 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 	
 	add_executable(
 		kinematics_check
-		${HDRS}
-		${SRCS}
+                ${HDRS}
+                ${SRCS}
 		${MOC_SRCS}
 	)
 
@@ -108,7 +110,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
         add_executable(test_jacobian_controller
             ifco_scene.cpp
             jacobian_controller.cpp
-            test/jacobian_controller.cpp
+            test/test_jacobian_controller.cpp
             ${TEST_MOC_SRCS})
         add_test(NAME test_jacobian_controller COMMAND test_jacobian_controller)
 
@@ -179,5 +181,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
                 ${BULLET_LIBRARIES}
                 ${LIBXML2_LIBRARIES}
         )
+
+add_dependencies(kinematics_check kinematics_check_generate_messages)
 
 endif(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)

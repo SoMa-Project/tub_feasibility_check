@@ -85,7 +85,7 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  auto jacobian_controller = ifco_scene->makePlanner<JacobianController>();
+  auto jacobian_controller = ifco_scene->makePlanner<JacobianController>(0.017);
   auto result =
       jacobian_controller->go(initial_configuration, goal_transform, allowed_collisions, no_uncertainty_settings);
 

@@ -61,14 +61,17 @@ JacobianController::Result::setSingleOutcome(JacobianController::Result::Outcome
 
 JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
                                        std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
+                                       double delta,
                                        boost::optional<Viewer*> viewer)
-  : kinematics_(kinematics), bullet_scene_(bullet_scene)
+  : kinematics_(kinematics), bullet_scene_(bullet_scene), delta_(delta)
 {
   noisy_model_.kin = kinematics_.get();
   noisy_model_.model = bullet_scene_->getModel(0);
   noisy_model_.scene = bullet_scene_.get();
   noisy_model_.motionError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
   noisy_model_.initialError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
+
+  uniform_sampler_.model = &noisy_model_;
 
   if (viewer)
   {
@@ -88,7 +91,7 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   using rl::plan::BeliefState;
   using rl::plan::Particle;
 
-  std::size_t maximum_steps = static_cast<std::size_t>(10 / settings.delta);
+  std::size_t maximum_steps = static_cast<std::size_t>(10 / delta_);
   *noisy_model_.motionError = settings.joints_std_error;
   *noisy_model_.initialError = settings.initial_std_error;
 
@@ -115,9 +118,10 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   emit drawConfiguration(current_belief.configMean());
 
   Result result;
+  result.mean_trajectory.push_back(current_belief.configMean());
   for (std::size_t i = 0; i < maximum_steps; ++i)
   {
-    auto q_dot = calculateQDot(current_belief, to_pose, settings.delta);
+    auto q_dot = calculateQDot(current_belief, to_pose, delta_);
     if (q_dot.isZero())
       return result.setSingleOutcome(required_collisions.empty() ? Result::Outcome::REACHED :
                                                                    Result::Outcome::MISSED_REQUIRED_COLLISIONS);
@@ -151,9 +155,11 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
                      });
     }
 
+    auto previous_mean = current_belief.configMean();
     current_belief = BeliefState(next_particles, &noisy_model_);
     // TODO rewrite to remove copying
     result.final_belief = current_belief;
+    result.mean_trajectory.push_back(current_belief.configMean());
 
     emit drawConfiguration(current_belief.configMean());
     auto collision_constraints_check = checkCollisionConstraints(collisions, allowed_collisions);
@@ -176,6 +182,30 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   }
 
   return result.setSingleOutcome(Result::Outcome::STEPS_LIMIT);
+}
+
+boost::optional<rl::math::Vector>
+JacobianController::sample(const rl::math::Vector& initial_configuration, const AllowedCollisions& allowed_collisions,
+                           std::function<bool(rl::math::Transform&)> workspace_constraints, unsigned maximum_attempts)
+{
+  for (unsigned i = 0; i < maximum_attempts; ++i)
+  {
+    rl::math::Vector random_sample(kinematics_->getDof());
+    uniform_sampler_.generate(random_sample);
+
+    noisy_model_.setPosition(random_sample);
+    noisy_model_.updateFrames();
+    auto pose = noisy_model_.forwardPosition();
+    if (!workspace_constraints(pose))
+      continue;
+
+    auto result =
+        go(initial_configuration, pose, allowed_collisions, Settings::NoUncertainty(kinematics_->getDof(), delta_));
+    if (result)
+      return random_sample;
+  }
+
+  return boost::none;
 }
 
 rl::math::Vector JacobianController::calculateQDot(const rl::plan::BeliefState& belief,
