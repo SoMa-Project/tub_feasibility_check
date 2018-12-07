@@ -15,11 +15,13 @@ Transform WorkspaceSampler::generate(std::mt19937& random_engine) const
 
 Quaternion UniformOrientationSampler::generateOrientation(std::mt19937& random_engine) const
 {
-  std::normal_distribution<double> normal_distribution;
-  auto n = [&random_engine, &normal_distribution] { return normal_distribution(random_engine); };
+  std::uniform_real_distribution<double> random_0_to_1;
+  std::array<double, 3> u;
+  for (unsigned i = 0; i < 3; ++i)
+    u[i] = random_0_to_1(random_engine);
 
-  Quaternion result(n(), n(), n(), n());
-  return result.normalized();
+  return Quaternion(sqrt(1 - u[0]) * sin(M_2_PI * u[1]), sqrt(1 - u[0]) * cos(M_2_PI * u[1]),
+                    sqrt(u[0]) * sin(M_2_PI * u[2]), sqrt(u[0]) * cos(M_2_PI * u[2]));
 }
 
 Vector BoxSampler::generatePosition(std::mt19937& random_engine) const

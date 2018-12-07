@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(no_initial_error_motion_error)
   BOOST_CHECK(theoretical_covariance.isApprox(result.final_belief.configCovariance()));
 }
 
-BOOST_AUTO_TEST_CASE(test_box)
+BOOST_AUTO_TEST_CASE(test_box_positions)
 {
   auto center = Transform::Identity();
   center.rotate(Eigen::AngleAxisd(1.1, Vector3(0.57735027, 0.57735027, 0.57735027)));
