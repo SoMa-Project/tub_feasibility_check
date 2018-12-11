@@ -1,6 +1,6 @@
 #include <rl/plan/Particle.h>
 #include "jacobian_controller.h"
-
+#include <iostream>
 JacobianController::Result::operator bool() const
 {
   assert(outcomes.size());
@@ -16,22 +16,22 @@ std::string JacobianController::Result::description() const
   auto describeOutcome = [](Outcome outcome) {
     switch (outcome)
     {
-      case Result::Outcome::REACHED:
-        return "reached the goal frame";
-      case Result::Outcome::JOINT_LIMIT:
-        return "violated the joint limit";
-      case Result::Outcome::SINGULARITY:
-        return "ended in the singularity";
-      case Result::Outcome::STEPS_LIMIT:
-        return "went over the steps limit";
-      case Result::Outcome::ACCEPTABLE_COLLISION:
-        return "ended on acceptable collision";
-      case Result::Outcome::UNACCEPTABLE_COLLISION:
-        return "ended on unacceptable collision";
-      case Result::Outcome::UNSENSORIZED_COLLISION:
-        return "ended on unsensorized collision";
-      case Result::Outcome::MISSED_REQUIRED_COLLISIONS:
-        return "missing required collisions";
+    case Result::Outcome::REACHED:
+      return "reached the goal frame";
+    case Result::Outcome::JOINT_LIMIT:
+      return "violated the joint limit";
+    case Result::Outcome::SINGULARITY:
+      return "ended in the singularity";
+    case Result::Outcome::STEPS_LIMIT:
+      return "went over the steps limit";
+    case Result::Outcome::ACCEPTABLE_COLLISION:
+      return "ended on acceptable collision";
+    case Result::Outcome::UNACCEPTABLE_COLLISION:
+      return "ended on unacceptable collision";
+    case Result::Outcome::UNSENSORIZED_COLLISION:
+      return "ended on unsensorized collision";
+    case Result::Outcome::MISSED_REQUIRED_COLLISIONS:
+      return "missing required collisions";
     }
   };
 
@@ -84,7 +84,8 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
 
 JacobianController::Result JacobianController::go(const rl::math::Vector& initial_configuration,
                                                   const rl::math::Transform& to_pose,
-                                                  const AllowedCollisions& allowed_collisions, const Settings& settings)
+                                                  const AllowedCollisions& allowed_collisions, const Settings& settings
+                                                  )
 {
   using namespace rl::math;
   using rl::plan::BeliefState;
@@ -121,6 +122,7 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   for (std::size_t i = 0; i < maximum_steps; ++i)
   {
     auto q_dot = calculateQDot(current_belief, to_pose, delta_);
+    // TODO: result REACHED if there is no required collision
     if (q_dot.isZero())
       return result.setSingleOutcome(required_collisions.empty() ? Result::Outcome::REACHED :
                                                                    Result::Outcome::MISSED_REQUIRED_COLLISIONS);
@@ -150,8 +152,8 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
       auto collision_pairs = noisy_model_.scene->getLastCollisions();
       std::transform(collision_pairs.begin(), collision_pairs.end(), std::back_inserter(collisions),
                      [this](decltype(collision_pairs)::value_type c) {
-                       return std::make_pair(getPartName(c.first.first), getPartName(c.first.second));
-                     });
+        return std::make_pair(getPartName(c.first.first), getPartName(c.first.second));
+      });
     }
 
     auto previous_mean = current_belief.configMean();

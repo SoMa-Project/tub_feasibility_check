@@ -147,6 +147,7 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
     if (result)
     {
       ROS_INFO_STREAM("Success: " << result.description());
+      //TODO remove success as a returen
       res.success = true;
       res.status = 2;
       res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
