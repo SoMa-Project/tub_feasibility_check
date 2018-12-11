@@ -41,7 +41,10 @@ float64[3] max_orientation_deltas
 AllowedCollision[] allowed_collisions
 ---
 bool success
+# 0 if failed, 1 if goal reached, 2 if sapled goal on manifold is reached
+int32 status
 
 # The final joint configuration of the robot after reaching the
 # goal pose or a pose sampled from a manifold.
 float64[] final_configuration
+float64[] trajectory

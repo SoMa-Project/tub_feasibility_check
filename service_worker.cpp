@@ -86,6 +86,7 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
 
   ROS_INFO("Trying to plan to the goal frame");
   auto jacobian_controller = ifco_scene->makePlanner<JacobianController>(0.017);
+  int status = 0;
   auto result =
       jacobian_controller->go(initial_configuration, goal_transform, allowed_collisions, no_uncertainty_settings);
 
@@ -93,6 +94,7 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   {
     ROS_INFO_STREAM("Goal frame success: " << result.description());
     res.success = true;
+    res.status = 1;
     res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
     return true;
   }
@@ -146,7 +148,9 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
     {
       ROS_INFO_STREAM("Success: " << result.description());
       res.success = true;
+      res.status = 2;
       res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
+      res.trajectory = utilities::concatanateEigneToStd(result.mean_trajectory, res.final_configuration.size() );
       return true;
     }
     else
@@ -155,6 +159,7 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
   res.success = false;
+  res.status = 0;
   return true;
 }
 

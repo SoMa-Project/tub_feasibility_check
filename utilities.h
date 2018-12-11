@@ -3,12 +3,30 @@
 
 #include <vector>
 #include <rl/math/Vector.h>
+#include <iostream>
 
 namespace utilities
 {
 inline std::vector<rl::math::Real> eigenToStd(const rl::math::Vector& eigen_vector)
 {
   return std::vector<rl::math::Real>(eigen_vector.data(), eigen_vector.data() + eigen_vector.size());
+}
+
+inline std::vector<rl::math::Real>concatanateEigneToStd(std::vector<rl::math::Vector> trajectory, const int DOF)
+{
+  int size = trajectory.size()*DOF;
+  std::vector<rl::math::Real> new_trajectory(size,-1);
+
+  for(auto i = 0; i < trajectory.size(); i++)
+  {
+    std::vector<rl::math::Real> pointOnTrajectory = eigenToStd(trajectory[i]);
+    for (auto j = 0; j < DOF; j++)
+    {
+      new_trajectory[i*DOF+j] = pointOnTrajectory[j];
+    }
+  }
+
+  return new_trajectory;
 }
 
 template <typename T>
