@@ -1,5 +1,5 @@
-#ifndef PROBLEM_STATEMENT_H
-#define PROBLEM_STATEMENT_H
+#ifndef ALLOWED_COLLISIONS_H
+#define ALLOWED_COLLISIONS_H
 
 #include <unordered_map>
 

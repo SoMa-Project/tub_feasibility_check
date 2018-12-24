@@ -39,7 +39,12 @@ int main(int argc, char** argv)
     service_worker.moveToThread(&worker_thread);
     QObject::connect(&application, SIGNAL(lastWindowClosed()), &application, SLOT(quit()));
     QObject::connect(&application, SIGNAL(lastWindowClosed()), &worker_thread, SLOT(quit()));
-    ros::ServiceServer service = n.advertiseService("check_kinematics", &ServiceWorker::query, &service_worker);
+
+    ros::ServiceServer checkKinematicsService = n.advertiseService("check_kinematics",
+                                                    &ServiceWorker::checkKinematicsQuery, &service_worker);
+    ros::ServiceServer cerrtExampleService = n.advertiseService("cerrt_example",
+        &ServiceWorker::cerrtExampleQuery, &service_worker);
+
     worker_thread.start();
     service_worker.start(20);
 

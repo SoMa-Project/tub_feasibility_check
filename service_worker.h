@@ -18,6 +18,7 @@
 #include <ros/package.h>
 #include <eigen_conversions/eigen_msg.h>
 #include "kinematics_check/CheckKinematics.h"
+#include "kinematics_check/CerrtExample.h"
 
 #include "MainWindow.h"
 #include "ifco_scene.h"
@@ -31,7 +32,10 @@ public:
   {
   }
 
-  bool query(kinematics_check::CheckKinematics::Request& req, kinematics_check::CheckKinematics::Response& res);
+  bool checkKinematicsQuery(kinematics_check::CheckKinematics::Request& req,
+                            kinematics_check::CheckKinematics::Response& res);
+
+  bool cerrtExampleQuery(kinematics_check::CerrtExample::Request& req, kinematics_check::CerrtExample::Response& res);
   void start(unsigned rate);
 
 public slots:

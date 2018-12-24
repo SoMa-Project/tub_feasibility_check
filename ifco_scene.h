@@ -23,17 +23,15 @@ public:
   ~IfcoScene();
   static std::unique_ptr<IfcoScene> load(const std::string& scene_graph_file, const std::string& kinematics_file);
 
-  template <typename T>
-  std::shared_ptr<T> makePlanner(double delta)
-  {
-    return std::make_shared<T>(kinematics, bullet_scene, delta, viewer_);
-  }
-
   void connectToViewer(Viewer* new_viewer);
 
   void moveIfco(const rl::math::Transform& ifco_pose);
   void createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose, const std::string& name);
   void removeBoxes();
+
+  std::shared_ptr<rl::kin::Kinematics> getKinematics() { return kinematics; }
+  std::shared_ptr<rl::sg::bullet::Scene> getBulletScene() { return bullet_scene; }
+  boost::optional<Viewer*> getViewer() { return viewer_; }
 
   std::size_t dof() const
   {

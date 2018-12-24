@@ -1,6 +1,8 @@
 #include <rl/plan/Particle.h>
 #include "jacobian_controller.h"
 #include <iostream>
+#include <fstream>
+
 JacobianController::Result::operator bool() const
 {
   assert(outcomes.size());
@@ -16,22 +18,24 @@ std::string JacobianController::Result::description() const
   auto describeOutcome = [](Outcome outcome) {
     switch (outcome)
     {
-    case Result::Outcome::REACHED:
-      return "reached the goal frame";
-    case Result::Outcome::JOINT_LIMIT:
-      return "violated the joint limit";
-    case Result::Outcome::SINGULARITY:
-      return "ended in the singularity";
-    case Result::Outcome::STEPS_LIMIT:
-      return "went over the steps limit";
-    case Result::Outcome::ACCEPTABLE_COLLISION:
-      return "ended on acceptable collision";
-    case Result::Outcome::UNACCEPTABLE_COLLISION:
-      return "ended on unacceptable collision";
-    case Result::Outcome::UNSENSORIZED_COLLISION:
-      return "ended on unsensorized collision";
-    case Result::Outcome::MISSED_REQUIRED_COLLISIONS:
-      return "missing required collisions";
+      case Result::Outcome::REACHED:
+        return "reached the goal frame";
+      case Result::Outcome::JOINT_LIMIT:
+        return "violated the joint limit";
+      case Result::Outcome::SINGULARITY:
+        return "ended in the singularity";
+      case Result::Outcome::STEPS_LIMIT:
+        return "went over the steps limit";
+      case Result::Outcome::ACCEPTABLE_COLLISION:
+        return "ended on acceptable collision";
+      case Result::Outcome::UNACCEPTABLE_COLLISION:
+        return "ended on unacceptable collision";
+      case Result::Outcome::UNSENSORIZED_COLLISION:
+        return "ended on unsensorized collision";
+      case Result::Outcome::MISSED_REQUIRED_COLLISIONS:
+        return "missing required collisions";
+      default:
+        assert(false);
     }
   };
 
@@ -84,8 +88,7 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
 
 JacobianController::Result JacobianController::go(const rl::math::Vector& initial_configuration,
                                                   const rl::math::Transform& to_pose,
-                                                  const AllowedCollisions& allowed_collisions, const Settings& settings
-                                                  )
+                                                  const AllowedCollisions& allowed_collisions, const Settings& settings)
 {
   using namespace rl::math;
   using rl::plan::BeliefState;
@@ -119,6 +122,7 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
 
   Result result;
   result.mean_trajectory.push_back(current_belief.configMean());
+
   for (std::size_t i = 0; i < maximum_steps; ++i)
   {
     auto q_dot = calculateQDot(current_belief, to_pose, delta_);
@@ -152,8 +156,8 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
       auto collision_pairs = noisy_model_.scene->getLastCollisions();
       std::transform(collision_pairs.begin(), collision_pairs.end(), std::back_inserter(collisions),
                      [this](decltype(collision_pairs)::value_type c) {
-        return std::make_pair(getPartName(c.first.first), getPartName(c.first.second));
-      });
+                       return std::make_pair(getPartName(c.first.first), getPartName(c.first.second));
+                     });
     }
 
     auto previous_mean = current_belief.configMean();
@@ -183,23 +187,6 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
   }
 
   return result.setSingleOutcome(Result::Outcome::STEPS_LIMIT);
-}
-
-boost::optional<rl::math::Vector> JacobianController::sample(const rl::math::Vector& initial_configuration,
-                                                             const AllowedCollisions& allowed_collisions,
-                                                             const WorkspaceSampler& sampler, unsigned maximum_attempts)
-{
-  for (unsigned i = 0; i < maximum_attempts; ++i)
-  {
-    auto sampled_pose = sampler.generate(random_engine_);
-
-    auto result = go(initial_configuration, sampled_pose, allowed_collisions,
-                     Settings::NoUncertainty(kinematics_->getDof(), delta_));
-    if (result)
-      return result.final_belief.configMean();
-  }
-
-  return boost::none;
 }
 
 rl::math::Vector JacobianController::calculateQDot(const rl::plan::BeliefState& belief,

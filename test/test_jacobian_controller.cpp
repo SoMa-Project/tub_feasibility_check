@@ -25,7 +25,7 @@ struct Fixture
     Transform t;
     ifco_scene->moveIfco(t.translate(Vector3(1000, 1000, 1000)));  // goodbye
 
-    controller = ifco_scene->makePlanner<JacobianController>(0.017);
+    controller = std::make_shared<JacobianController>(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017);
 
     settings.delta = 0.017;
     pose_in_front.translation() = Vector3(0.45, -0.4, 0.35);
@@ -53,9 +53,9 @@ struct Fixture
   rl::plan::DistanceModel model;
 
   // number of trials for sampling tests
-  const unsigned trials = 100;
+  const unsigned trials = 40;
   // number of maximum sample attempts for sampling tests
-  const unsigned maximum_sample_attempts = 10000;
+  const unsigned maximum_sample_attempts = 40;
 };
 
 BOOST_FIXTURE_TEST_SUITE(jacobian_controller_suite, Fixture)
@@ -128,11 +128,14 @@ BOOST_AUTO_TEST_CASE(test_box_positions)
   initial_configuration << 0.1, 0.1, 0, 2.3, 0, 0.5, 0;
 
   std::array<double, 3> dimensions{ 0.1, 0.3, 0.2 };
+  std::mt19937 random_engine;
+  random_engine.seed(std::time(0));
 
   auto box_sampler = BoxSampler(center, dimensions);
   for (unsigned i = 0; i < trials; ++i)
   {
-    auto sample = controller->sample(initial_configuration, {}, box_sampler, maximum_sample_attempts);
+    auto sample = sampleWithJacobianControl(*controller, initial_configuration, {}, box_sampler, random_engine,
+                                            maximum_sample_attempts, 0.017);
     BOOST_REQUIRE(sample);
 
     model.setPosition(*sample);

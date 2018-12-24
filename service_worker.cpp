@@ -27,7 +27,9 @@
 #include <QMutexLocker>
 #include "service_worker.h"
 #include "jacobian_controller.h"
+#include "workspace_samplers.h"
 #include "utilities.h"
+#include "SomaCerrt.h"
 
 void ServiceWorker::spinOnce()
 {
@@ -46,8 +48,8 @@ void ServiceWorker::start(unsigned rate)
   loop_timer.start();
 }
 
-bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
-                          kinematics_check::CheckKinematics::Response& res)
+bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Request& req,
+                                         kinematics_check::CheckKinematics::Response& res)
 {
   const double delta = 0.017;
   ROS_INFO("Receiving query");
@@ -85,10 +87,11 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  auto jacobian_controller = ifco_scene->makePlanner<JacobianController>(0.017);
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017,
+                                         ifco_scene->getViewer());
   int status = 0;
   auto result =
-      jacobian_controller->go(initial_configuration, goal_transform, allowed_collisions, no_uncertainty_settings);
+      jacobian_controller.go(initial_configuration, goal_transform, allowed_collisions, no_uncertainty_settings);
 
   if (result)
   {
@@ -142,16 +145,16 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
                     << i << ". Translation sample: " << sampled_point.transpose() << ", rotation sample: "
                     << sampled_rotation[0] << " " << sampled_rotation[1] << " " << sampled_rotation[2]);
     auto result =
-        jacobian_controller->go(initial_configuration, sampled_transform, allowed_collisions, no_uncertainty_settings);
+        jacobian_controller.go(initial_configuration, sampled_transform, allowed_collisions, no_uncertainty_settings);
 
     if (result)
     {
       ROS_INFO_STREAM("Success: " << result.description());
-      //TODO remove success as a returen
+      // TODO remove success as a returen
       res.success = true;
       res.status = 2;
       res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
-      res.trajectory = utilities::concatanateEigneToStd(result.mean_trajectory, res.final_configuration.size() );
+      res.trajectory = utilities::concatanateEigneToStd(result.mean_trajectory, res.final_configuration.size());
       return true;
     }
     else
@@ -161,6 +164,45 @@ bool ServiceWorker::query(kinematics_check::CheckKinematics::Request& req,
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
   res.success = false;
   res.status = 0;
+  return true;
+}
+
+bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& req,
+                                      kinematics_check::CerrtExample::Response& res)
+{
+  using namespace rl::math;
+
+  const double delta = 0.017;
+  Eigen::Affine3d ifco_transform;
+  Eigen::Affine3d goal_transform;
+  tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
+  tf::poseMsgToEigen(req.goal_pose, goal_transform);
+  auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
+
+  ifco_scene->moveIfco(ifco_transform);
+  auto jacobian_controller = std::make_shared<JacobianController>(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017,
+                                         ifco_scene->getViewer());
+  auto noisy_model = new rl::plan::NoisyModel;
+  noisy_model->kin = ifco_scene->getKinematics().get();
+  noisy_model->model = ifco_scene->getBulletScene()->getModel(0);
+  noisy_model->scene = ifco_scene->getBulletScene().get();
+
+  Vector errors = Vector::Ones(initial_configuration.size()) * 0.1;
+  noisy_model->initialError = &errors;
+  noisy_model->motionError = &errors;
+
+  std::mt19937 gen;
+  gen.seed(std::time(0));
+  auto workspace_box = std::make_shared<BoxSampler>(goal_transform, std::array<double,3>{0.1, 0.1, 0.1});
+
+  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, workspace_box, delta, *ifco_scene->getViewer());
+  soma_cerrt.start = &initial_configuration;
+  rl::math::Vector crazy_goal = initial_configuration * 1.1;
+  soma_cerrt.goal = &crazy_goal;
+  soma_cerrt.goalEpsilon = 0.1;
+  soma_cerrt.solve();
+
+  res.success = true;
   return true;
 }
 

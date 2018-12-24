@@ -1,6 +1,7 @@
 #ifndef JACOBIAN_CONTROLLER_H
 #define JACOBIAN_CONTROLLER_H
 
+#include <random>
 #include <QObject>
 #include <rl/kin/Kinematics.h>
 #include <rl/sg/bullet/Scene.h>
@@ -8,9 +9,10 @@
 #include <rl/plan/BeliefState.h>
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
-#include "problem_statement.h"
-#include "workspace_samplers.h"
+#include "allowed_collisions.h"
 #include <unordered_map>
+
+class WorkspaceSampler;
 
 class JacobianController : public QObject
 {
@@ -56,10 +58,6 @@ public:
   Result go(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
             const AllowedCollisions& allowed_collisions, const Settings& settings);
 
-  boost::optional<rl::math::Vector> sample(const rl::math::Vector& initial_configuration,
-                                           const AllowedCollisions& allowed_collisions, const WorkspaceSampler& sampler,
-                                           unsigned maximum_attempts);
-
 private:
   // for now, the container is flat. if information regarding particles is needed, than it should be nested
   typedef std::vector<std::pair<std::string, std::string>> CollisionPairs;
@@ -85,9 +83,6 @@ private:
   double delta_;
 
   std::mt19937 random_engine_;
-
-  // this is needed to find shape names from collision pairs - the version in master returns addresses
-  std::unordered_map<std::string, std::string> address_shape_mapping_;
 
 signals:
   void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);

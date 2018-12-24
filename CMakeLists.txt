@@ -37,6 +37,7 @@ enable_testing()
 add_service_files(
    FILES
    CheckKinematics.srv
+   CerrtExample.srv
  )
 
 add_message_files(
@@ -54,8 +55,6 @@ add_message_files(
    geometry_msgs
  )
 
-
-
 catkin_package(
   CATKIN_DEPENDS message_runtime
 )
@@ -70,8 +69,9 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
                 service_worker.h
                 jacobian_controller.h
                 utilities.h
-                problem_statement.h
+				allowed_collisions.h
 				workspace_samplers.h
+				SomaCerrt.h
         )
 
         set(
@@ -83,7 +83,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
                 service_worker.cpp
                 jacobian_controller.cpp
 #		${rl_SOURCE_DIR}/robotics-library.rc
-				workspace_samplers.cpp)
+				workspace_samplers.cpp SomaCerrt.cpp)
 	
 	qt4_wrap_cpp(
 		MOC_SRCS
