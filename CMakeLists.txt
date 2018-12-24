@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(kinematics_check)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated-declarations -Wno-zero-as-null-pointer-constant -fno-inline-functions")
-set (CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};/opt/ros/indigo)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated-declarations -Wno-zero-as-null-pointer-constant -fno-inline-functions -fpermissive")
 
 add_definitions(-DEIGEN_DONT_ALIGN)
 
@@ -19,8 +18,10 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 message(${PROJECT_SOURCE_DIR})
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../../Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/contact-motion-planning/Modules/")
 
+add_subdirectory(contact-motion-planning EXCLUDE_FROM_ALL)
+set(ROBLIB_INCLUDE_DIRS contact-motion-planning/src)
 
 find_package(Boost REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -30,6 +31,7 @@ include(${QT_USE_FILE})
 find_package(Bullet REQUIRED)
 find_package(SoQt REQUIRED)
 find_package(LibXml2 REQUIRED)
+find_package(Coin REQUIRED)
 
 enable_testing()
 
@@ -55,80 +57,51 @@ add_message_files(
    geometry_msgs
  )
 
+
+
 catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
 
-if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
-        set(
-                HDRS
-                MainWindow.h
-                Viewer.h
-                ifco_scene.h
-                service_worker.h
-                jacobian_controller.h
-                utilities.h
-				allowed_collisions.h
-				workspace_samplers.h
-				SomaCerrt.h
-        )
-
-        set(
-		SRCS
-		MainWindow.cpp
-		kinematics_check.cpp
-		Viewer.cpp
-                ifco_scene.cpp
-                service_worker.cpp
-                jacobian_controller.cpp
-#		${rl_SOURCE_DIR}/robotics-library.rc
-				workspace_samplers.cpp SomaCerrt.cpp)
+if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND ) # FALSE) #
+        set(SRCS
+		src/MainWindow.cpp
+		src/kinematics_check.cpp
+		src/Viewer.cpp
+                src/ifco_scene.cpp
+                src/service_worker.cpp
+              src/jacobian_controller.cpp
+              src/soma_cerrt.cpp
+    src/workspace_samplers.cpp)
 	
 	qt4_wrap_cpp(
 		MOC_SRCS
-		Viewer.h
-                service_worker.h
-                ifco_scene.h
-                jacobian_controller.h
+		src/Viewer.h
+                src/service_worker.h
+                src/ifco_scene.h
+                src/jacobian_controller.h
 		OPTIONS
 		-DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
 	)
 	
 	add_executable(
 		kinematics_check
-                ${HDRS}
                 ${SRCS}
 		${MOC_SRCS}
 	)
 
-        qt4_wrap_cpp(
-            TEST_MOC_SRCS
-            ifco_scene.h
-            jacobian_controller.h
-        )
-        add_executable(test_jacobian_controller
-            ifco_scene.cpp
-            jacobian_controller.cpp
-            workspace_samplers.cpp
-            test/test_jacobian_controller.cpp
-            ${TEST_MOC_SRCS})
-        add_test(NAME test_jacobian_controller COMMAND test_jacobian_controller)
+        
 
 	target_compile_definitions(
 		kinematics_check
 		PUBLIC
 		${QT_DEFINITIONS}
 		${SOQT_DEFINITIONS}
+		${COIN_DEFINITIONS}
 	)
 
-        target_compile_definitions(
-                test_jacobian_controller
-                PUBLIC
-                ${QT_DEFINITIONS}
-                ${SOQT_DEFINITIONS}
-        )
-
+       
 	target_include_directories(
 		kinematics_check
 		PUBLIC
@@ -139,40 +112,16 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
 		${SOQT_INCLUDE_DIRS}
 		${BULLET_INCLUDE_DIRS}
 		${LIBXML2_INCLUDE_DIRS}
+		${COIN_INCLUDE_DIRS}
+		${ROBLIB_INCLUDE_DIRS}
 	)
 
-        target_include_directories(
-                test_jacobian_controller
-                PUBLIC
-                ${Boost_INCLUDE_DIR}
-                ${catkin_INCLUDE_DIRS}
-                ${OPENGL_INCLUDE_DIR}
-                ${QT_INCLUDES}
-                ${SOQT_INCLUDE_DIRS}
-                ${BULLET_INCLUDE_DIRS}
-                ${LIBXML2_INCLUDE_DIRS}
-        )
 
-	target_link_libraries(
-                test_jacobian_controller
+  target_link_libraries(
+                kinematics_check
 		rlplan
 		rlkin
 		rlsg
-		${catkin_LIBRARIES} 
-		${ROS_LIBRARIES}
-		${catkin_LIBRARIES}
-		${OPENGL_LIBRARIES}
-		${QT_LIBRARIES}
-		${SOQT_LIBRARIES}
-		${BULLET_LIBRARIES}
-		${LIBXML2_LIBRARIES}
-	)
-
-        target_link_libraries(
-                kinematics_check
-                rlplan
-                rlkin
-                rlsg
                 ${catkin_LIBRARIES}
                 ${ROS_LIBRARIES}
                 ${catkin_LIBRARIES}
@@ -181,6 +130,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
                 ${SOQT_LIBRARIES}
                 ${BULLET_LIBRARIES}
                 ${LIBXML2_LIBRARIES}
+		${COIN_LIBRARIES}
         )
 
 add_dependencies(kinematics_check kinematics_check_generate_messages)

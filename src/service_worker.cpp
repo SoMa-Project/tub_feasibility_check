@@ -29,7 +29,7 @@
 #include "jacobian_controller.h"
 #include "workspace_samplers.h"
 #include "utilities.h"
-#include "SomaCerrt.h"
+#include "soma_cerrt.h"
 
 void ServiceWorker::spinOnce()
 {

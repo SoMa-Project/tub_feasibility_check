@@ -1,0 +1,128 @@
+#VRML V2.0 utf8
+
+Transform
+  {
+  rotation -7.53899961e-2 -0.99326622 8.79691094e-2 2.55407094
+  translation -0.10000000 4.02717702e-2 5.91262392e-2
+  children 
+    DEF sensor1 Shape
+      {
+      appearance Appearance
+	{
+	material Material
+	  {
+	  diffuseColor 0 0.37000003 0.80000001
+	  }
+	}
+      geometry Box
+	{
+	size 0.12000005 5.00000007e-2 9.99999977e-3
+	}
+      }
+  }
+
+Transform
+  {
+  rotation 4.36250977e-2 -0.99885523 -1.96214783e-2 2.55293655
+  translation -9.92456227e-2 -1.17803476e-2 5.87460547e-2
+  children 
+    DEF sensor2 Shape
+      {
+      appearance Appearance
+	{
+	material Material
+	  {
+	  diffuseColor 0 0.37000003 0.80000001
+	  }
+	}
+      geometry Box
+	{
+	size 0.12000005 5.00000007e-2 9.99999977e-3
+	}
+      }
+  }
+
+Transform
+  {
+  rotation -0.45435932 -0.75729310 0.46911051 1.83904087
+  translation -5.59050105e-2 1.15336687e-3 -1.39715252e-2
+  children 
+    DEF sensor3 Shape
+      {
+      appearance Appearance
+	{
+	material Material
+	  {
+	  diffuseColor 0 0.37000003 0.80000001
+	  }
+	}
+      geometry Box
+	{
+	size 6.00000582e-2 5.00000007e-2 9.99999977e-3
+	}
+      }
+  }
+
+Transform
+  {
+  rotation -0.63616091 -0.44425004 0.63082581 2.29349565
+  translation -5.75133152e-2 -7.65166729e-2 -3.27366590e-2
+  children 
+    DEF sensor4 Shape
+      {
+      appearance Appearance
+	{
+	material Material
+	  {
+	  diffuseColor 0 0.37000003 0.80000001
+	  }
+	}
+      geometry Box
+	{
+	size 4.00000512e-2 1.79999992e-2 9.99999977e-3
+	}
+      }
+  }
+
+Transform
+  {
+  rotation -0.63616091 -0.44425004 0.63082581 2.29349565
+  translation -5.68844266e-2 -2.21466030e-2 -3.92522923e-2
+  children 
+    DEF sensor5 Shape
+      {
+      appearance Appearance
+	{
+	material Material
+	  {
+	  diffuseColor 0 0.37000003 0.80000001
+	  }
+	}
+      geometry Box
+	{
+	size 4.00000512e-2 2.50000003e-2 9.99999977e-3
+	}
+      }
+  }
+
+Transform
+  {
+  rotation -0.58462339 -0.55111908 0.59538483 2.12455725
+  translation -1.96350719e-2 2.03675543e-3 1.33099290e-3
+  children 
+    DEF sensor6 Shape
+      {
+      appearance Appearance
+	{
+	material Material
+	  {
+	  diffuseColor 0.79999995 0.76499998 0.79500001
+	  }
+	}
+      geometry Box
+	{
+	size 4.00000587e-2 3.00000011e-2 4.99999970e-2
+	}
+      }
+  }
+

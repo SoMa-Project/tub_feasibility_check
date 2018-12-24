@@ -1,0 +1,3 @@
+[submodule "contact-motion-planning"]
+	path = contact-motion-planning
+	url = git@gitlab.tubit.tu-berlin.de:rbo-lab/contact-motion-planning.git

@@ -13,11 +13,8 @@ int main(int argc, char** argv)
     std::string kinematics_file;
     // TODO fix to run in QT and access ros pkg path  - if solved add to readme steps to fix it
     std::string default_root_dir = ros::package::getPath("kinematics_check");
-    std::string relative_path = "/demos/kinematics_check";
-    if (default_root_dir.substr(default_root_dir.size() - relative_path.size()) == relative_path)
-        default_root_dir = default_root_dir.substr(0, default_root_dir.size() - relative_path.size());
-    n.param("scene_graph_file", scene_graph_file,  default_root_dir + "/soma/rlsg/wam-rbohand-ifco.convex.xml");
-    n.param("kinematics_file", kinematics_file,  default_root_dir + "/soma/rlkin/barrett-wam-ocado2.xml");
+    n.param("scene_graph_file", scene_graph_file,  default_root_dir + "/model/rlsg/wam-rbohand-ifco.convex.xml");
+    n.param("kinematics_file", kinematics_file,  default_root_dir + "/model/rlkin/barrett-wam-ocado2.xml");
 
     auto ifco_scene = IfcoScene::load(scene_graph_file, kinematics_file);
 

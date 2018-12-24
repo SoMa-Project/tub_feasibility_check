@@ -5,7 +5,7 @@
 #include <rl/plan/NoisyModel.h>
 #include <boost/graph/random.hpp>
 
-#include "SomaCerrt.h"
+#include "soma_cerrt.h"
 #include "Viewer.h"
 #include "jacobian_controller.h"
 #include "workspace_samplers.h"

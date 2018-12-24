@@ -1,0 +1,106 @@
+#VRML V2.0 utf8
+
+Transform
+  {
+  translation 0.84999996 0 -0.53544157
+  children 
+    Transform
+      {
+      rotation 0 0 1 1.57079994
+      translation -0.25000000 0 0.64999997
+      children 
+	[
+	DEF bottom Shape
+	  {
+	  appearance Appearance
+	    {
+	    material Material 
+	      {
+	      diffuseColor 0 1 0.50000000
+	      }
+	    }
+	  geometry Box
+	    {
+	    size 0.59500002 0.39500001 9.99999977e-3
+	    }
+	  }
+	Transform
+	  {
+	  translation 0 0.19699999 9.00000035e-2
+	  children 
+	    DEF west Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0 1 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 0.59500002 3.09999976e-2 0.18000000
+		}
+	      }
+	  }
+	Transform
+	  {
+	  translation 0 -0.19750000 9.00000035e-2
+	  children 
+	    DEF east Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0 1 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 0.59500002 3.09999994e-2 0.18000000
+		}
+	      }
+	  }
+	Transform
+	  {
+	  translation 0.29750001 0 9.00000035e-2
+	  children 
+	    DEF north Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0 1 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 3.09999994e-2 0.39500001 0.18000000
+		}
+	      }
+	  }
+	Transform
+	  {
+	  translation -0.29750001 0 9.00000035e-2
+	  children 
+	    DEF south Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0 1 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 3.09999994e-2 0.39500001 0.18000000
+		}
+	      }
+	  }
+	]
+      }
+  }
+

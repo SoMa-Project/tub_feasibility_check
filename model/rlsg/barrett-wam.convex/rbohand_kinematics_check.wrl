@@ -1,0 +1,238 @@
+#VRML V2.0 utf8
+
+DEF ScaffoldMount Transform
+  {
+  rotation -0.5773503 -0.5773503 -0.5773503 2.0943951
+  translation 0.003 0 0
+  children 
+    [
+    Shape
+      {
+      appearance Appearance
+	{
+	material Material
+	  {
+	  diffuseColor 1 0.33000001 1
+	  transparency 0.50000000
+	  }
+	}
+      geometry Box
+	{
+	size 3.99999991e-2 4.60000010e-3 4.05999980e-2
+	}
+      }
+    DEF Base Transform
+      {
+      rotation -6.65284618e-2 -0.25771009 0.96392923 0.60293477
+      translation 2.33139302e-2 -2.76508703e-2 1.09430402e-2
+      children 
+	[
+	DEF BaseScaffold Shape
+	  {
+	  appearance Appearance
+	    {
+	    material Material
+	      {
+	      diffuseColor 0 0.80000001 0.80000001
+	      transparency 0.50000000
+	      }
+	    }
+	  geometry Box
+	    {
+	    size 2.18000002e-2 5.44000007e-2 9.31999981e-2
+	    }
+	  }
+	DEF Finger1 Transform
+	  {
+	  rotation -0.99603402 -1.28259547e-2 -8.80441963e-2 3.24267220
+	  translation -7.72042572e-3 -7.17090293e-2 3.82037460e-2
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.80000001 0 0
+		  transparency 0.60000002
+		  }
+		}
+	      geometry Box
+		{
+		size 1.99999995e-2 8.35999995e-2 1.99999995e-2
+		}
+	      }
+	  }
+	DEF Finger2 Transform
+	  {
+	  rotation -0.99996191 2.27708849e-4 -8.72653536e-3 3.19376659
+	  translation -6.76405429e-3 -7.41978660e-2 1.29660712e-2
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.80000001 0 0
+		  transparency 0.60000002
+		  }
+		}
+	      geometry Box
+		{
+		size 1.99999995e-2 8.35999995e-2 1.99999995e-2
+		}
+	      }
+	  }
+	DEF Finger3 Transform
+	  {
+	  rotation -0.99756240 1.83306180e-3 6.97563514e-2 3.08917665
+	  translation -8.81301239e-3 -7.41511583e-2 -1.45649630e-2
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.80000001 0 0
+		  transparency 0.60000002
+		  }
+		}
+	      geometry Box
+		{
+		size 1.99999995e-2 8.09999927e-2 1.99999995e-2
+		}
+	      }
+	  }
+	DEF Finger4 Transform
+	  {
+	  rotation -0.98762911 1.09527800e-2 0.15642507 3.00350618
+	  translation -1.32024642e-2 -6.92324712e-2 -4.11055050e-2
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.80000001 0 0
+		  transparency 0.60000002
+		  }
+		}
+	      geometry Box
+		{
+		size 1.99999995e-2 8.09999927e-2 1.99999995e-2
+		}
+	      }
+	  }
+	DEF PalmScaffold Transform
+	  {
+	  rotation 3.71050275e-2 -4.75708320e-2 -0.99817848 2.14919710
+	  translation -2.96577271e-2 2.83292680e-2 1.25902623e-3
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0 0 0.80000001
+		  transparency 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 4.54000011e-2 1.80000010e-2 4.11999970e-2
+		}
+	      }
+	  }
+	DEF Palm1 Transform
+	  {
+	  rotation -0.34452247 0.10565368 -0.93281376 3.67458152
+	  translation -6.11586198e-2 3.23250074e-3 -6.13031117e-3
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.80000001 0.80000001 0
+		  transparency 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 5.78000023e-2 2.61999983e-2 5.33999912e-2
+		}
+	      }
+	  }
+	DEF Thumb Transform
+	  {
+	  rotation -0.22141501 -0.11039344 0.96891105 0.95048576
+	  translation -7.47148469e-2 9.56771057e-3 -8.18631052e-2
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.20000000 0.80000001 0.50000000
+		  transparency 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 2.53999996e-2 2.38000005e-2 6.85999989e-2
+		}
+	      }
+	  }
+	DEF Palm2 Transform
+	  {
+	  rotation -0.62270116 0.18541179 -0.76017481 3.58329796
+	  translation -4.57854978e-2 -6.88831694e-3 1.28308068e-2
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.80000001 0.80000001 0
+		  transparency 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 5.46000041e-2 2.61999983e-2 3.41999903e-2
+		}
+	      }
+	  }
+	DEF Palm3 Transform
+	  {
+	  rotation -0.62270116 0.18541179 -0.76017481 3.58329796
+	  translation -7.91772529e-2 1.49138579e-2 -2.91231293e-2
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  diffuseColor 0.80000001 0.80000001 0
+		  transparency 0.50000000
+		  }
+		}
+	      geometry Box
+		{
+		size 3.74000072e-2 2.61999983e-2 3.57999950e-2
+		}
+	      }
+	  }
+	]
+      }
+    ]
+  }
+
