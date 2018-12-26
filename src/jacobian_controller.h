@@ -56,7 +56,7 @@ public:
                      boost::optional<Viewer*> viewer = boost::none);
 
   Result go(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
-            const AllowedCollisions& allowed_collisions, const Settings& settings);
+            const CollisionTypes& collision_types, const Settings& settings);
 
 private:
   // for now, the container is flat. if information regarding particles is needed, than it should be nested

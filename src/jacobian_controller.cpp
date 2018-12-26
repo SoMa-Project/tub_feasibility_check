@@ -88,7 +88,7 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
 
 JacobianController::Result JacobianController::go(const rl::math::Vector& initial_configuration,
                                                   const rl::math::Transform& to_pose,
-                                                  const AllowedCollisions& allowed_collisions, const Settings& settings)
+                                                  const CollisionTypes& collision_types, const Settings& settings)
 {
   using namespace rl::math;
   using rl::plan::BeliefState;

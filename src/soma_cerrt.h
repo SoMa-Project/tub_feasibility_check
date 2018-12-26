@@ -22,11 +22,14 @@ public:
 
 protected:
   void choose(rl::math::Vector& chosen) override;
+  void sampleInitialParticles(std::vector<Particle>& initialParticles) override;
+  bool isAdmissableGoal(boost::shared_ptr<BeliefState> belief) override;
 
 private:
   std::shared_ptr<JacobianController> jacobian_controller_;
   Viewer* viewer_;
-  std::shared_ptr<WorkspaceSampler> workspace_sampler_;
+  std::shared_ptr<WorkspaceSampler> sampler_for_choose_;
+  std::shared_ptr<WorkspaceSampler> initial_sampler_;
   AllowedCollisions allowed_collisions_;
   unsigned maximum_sample_attempts_ = 10;
   std::mt19937 random_gen_;
