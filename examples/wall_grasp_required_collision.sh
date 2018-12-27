@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# CURRENTLY REQUIRES TIME TO ADAPT SITUATION TO THE NEW HAND
+
 # This script demonstrates the required collision functionality.
 # The first check finds a sampled pose that is not behind the green object.
 # The subsequent check is not able to find a feasible target pose such
@@ -7,7 +9,7 @@
 result=$(rosservice call /check_kinematics "
 initial_configuration: [0.1, 0.1, 0, 2.3, 0, 0.5, 0]
 goal_pose:
-  position: {x: 0.4, y: -0.02, z: 0.3}
+  position: {x: 0.4, y: -0.1, z: 0.3}
   orientation: {x: 0.6830127, y: -0.6830127, z: 0.1830127, w: 0.1830127}
 ifco_pose:
   position: {x: -0.12, y: 0, z: 0.1}
@@ -35,7 +37,7 @@ allowed_collisions:
 
 echo $result
 
-final_configuration=$(echo $result | perl -n -e'/final_configuration: (.*)/ && print $1')
+final_configuration=$(echo $result | perl -n -e'/final_configuration: (\[[^]]*\])/ && print $1')
 if [ "$final_configuration" == '[]' ]; then 
     echo "The first check failed, rerun the script"
     exit
@@ -45,7 +47,7 @@ rosservice call /check_kinematics "
 initial_configuration: $final_configuration
 goal_pose:
   position: {x: 0.45, y: -0.4, z: 0.35}
-  orientation: {x: 0.6830127, y: -0.6830127, z: 0.1830127, w: 0.1830127}
+  orientation: {x: 0.4909103, y: -0.3602125, z: 0.6225606, w: 0.4916018}
 ifco_pose:
   position: {x: -0.12, y: 0, z: 0.1}
   orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1}
