@@ -65,16 +65,21 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
   JacobianController::Settings no_uncertainty_settings =
       JacobianController::Settings::NoUncertainty(static_cast<std::size_t>(initial_configuration.size()), delta);
 
-  AllowedCollisions allowed_collisions;
+  WorldCollisionTypes::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
   {
     auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
                            getBoxShapeName(allowed_collision_msg.box_id) :
                            allowed_collision_msg.constraint_name;
-    allowed_collisions.insert(
-        { object_name, CollisionSettings{ static_cast<bool>(allowed_collision_msg.terminate_on_collision),
-                                          static_cast<bool>(allowed_collision_msg.required_collision) } });
+    CollisionType type;
+
+    type.terminating = allowed_collision_msg.terminate_on_collision;
+    type.required = allowed_collision_msg.required_collision;
+    type.ignored = allowed_collision_msg.ignored_collision;
+
+    part_to_type.insert({ object_name, type });
   }
+  WorldCollisionTypes world_collision_types(part_to_type);
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
   ifco_scene->moveIfco(ifco_transform);
@@ -91,7 +96,7 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
                                          ifco_scene->getViewer());
   int status = 0;
   auto result =
-      jacobian_controller.go(initial_configuration, goal_transform, allowed_collisions, no_uncertainty_settings);
+      jacobian_controller.go(initial_configuration, goal_transform, world_collision_types, no_uncertainty_settings);
 
   if (result)
   {
@@ -144,8 +149,8 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
     ROS_INFO_STREAM("Trying to plan to the sampled frame number "
                     << i << ". Translation sample: " << sampled_point.transpose() << ", rotation sample: "
                     << sampled_rotation[0] << " " << sampled_rotation[1] << " " << sampled_rotation[2]);
-    auto result =
-        jacobian_controller.go(initial_configuration, sampled_transform, allowed_collisions, no_uncertainty_settings);
+    auto result = jacobian_controller.go(initial_configuration, sampled_transform, world_collision_types,
+                                         no_uncertainty_settings);
 
     if (result)
     {
@@ -180,8 +185,8 @@ bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& r
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
 
   ifco_scene->moveIfco(ifco_transform);
-  auto jacobian_controller = std::make_shared<JacobianController>(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017,
-                                         ifco_scene->getViewer());
+  auto jacobian_controller = std::make_shared<JacobianController>(
+      ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017, ifco_scene->getViewer());
   auto noisy_model = new rl::plan::NoisyModel;
   noisy_model->kin = ifco_scene->getKinematics().get();
   noisy_model->model = ifco_scene->getBulletScene()->getModel(0);
@@ -193,9 +198,15 @@ bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& r
 
   std::mt19937 gen;
   gen.seed(std::time(0));
-  auto workspace_box = std::make_shared<BoxSampler>(goal_transform, std::array<double,3>{0.1, 0.1, 0.1});
+  auto choose_sampler = std::make_shared<BoxSampler>(goal_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
 
-  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, workspace_box, delta, *ifco_scene->getViewer());
+  noisy_model->setPosition(initial_configuration);
+  noisy_model->updateFrames();
+  auto initial_transform = noisy_model->forwardPosition();
+  auto initial_sampler = std::make_shared<BoxSampler>(initial_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
+
+  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler, initial_sampler, delta,
+                       *ifco_scene->getViewer());
   soma_cerrt.start = &initial_configuration;
   rl::math::Vector crazy_goal = initial_configuration * 1.1;
   soma_cerrt.goal = &crazy_goal;

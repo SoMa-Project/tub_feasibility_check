@@ -108,14 +108,7 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
 
   BeliefState current_belief(initial_particles, &noisy_model_);
 
-  std::set<std::string> required_collisions;
-  for (auto& item : allowed_collisions)
-  {
-    auto& name = item.first;
-    auto& settings = item.second;
-    if (settings.required)
-      required_collisions.insert(name);
-  }
+  auto required_counter = collision_types.makeRequiredCollisionsCounter();
 
   emit reset();
   emit drawConfiguration(current_belief.configMean());
@@ -128,8 +121,9 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
     auto q_dot = calculateQDot(current_belief, to_pose, delta_);
     // TODO: result REACHED if there is no required collision
     if (q_dot.isZero())
-      return result.setSingleOutcome(required_collisions.empty() ? Result::Outcome::REACHED :
-                                                                   Result::Outcome::MISSED_REQUIRED_COLLISIONS);
+      return result.setSingleOutcome(required_counter->allRequiredPresent() ?
+                                         Result::Outcome::REACHED :
+                                         Result::Outcome::MISSED_REQUIRED_COLLISIONS);
 
     auto& particles = current_belief.getParticles();
     std::vector<Particle> next_particles(particles.size());
@@ -167,23 +161,14 @@ JacobianController::Result JacobianController::go(const rl::math::Vector& initia
     result.mean_trajectory.push_back(current_belief.configMean());
 
     emit drawConfiguration(current_belief.configMean());
-    auto collision_constraints_check = checkCollisionConstraints(collisions, allowed_collisions);
+    auto collision_constraints_check = checkCollisionConstraints(collisions, collision_types, *required_counter);
     std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
               std::inserter(result.outcomes, result.outcomes.begin()));
 
-    decltype(required_collisions) intersection;
-    std::set_difference(required_collisions.begin(), required_collisions.end(),
-                        collision_constraints_check.seen_required_world_collisions.begin(),
-                        collision_constraints_check.seen_required_world_collisions.end(),
-                        std::inserter(intersection, intersection.begin()));
-    required_collisions = intersection;
-
     if (!result.outcomes.empty())
       return result;
-
-    if (collision_constraints_check.success_termination)
-      return result.setSingleOutcome(required_collisions.empty() ? Result::Outcome::ACCEPTABLE_COLLISION :
-                                                                   Result::Outcome::MISSED_REQUIRED_COLLISIONS);
+    else if (collision_constraints_check.success_termination)
+      return result.setSingleOutcome(Result::Outcome::ACCEPTABLE_COLLISION);
   }
 
   return result.setSingleOutcome(Result::Outcome::STEPS_LIMIT);
@@ -221,30 +206,30 @@ rl::math::Vector JacobianController::calculateQDot(const rl::plan::BeliefState& 
   return qdot;
 }
 
-JacobianController::CollisionConstraintsCheck JacobianController::checkCollisionConstraints(
-    const CollisionPairs& collisions, const AllowedCollisions& allowed_collisions)
+JacobianController::CollisionConstraintsCheck
+JacobianController::checkCollisionConstraints(const CollisionPairs& collisions, const CollisionTypes& collision_types,
+                                              RequiredCollisionsCounter& required_counter)
 {
   CollisionConstraintsCheck check;
   bool terminating_collision_present = false;
 
   for (auto& shapes_in_contact : collisions)
   {
-    if (!isSensorized(shapes_in_contact.first))
+    auto collision_type = collision_types.getCollisionType(shapes_in_contact.first, shapes_in_contact.second);
+
+    // if the collision pair is ignored, touching with an unsensorized part is not a failure
+    if (!isSensorized(shapes_in_contact.first) && !collision_type.ignored)
       check.failures.insert(Result::Outcome::UNSENSORIZED_COLLISION);
 
-    if (allowed_collisions.count(shapes_in_contact.second))
-    {
-      auto& collision_settings = allowed_collisions.at(shapes_in_contact.second);
-      if (collision_settings.terminating)
-        terminating_collision_present = true;
-      if (collision_settings.required)
-        check.seen_required_world_collisions.insert(shapes_in_contact.second);
-    }
-    else
+    required_counter.countCollision(shapes_in_contact.first, shapes_in_contact.second);
+
+    if (collision_type.prohibited)
       check.failures.insert(Result::Outcome::UNACCEPTABLE_COLLISION);
+    if (collision_type.terminating)
+      terminating_collision_present = true;
   }
 
-  if (terminating_collision_present && check.failures.empty())
+  if (terminating_collision_present && check.failures.empty() && required_counter.allRequiredPresent())
     check.success_termination = true;
 
   return check;

@@ -9,7 +9,7 @@
 #include <rl/plan/BeliefState.h>
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
-#include "allowed_collisions.h"
+#include "collision_types.h"
 #include <unordered_map>
 
 class WorkspaceSampler;
@@ -69,7 +69,9 @@ private:
   };
 
   CollisionConstraintsCheck checkCollisionConstraints(const CollisionPairs& collisions,
-                                                      const AllowedCollisions& allowed_collisions);
+                                                      const CollisionTypes& collision_types,
+                                                      RequiredCollisionsCounter& required_counter);
+
   rl::math::Vector calculateQDot(const rl::plan::BeliefState& belief, const rl::math::Transform& goal_pose,
                                  double delta);
   void moveBelief(rl::plan::BeliefState& belief, const std::vector<rl::math::Real>& q_dots);

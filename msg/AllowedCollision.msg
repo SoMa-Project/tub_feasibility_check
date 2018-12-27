@@ -27,3 +27,7 @@ bool terminate_on_collision
 # If true, planner will not output success if this collision did not
 # happen at some point.
 bool required_collision
+
+# If true, even contact with unsensorized part of the robot will not
+# trigger failure.
+bool ignored_collision

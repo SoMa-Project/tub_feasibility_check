@@ -6,7 +6,7 @@
 #include <rl/math/Vector.h>
 #include <rl/math/Transform.h>
 #include <boost/optional.hpp>
-#include "allowed_collisions.h"
+#include "collision_types.h"
 #include "jacobian_controller.h"
 
 
@@ -66,7 +66,7 @@ private:
 template <class RandomEngine>
 boost::optional<rl::math::Vector> sampleWithJacobianControl(JacobianController& jacobian_controller,
                                                             const rl::math::Vector& initial_configuration,
-                                                            const AllowedCollisions& allowed_collisions,
+                                                            const CollisionTypes& collision_types,
                                                             WorkspaceSampler& sampler,
                                                             RandomEngine& random_engine,
                                                             unsigned maximum_attempts,
@@ -77,7 +77,7 @@ boost::optional<rl::math::Vector> sampleWithJacobianControl(JacobianController& 
     auto sampled_pose = sampler.generate(random_engine);
 
     auto result =
-        jacobian_controller.go(initial_configuration, sampled_pose, allowed_collisions,
+        jacobian_controller.go(initial_configuration, sampled_pose, collision_types,
                                JacobianController::Settings::NoUncertainty(initial_configuration.size(), delta));
     if (result)
       return result.final_belief.configMean();
