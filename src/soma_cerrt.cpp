@@ -30,6 +30,7 @@ SomaCerrt::SomaCerrt(std::shared_ptr<JacobianController> jacobian_controller, rl
 
   collision_types_.reset(new IgnoreAllCollisionTypes);
   goal_checker_.reset(new BoxChecker(Transform::Identity(), { 0.1, 0.1, 0.1 }, { 0.5, 0.5, 0.5 }));
+  nrParticles = 20;
 }
 
 void SomaCerrt::choose(rl::math::Vector& chosen)
@@ -54,15 +55,7 @@ void SomaCerrt::choose(rl::math::Vector& chosen)
 
 void SomaCerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initialParticles)
 {
-  initialParticles.clear();
-  IgnoreAllCollisionTypes ignore_all_collisions;
-
-  for (unsigned i = 0; i < model->getDof(); ++i)
-  {
-    auto sample_pose = initial_sampler_->generate(random_gen_);
-    auto result = jacobian_controller_->moveSingleParticle(*start, sample_pose, ignore_all_collisions);
-    initialParticles.push_back(result.trajectory.back());
-  }
+  Cerrt::sampleInitialParticles(initialParticles);
 }
 
 bool SomaCerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> belief)

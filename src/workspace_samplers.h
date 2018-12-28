@@ -9,9 +9,7 @@
 #include "collision_types.h"
 #include "jacobian_controller.h"
 
-// TODO in dire need of rework. no way to combine box position + fixed orientation from this code
-// even though it should be possible
-
+// TODO in dire need of rework
 class WorkspaceSampler
 {
 public:

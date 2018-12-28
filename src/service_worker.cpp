@@ -193,7 +193,7 @@ bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& r
   noisy_model->model = ifco_scene->getBulletScene()->getModel(0);
   noisy_model->scene = ifco_scene->getBulletScene().get();
 
-  Vector errors = Vector::Ones(initial_configuration.size()) * 0.001;
+  Vector errors = Vector::Ones(initial_configuration.size()) * 0;
   noisy_model->initialError = &errors;
   noisy_model->motionError = &errors;
 
@@ -206,7 +206,7 @@ bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& r
   noisy_model->updateFrames();
   auto initial_transform = noisy_model->forwardPosition();
   auto initial_sampler =
-      std::make_shared<BoxUniformOrientationSampler>(initial_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
+      std::make_shared<BoxUniformOrientationSampler>(initial_transform, std::array<double, 3>{ 0.01, 0.01, 0.01 });
 
   SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler, initial_sampler,
                        { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
