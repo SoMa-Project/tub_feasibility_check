@@ -9,7 +9,8 @@
 #include "collision_types.h"
 #include "jacobian_controller.h"
 
-// TODO in dire need of rework
+// TODO in dire need of rework. Have not figured out a way to write it cleanly so far.
+
 class WorkspaceSampler
 {
 public:

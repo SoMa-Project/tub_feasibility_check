@@ -3,6 +3,7 @@
 
 #include <rl/math/Transform.h>
 
+/* Checks whether a pose is contained within a workspace manifold. */
 class WorkspaceChecker
 {
 public:
@@ -10,6 +11,7 @@ public:
   virtual bool contains(const rl::math::Transform& transform) const = 0;
 };
 
+/* A manifold with positions inside of a box and orientations having a maximum value of Euler XYZ rotation. */
 class BoxChecker : public WorkspaceChecker
 {
 public:

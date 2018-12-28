@@ -61,6 +61,8 @@ void SomaCerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initialP
 bool SomaCerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> belief)
 {
   auto& particles = belief->getParticles();
+  // for every particle, check that all required contact pairs are present, and the pose lies within a workspace
+  // goal manifold
   for (auto& particle : particles)
   {
     auto nonpresent_contacts = required_goal_contacts_;

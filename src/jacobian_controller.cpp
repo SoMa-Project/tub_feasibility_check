@@ -7,9 +7,13 @@ JacobianController::SingleResult::operator bool() const
 {
   assert(outcomes.size());
 
+  // a positive outcome is always single
   if (outcomes.size() != 1)
     return false;
+
   Outcome outcome = *outcomes.begin();
+
+  // REACHED and ACCEPTABLE_COLLISION are the only positive outcomes.
   return outcome == SingleResult::Outcome::REACHED || outcome == SingleResult::Outcome::ACCEPTABLE_COLLISION;
 }
 
@@ -71,6 +75,9 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   noisy_model_.kin = kinematics_.get();
   noisy_model_.model = bullet_scene_->getModel(0);
   noisy_model_.scene = bullet_scene_.get();
+
+  // motionError and initialError are allocated here, but their values are set at the beginning of each
+  // moveBelief call
   noisy_model_.motionError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
   noisy_model_.initialError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
 
@@ -92,6 +99,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
 {
   using namespace rl::math;
 
+  // a counter for required collisions
   auto required_counter = collision_types.makeRequiredCollisionsCounter();
 
   Vector current_config = initial_configuration;
@@ -105,8 +113,11 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
   for (std::size_t i = 0; i < maximum_steps_; ++i)
   {
     auto q_dot = calculateQDot(current_config, to_pose, delta_);
-    // TODO: result REACHED if there is no required collision
+
+    // arrived at the target pose
     if (q_dot.isZero())
+      // if there were no required collisions at the start, or all of them were seen during the execution,
+      // then it's a succesful termination
       return result.setSingleOutcome(required_counter->allRequiredPresent() ?
                                          SingleResult::Outcome::REACHED :
                                          SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS);
@@ -130,11 +141,15 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
 
     auto collision_constraints_check =
         checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_types, *required_counter);
+    // if the collision constraints were violated, failures are not empty
     std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
               std::inserter(result.outcomes, result.outcomes.begin()));
 
     if (!result.outcomes.empty())
       return result;
+
+    // success termination means that a terminating collision was seen, and all other collision constraints
+    // and requirements were obeyed
     else if (collision_constraints_check.success_termination)
       return result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION);
   }
@@ -153,6 +168,7 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
   using rl::plan::Particle;
 
   BeliefResult result;
+  // phase one: move a single particle without noise to find out the trajectory
   result.no_noise_test_result = moveSingleParticle(initial_configuration, to_pose, collision_types);
 
   if (!result)
@@ -163,26 +179,34 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
   *noisy_model_.motionError = settings.joints_std_error;
   *noisy_model_.initialError = settings.initial_std_error;
 
+  // for every particle, sample initial noise, and then execute the trajectory with motion noise
   for (std::size_t i = 0; i < settings.number_of_particles; ++i)
   {
     Vector current_config(initial_configuration.size());
     noisy_model_.sampleInitialError(current_config);
     current_config += initial_configuration;
 
+    // count the required collisions for this particle
     auto required_counter = collision_types.makeRequiredCollisionsCounter();
 
     auto& particle_result = result.particle_results->at(i);
     particle_result.trajectory.push_back(current_config);
+
+    // current_error is used to store accumulated error. The target of the particle for a step
+    // is a trajectory configuration for that step plus the accumulated error
     Vector current_error = current_config - result.no_noise_test_result.trajectory.front();
 
     emit reset();
     emit drawConfiguration(current_config);
 
+    // execute the steps of the trajectory
     for (std::size_t j = 1; j < result.no_noise_test_result.trajectory.size(); ++j)
     {
+      // target with the inclusion of accumulated error
       Vector target_with_error = result.no_noise_test_result.trajectory[j] + current_error;
       Vector noise(initial_configuration.size());
       noisy_model_.sampleMotionError(noise);
+      // move the particle all the way to target_with_error applying noise
       noisy_model_.interpolateNoisy(current_config, target_with_error, 1, noise, current_config);
 
       particle_result.trajectory.push_back(current_config);
@@ -205,9 +229,11 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
       std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
                 std::inserter(particle_result.outcomes, particle_result.outcomes.begin()));
 
+      // there was one or more failures, execution for this particle is finished
       if (!particle_result.outcomes.empty())
         break;
 
+      // a terminating collision was seen and all other constraints were obeyed
       if (collision_constraints_check.success_termination)
       {
         particle_result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION);
@@ -215,7 +241,10 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
       }
     }
 
-    particle_result.setSingleOutcome(SingleResult::Outcome::STEPS_LIMIT);
+    // have successfully executed the whole trajectory
+    // TODO unclear whether it should be reached: it can deviate pretty far from the target pose. It does not
+    // mean the same as REACHED in moveSingleParticle
+    particle_result.setSingleOutcome(SingleResult::Outcome::REACHED);
   }
 
   return result;
@@ -242,6 +271,7 @@ rl::math::Vector JacobianController::calculateQDot(const rl::math::Vector& confi
   Vector qdot = Vector::Zero(kinematics_->getDof());
   noisy_model_.inverseVelocity(tdot, qdot);
 
+  // clip the velocity to zero if we are within delta units of goal
   if (qdot.norm() < delta)
     qdot.setZero();
   else
@@ -276,13 +306,20 @@ JacobianController::CollisionConstraintsCheck JacobianController::checkCollision
       terminating_collision_present = true;
   }
 
-  if (terminating_collision_present && check.failures.empty() && required_counter.allRequiredPresent())
-    check.success_termination = true;
+  // there was a terminating collision and there were no failures
+  if (terminating_collision_present && check.failures.empty())
+  {
+    // success only if all required collisions were present
+    if (required_counter.allRequiredPresent())
+      check.success_termination = true;
+    else
+      check.failures.insert(SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS);
+  }
 
   return check;
 }
 
-// will be killed by the hybrid automatons code
+// TODO Elod says Hybrid Automaton export will mess with this
 std::string JacobianController::getPartName(const std::string& address) const
 {
   auto split_position = address.find("_");

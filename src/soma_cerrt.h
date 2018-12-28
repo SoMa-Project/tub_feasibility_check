@@ -17,6 +17,8 @@ class Viewer;
 class WorkspaceSampler;
 class JacobianController;
 
+/* An example showing how CHOOSE and goal check can be implemented.
+ */
 class SomaCerrt : public rl::plan::Cerrt
 {
 public:
