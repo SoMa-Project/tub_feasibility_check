@@ -12,12 +12,15 @@
 
 SomaCerrt::SomaCerrt(std::shared_ptr<JacobianController> jacobian_controller, rl::plan::NoisyModel* noisy_model,
                      std::shared_ptr<WorkspaceSampler> sampler_for_choose,
-                     std::shared_ptr<WorkspaceSampler> initial_sampler, double delta, Viewer* viewer)
+                     std::shared_ptr<WorkspaceSampler> initial_sampler,
+                     std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts,
+                     double delta, Viewer* viewer)
   : Cerrt()
   , jacobian_controller_(jacobian_controller)
   , sampler_for_choose_(sampler_for_choose)
   , initial_sampler_(initial_sampler)
   , viewer_(viewer)
+  , required_goal_contacts_(required_goal_contacts)
 {
   using namespace rl::math;
   model = noisy_model;
@@ -26,6 +29,7 @@ SomaCerrt::SomaCerrt(std::shared_ptr<JacobianController> jacobian_controller, rl
   random_gen_.seed(std::time(0));
 
   collision_types_.reset(new IgnoreAllCollisionTypes);
+  goal_checker_.reset(new BoxChecker(Transform::Identity(), {0.1, 0.1, 0.1}, {0.5, 0.5, 0.5}));
 }
 
 void SomaCerrt::choose(rl::math::Vector& chosen)
@@ -53,12 +57,28 @@ void SomaCerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initialP
   {
     auto sample_pose = initial_sampler_->generate(random_gen_);
     auto result = jacobian_controller_->go(*start, sample_pose, ignore_all_collisions,
-                             JacobianController::Settings::NoUncertainty(model->getDof(), delta));
+                                           JacobianController::Settings::NoUncertainty(model->getDof(), delta));
     initialParticles.push_back(result.final_belief.getParticles().front());
   }
 }
 
 bool SomaCerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> belief)
 {
-  return false;
+  auto& particles = belief->getParticles();
+  for (auto& particle: particles)
+  {
+    auto nonpresent_contacts = required_goal_contacts_;
+    for (auto& contact_and_description: particle.contacts)
+      nonpresent_contacts.erase(contact_and_description.first);
+
+    if (!nonpresent_contacts.empty())
+      return false;
+
+    model->setPosition(particle.config);
+    model->updateFrames();
+    if (!goal_checker_->contains(model->forwardPosition()))
+      return false;
+  }
+
+  return true;
 }

@@ -10,6 +10,8 @@
 #include <rl/sg/bullet/Scene.h>
 #include <random>
 #include "collision_types.h"
+#include "workspace_checkers.h"
+#include "pair_hash.h"
 
 class Viewer;
 class WorkspaceSampler;
@@ -20,7 +22,8 @@ class SomaCerrt : public rl::plan::Cerrt
 public:
   SomaCerrt(std::shared_ptr<JacobianController> jacobian_controller, rl::plan::NoisyModel* noisy_model,
             std::shared_ptr<WorkspaceSampler> sampler_for_choose, std::shared_ptr<WorkspaceSampler> initial_sampler,
-            double delta, Viewer* viewer);
+            std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts, double delta,
+            Viewer* viewer);
 
 protected:
   void choose(rl::math::Vector& chosen) override;
@@ -33,6 +36,9 @@ private:
   std::shared_ptr<WorkspaceSampler> sampler_for_choose_;
   std::shared_ptr<WorkspaceSampler> initial_sampler_;
   std::unique_ptr<CollisionTypes> collision_types_;
+  std::unique_ptr<WorkspaceChecker> goal_checker_;
+  std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts_;
+
   unsigned maximum_sample_attempts_ = 10;
   std::mt19937 random_gen_;
 };

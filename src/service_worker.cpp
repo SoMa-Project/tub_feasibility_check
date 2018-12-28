@@ -205,7 +205,8 @@ bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& r
   auto initial_transform = noisy_model->forwardPosition();
   auto initial_sampler = std::make_shared<BoxSampler>(initial_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
 
-  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler, initial_sampler, delta,
+  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler, initial_sampler,
+                       { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
                        *ifco_scene->getViewer());
   soma_cerrt.start = &initial_configuration;
   rl::math::Vector crazy_goal = initial_configuration * 1.1;
