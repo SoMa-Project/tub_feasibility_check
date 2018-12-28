@@ -52,6 +52,8 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
                                          kinematics_check::CheckKinematics::Response& res)
 {
   const double delta = 0.017;
+  const unsigned maximum_steps = 1000;
+
   ROS_INFO("Receiving query");
   if (!checkParameters(req))
     return false;
@@ -62,8 +64,6 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
   tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
-  JacobianController::Settings no_uncertainty_settings =
-      JacobianController::Settings::NoUncertainty(static_cast<std::size_t>(initial_configuration.size()), delta);
 
   WorldCollisionTypes::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
@@ -92,18 +92,17 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017,
-                                         ifco_scene->getViewer());
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
+                                         maximum_steps, ifco_scene->getViewer());
   int status = 0;
-  auto result =
-      jacobian_controller.go(initial_configuration, goal_transform, world_collision_types, no_uncertainty_settings);
+  auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types);
 
   if (result)
   {
     ROS_INFO_STREAM("Goal frame success: " << result.description());
     res.success = true;
     res.status = 1;
-    res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
+    res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
 
@@ -149,8 +148,8 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
     ROS_INFO_STREAM("Trying to plan to the sampled frame number "
                     << i << ". Translation sample: " << sampled_point.transpose() << ", rotation sample: "
                     << sampled_rotation[0] << " " << sampled_rotation[1] << " " << sampled_rotation[2]);
-    auto result = jacobian_controller.go(initial_configuration, sampled_transform, world_collision_types,
-                                         no_uncertainty_settings);
+    auto result =
+        jacobian_controller.moveSingleParticle(initial_configuration, sampled_transform, world_collision_types);
 
     if (result)
     {
@@ -158,8 +157,8 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
       // TODO remove success as a returen
       res.success = true;
       res.status = 2;
-      res.final_configuration = utilities::eigenToStd(result.final_belief.configMean());
-      res.trajectory = utilities::concatanateEigneToStd(result.mean_trajectory, res.final_configuration.size());
+      res.final_configuration = utilities::eigenToStd(result.trajectory.back());
+      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
       return true;
     }
     else
@@ -178,6 +177,8 @@ bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& r
   using namespace rl::math;
 
   const double delta = 0.017;
+  const unsigned maximum_steps = 1000;
+
   Eigen::Affine3d ifco_transform;
   Eigen::Affine3d goal_transform;
   tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
@@ -186,24 +187,26 @@ bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& r
 
   ifco_scene->moveIfco(ifco_transform);
   auto jacobian_controller = std::make_shared<JacobianController>(
-      ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017, ifco_scene->getViewer());
+      ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta, maximum_steps, ifco_scene->getViewer());
   auto noisy_model = new rl::plan::NoisyModel;
   noisy_model->kin = ifco_scene->getKinematics().get();
   noisy_model->model = ifco_scene->getBulletScene()->getModel(0);
   noisy_model->scene = ifco_scene->getBulletScene().get();
 
-  Vector errors = Vector::Ones(initial_configuration.size()) * 0.1;
+  Vector errors = Vector::Ones(initial_configuration.size()) * 0.001;
   noisy_model->initialError = &errors;
   noisy_model->motionError = &errors;
 
   std::mt19937 gen;
   gen.seed(std::time(0));
-  auto choose_sampler = std::make_shared<BoxSampler>(goal_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
+  auto choose_sampler =
+      std::make_shared<BoxUniformOrientationSampler>(goal_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
 
   noisy_model->setPosition(initial_configuration);
   noisy_model->updateFrames();
   auto initial_transform = noisy_model->forwardPosition();
-  auto initial_sampler = std::make_shared<BoxSampler>(initial_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
+  auto initial_sampler =
+      std::make_shared<BoxUniformOrientationSampler>(initial_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
 
   SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler, initial_sampler,
                        { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,

@@ -3,36 +3,36 @@
 #include <iostream>
 #include <fstream>
 
-JacobianController::Result::operator bool() const
+JacobianController::SingleResult::operator bool() const
 {
   assert(outcomes.size());
 
   if (outcomes.size() != 1)
     return false;
   Outcome outcome = *outcomes.begin();
-  return outcome == Result::Outcome::REACHED || outcome == Result::Outcome::ACCEPTABLE_COLLISION;
+  return outcome == SingleResult::Outcome::REACHED || outcome == SingleResult::Outcome::ACCEPTABLE_COLLISION;
 }
 
-std::string JacobianController::Result::description() const
+std::string JacobianController::SingleResult::description() const
 {
   auto describeOutcome = [](Outcome outcome) {
     switch (outcome)
     {
-      case Result::Outcome::REACHED:
+      case SingleResult::Outcome::REACHED:
         return "reached the goal frame";
-      case Result::Outcome::JOINT_LIMIT:
+      case SingleResult::Outcome::JOINT_LIMIT:
         return "violated the joint limit";
-      case Result::Outcome::SINGULARITY:
+      case SingleResult::Outcome::SINGULARITY:
         return "ended in the singularity";
-      case Result::Outcome::STEPS_LIMIT:
+      case SingleResult::Outcome::STEPS_LIMIT:
         return "went over the steps limit";
-      case Result::Outcome::ACCEPTABLE_COLLISION:
+      case SingleResult::Outcome::ACCEPTABLE_COLLISION:
         return "ended on acceptable collision";
-      case Result::Outcome::UNACCEPTABLE_COLLISION:
+      case SingleResult::Outcome::UNACCEPTABLE_COLLISION:
         return "ended on unacceptable collision";
-      case Result::Outcome::UNSENSORIZED_COLLISION:
+      case SingleResult::Outcome::UNSENSORIZED_COLLISION:
         return "ended on unsensorized collision";
-      case Result::Outcome::MISSED_REQUIRED_COLLISIONS:
+      case SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS:
         return "missing required collisions";
       default:
         assert(false);
@@ -54,8 +54,8 @@ std::string JacobianController::Result::description() const
   return ss.str();
 }
 
-JacobianController::Result&
-JacobianController::Result::setSingleOutcome(JacobianController::Result::Outcome single_outcome)
+JacobianController::SingleResult&
+JacobianController::SingleResult::setSingleOutcome(JacobianController::SingleResult::Outcome single_outcome)
 {
   outcomes.clear();
   outcomes.insert(single_outcome);
@@ -65,8 +65,8 @@ JacobianController::Result::setSingleOutcome(JacobianController::Result::Outcome
 
 JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
                                        std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta,
-                                       boost::optional<Viewer*> viewer)
-  : kinematics_(kinematics), bullet_scene_(bullet_scene), delta_(delta)
+                                       unsigned maximum_steps, boost::optional<Viewer*> viewer)
+  : kinematics_(kinematics), bullet_scene_(bullet_scene), delta_(delta), maximum_steps_(maximum_steps)
 {
   noisy_model_.kin = kinematics_.get();
   noisy_model_.model = bullet_scene_->getModel(0);
@@ -86,102 +86,149 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   }
 }
 
-JacobianController::Result JacobianController::go(const rl::math::Vector& initial_configuration,
-                                                  const rl::math::Transform& to_pose,
-                                                  const CollisionTypes& collision_types, const Settings& settings)
+JacobianController::SingleResult JacobianController::moveSingleParticle(const rl::math::Vector& initial_configuration,
+                                                                        const rl::math::Transform& to_pose,
+                                                                        const CollisionTypes& collision_types)
 {
   using namespace rl::math;
-  using rl::plan::BeliefState;
-  using rl::plan::Particle;
-
-  std::size_t maximum_steps = static_cast<std::size_t>(10 / delta_);
-  *noisy_model_.motionError = settings.joints_std_error;
-  *noisy_model_.initialError = settings.initial_std_error;
-
-  std::vector<Particle> initial_particles(settings.number_of_particles);
-  for (std::size_t i = 0; i < settings.number_of_particles; ++i)
-  {
-    initial_particles[i].config.resize(initial_configuration.size());
-    noisy_model_.sampleInitialError(initial_particles[i].config);
-    initial_particles[i].config += initial_configuration;
-  }
-
-  BeliefState current_belief(initial_particles, &noisy_model_);
 
   auto required_counter = collision_types.makeRequiredCollisionsCounter();
 
+  Vector current_config = initial_configuration;
+
   emit reset();
-  emit drawConfiguration(current_belief.configMean());
+  emit drawConfiguration(current_config);
 
-  Result result;
-  result.mean_trajectory.push_back(current_belief.configMean());
+  SingleResult result;
+  result.trajectory.push_back(current_config);
 
-  for (std::size_t i = 0; i < maximum_steps; ++i)
+  for (std::size_t i = 0; i < maximum_steps_; ++i)
   {
-    auto q_dot = calculateQDot(current_belief, to_pose, delta_);
+    auto q_dot = calculateQDot(current_config, to_pose, delta_);
     // TODO: result REACHED if there is no required collision
     if (q_dot.isZero())
       return result.setSingleOutcome(required_counter->allRequiredPresent() ?
-                                         Result::Outcome::REACHED :
-                                         Result::Outcome::MISSED_REQUIRED_COLLISIONS);
+                                         SingleResult::Outcome::REACHED :
+                                         SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS);
 
-    auto& particles = current_belief.getParticles();
-    std::vector<Particle> next_particles(particles.size());
-    std::vector<std::pair<std::string, std::string>> collisions;
-    for (std::size_t j = 0; j < particles.size(); ++j)
-    {
-      Vector noise(noisy_model_.getDof());
-      noisy_model_.sampleMotionError(noise);
+    current_config += q_dot;
 
-      auto added_noise = (q_dot.array().abs().sqrt() * noise.array()).matrix();
-      next_particles[j].config = particles[j].config + q_dot + added_noise;
-      if (!noisy_model_.isValid(next_particles[j].config))
-        result.outcomes.insert(Result::Outcome::JOINT_LIMIT);
+    result.trajectory.push_back(current_config);
+    emit drawConfiguration(current_config);
 
-      noisy_model_.setPosition(next_particles[j].config);
-      noisy_model_.updateFrames();
-      noisy_model_.updateJacobian();
-      noisy_model_.updateJacobianInverse();
-      noisy_model_.isColliding();
+    if (!noisy_model_.isValid(current_config))
+      result.outcomes.insert(SingleResult::Outcome::JOINT_LIMIT);
 
-      if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
-        result.outcomes.insert(Result::Outcome::SINGULARITY);
+    noisy_model_.setPosition(current_config);
+    noisy_model_.updateFrames();
+    noisy_model_.updateJacobian();
+    noisy_model_.updateJacobianInverse();
+    noisy_model_.isColliding();
 
-      auto collision_pairs = noisy_model_.scene->getLastCollisions();
-      std::transform(collision_pairs.begin(), collision_pairs.end(), std::back_inserter(collisions),
-                     [this](decltype(collision_pairs)::value_type c) {
-                       return std::make_pair(getPartName(c.first.first), getPartName(c.first.second));
-                     });
-    }
+    if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
+      result.outcomes.insert(SingleResult::Outcome::SINGULARITY);
 
-    auto previous_mean = current_belief.configMean();
-    current_belief = BeliefState(next_particles, &noisy_model_);
-    // TODO rewrite to remove copying
-    result.final_belief = current_belief;
-    result.mean_trajectory.push_back(current_belief.configMean());
-
-    emit drawConfiguration(current_belief.configMean());
-    auto collision_constraints_check = checkCollisionConstraints(collisions, collision_types, *required_counter);
+    auto collision_constraints_check =
+        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_types, *required_counter);
     std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
               std::inserter(result.outcomes, result.outcomes.begin()));
 
     if (!result.outcomes.empty())
       return result;
     else if (collision_constraints_check.success_termination)
-      return result.setSingleOutcome(Result::Outcome::ACCEPTABLE_COLLISION);
+      return result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION);
   }
 
-  return result.setSingleOutcome(Result::Outcome::STEPS_LIMIT);
+  return result.setSingleOutcome(SingleResult::Outcome::STEPS_LIMIT);
 }
 
-rl::math::Vector JacobianController::calculateQDot(const rl::plan::BeliefState& belief,
+// TODO try to resolve code duplication between this and moveSingleParticle
+JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::Vector& initial_configuration,
+                                                                const rl::math::Transform& to_pose,
+                                                                const CollisionTypes& collision_types,
+                                                                MoveBeliefSettings settings)
+{
+  using namespace rl::math;
+  using rl::plan::BeliefState;
+  using rl::plan::Particle;
+
+  BeliefResult result;
+  result.no_noise_test_result = moveSingleParticle(initial_configuration, to_pose, collision_types);
+
+  if (!result)
+    return result;
+
+  result.particle_results = std::vector<SingleResult>(settings.number_of_particles);
+
+  *noisy_model_.motionError = settings.joints_std_error;
+  *noisy_model_.initialError = settings.initial_std_error;
+
+  for (std::size_t i = 0; i < settings.number_of_particles; ++i)
+  {
+    Vector current_config(initial_configuration.size());
+    noisy_model_.sampleInitialError(current_config);
+    current_config += initial_configuration;
+
+    auto required_counter = collision_types.makeRequiredCollisionsCounter();
+
+    auto& particle_result = result.particle_results->at(i);
+    particle_result.trajectory.push_back(current_config);
+    Vector current_error = current_config - result.no_noise_test_result.trajectory.front();
+
+    emit reset();
+    emit drawConfiguration(current_config);
+
+    for (std::size_t j = 1; j < result.no_noise_test_result.trajectory.size(); ++j)
+    {
+      Vector target_with_error = result.no_noise_test_result.trajectory[j] + current_error;
+      Vector noise(initial_configuration.size());
+      noisy_model_.sampleMotionError(noise);
+      noisy_model_.interpolateNoisy(current_config, target_with_error, 1, noise, current_config);
+
+      particle_result.trajectory.push_back(current_config);
+      current_error += noise;
+
+      if (!noisy_model_.isValid(current_config))
+        particle_result.outcomes.insert(SingleResult::Outcome::JOINT_LIMIT);
+
+      noisy_model_.setPosition(current_config);
+      noisy_model_.updateFrames();
+      noisy_model_.updateJacobian();
+      noisy_model_.updateJacobianInverse();
+      noisy_model_.isColliding();
+
+      if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
+        particle_result.outcomes.insert(SingleResult::Outcome::SINGULARITY);
+
+      auto collision_constraints_check =
+          checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_types, *required_counter);
+      std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
+                std::inserter(particle_result.outcomes, particle_result.outcomes.begin()));
+
+      if (!particle_result.outcomes.empty())
+        break;
+
+      if (collision_constraints_check.success_termination)
+      {
+        particle_result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION);
+        break;
+      }
+    }
+
+    particle_result.setSingleOutcome(SingleResult::Outcome::STEPS_LIMIT);
+  }
+
+  return result;
+}
+
+rl::math::Vector JacobianController::calculateQDot(const rl::math::Vector& configuration,
                                                    const rl::math::Transform& goal_pose, double delta)
 {
   using namespace rl::math;
   using rl::math::transform::toDelta;
 
   // Update the model
-  noisy_model_.setPosition(belief.configMean());
+  noisy_model_.setPosition(configuration);
   noisy_model_.updateFrames();
   noisy_model_.updateJacobian();
   noisy_model_.updateJacobianInverse();
@@ -206,25 +253,25 @@ rl::math::Vector JacobianController::calculateQDot(const rl::plan::BeliefState& 
   return qdot;
 }
 
-JacobianController::CollisionConstraintsCheck
-JacobianController::checkCollisionConstraints(const CollisionPairs& collisions, const CollisionTypes& collision_types,
-                                              RequiredCollisionsCounter& required_counter)
+JacobianController::CollisionConstraintsCheck JacobianController::checkCollisionConstraints(
+    const rl::sg::CollisionMap& collision_map, const CollisionTypes& collision_types,
+    RequiredCollisionsCounter& required_counter)
 {
   CollisionConstraintsCheck check;
   bool terminating_collision_present = false;
 
-  for (auto& shapes_in_contact : collisions)
+  for (auto& shapes_in_contact : transformCollisionMapToNamePairs(collision_map))
   {
     auto collision_type = collision_types.getCollisionType(shapes_in_contact.first, shapes_in_contact.second);
 
     // if the collision pair is ignored, touching with an unsensorized part is not a failure
     if (!isSensorized(shapes_in_contact.first) && !collision_type.ignored)
-      check.failures.insert(Result::Outcome::UNSENSORIZED_COLLISION);
+      check.failures.insert(SingleResult::Outcome::UNSENSORIZED_COLLISION);
 
     required_counter.countCollision(shapes_in_contact.first, shapes_in_contact.second);
 
     if (collision_type.prohibited)
-      check.failures.insert(Result::Outcome::UNACCEPTABLE_COLLISION);
+      check.failures.insert(SingleResult::Outcome::UNACCEPTABLE_COLLISION);
     if (collision_type.terminating)
       terminating_collision_present = true;
   }
@@ -236,7 +283,7 @@ JacobianController::checkCollisionConstraints(const CollisionPairs& collisions, 
 }
 
 // will be killed by the hybrid automatons code
-std::string JacobianController::getPartName(const std::string& address)
+std::string JacobianController::getPartName(const std::string& address) const
 {
   auto split_position = address.find("_");
   auto body_address_str = address.substr(0, split_position);
@@ -253,13 +300,22 @@ bool JacobianController::isSensorized(const std::string& part_name) const
   return part_name.find("sensor") != std::string::npos;
 }
 
-JacobianController::Settings JacobianController::Settings::NoUncertainty(std::size_t dof, double delta)
+std::vector<std::pair<std::string, std::string>>
+JacobianController::transformCollisionMapToNamePairs(const rl::sg::CollisionMap& collision_map) const
 {
-  Settings s;
-  s.joints_std_error = rl::math::Vector::Zero(static_cast<int>(dof));
-  s.initial_std_error = rl::math::Vector::Zero(static_cast<int>(dof));
-  s.delta = delta;
-  s.number_of_particles = 1;
+  std::vector<std::pair<std::string, std::string>> collisions;
+  std::transform(collision_map.begin(), collision_map.end(), std::back_inserter(collisions),
+                 [this](rl::sg::CollisionMap::value_type c) {
+                   return std::make_pair(getPartName(c.first.first), getPartName(c.first.second));
+                 });
 
-  return s;
+  return collisions;
+}
+
+JacobianController::BeliefResult::operator bool() const
+{
+  if (!no_noise_test_result)
+    return false;
+
+  return std::all_of(particle_results->begin(), particle_results->end(), [](const SingleResult& r) { return r; });
 }

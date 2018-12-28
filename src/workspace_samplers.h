@@ -9,6 +9,8 @@
 #include "collision_types.h"
 #include "jacobian_controller.h"
 
+// TODO in dire need of rework. no way to combine box position + fixed orientation from this code
+// even though it should be possible
 
 class WorkspaceSampler
 {
@@ -45,10 +47,10 @@ protected:
   rl::math::Quaternion generateOrientation(std::array<double, 3> randoms_01) override;
 };
 
-class BoxSampler : public UniformOrientationSampler
+class BoxUniformOrientationSampler : public UniformOrientationSampler
 {
 public:
-  BoxSampler(rl::math::Transform box_pose, std::array<double, 3> dimensions)
+  BoxUniformOrientationSampler(rl::math::Transform box_pose, std::array<double, 3> dimensions)
     : box_pose_(box_pose), dimensions_(dimensions)
   {
   }
@@ -77,10 +79,9 @@ boost::optional<rl::math::Vector> sampleWithJacobianControl(JacobianController& 
     auto sampled_pose = sampler.generate(random_engine);
 
     auto result =
-        jacobian_controller.go(initial_configuration, sampled_pose, collision_types,
-                               JacobianController::Settings::NoUncertainty(initial_configuration.size(), delta));
+        jacobian_controller.moveSingleParticle(initial_configuration, sampled_pose, collision_types);
     if (result)
-      return result.final_belief.configMean();
+      return result.trajectory.back();
   }
 
   return boost::none;

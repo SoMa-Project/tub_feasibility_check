@@ -18,7 +18,7 @@ class JacobianController : public QObject
 {
   Q_OBJECT
 public:
-  struct Result
+  struct SingleResult
   {
     enum class Outcome
     {
@@ -32,57 +32,68 @@ public:
       MISSED_REQUIRED_COLLISIONS
     };
 
-    rl::plan::BeliefState final_belief;
-    std::vector<rl::math::Vector> mean_trajectory;
+    std::vector<rl::math::Vector> trajectory;
     std::set<Outcome> outcomes;
 
     operator bool() const;
-    Result& setSingleOutcome(Outcome outcome);
+    SingleResult& setSingleOutcome(Outcome outcome);
     std::string description() const;
   };
 
-  struct Settings
+  struct BeliefResult
+  {
+    SingleResult no_noise_test_result;
+    boost::optional<std::vector<SingleResult>> particle_results;
+
+    operator bool() const;
+  };
+
+  struct MoveBeliefSettings
   {
     std::size_t number_of_particles;
-    double delta;
     rl::math::Vector initial_std_error;
     rl::math::Vector joints_std_error;
-
-    static Settings NoUncertainty(std::size_t dof, double delta);
   };
 
   JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta,
+                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta, unsigned maximum_steps,
                      boost::optional<Viewer*> viewer = boost::none);
 
-  Result go(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
-            const CollisionTypes& collision_types, const Settings& settings);
+  SingleResult moveSingleParticle(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
+                                  const CollisionTypes& collision_types);
+
+  BeliefResult moveBelief(const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
+                          const CollisionTypes& collision_types, MoveBeliefSettings settings);
 
 private:
   // for now, the container is flat. if information regarding particles is needed, than it should be nested
   typedef std::vector<std::pair<std::string, std::string>> CollisionPairs;
   struct CollisionConstraintsCheck
   {
-    std::set<Result::Outcome> failures;
+    std::set<SingleResult::Outcome> failures;
     std::set<std::string> seen_required_world_collisions;
     bool success_termination = false;
   };
 
-  CollisionConstraintsCheck checkCollisionConstraints(const CollisionPairs& collisions,
+  std::vector<std::pair<std::string, std::string>>
+  transformCollisionMapToNamePairs(const rl::sg::CollisionMap& collision_map) const;
+
+  CollisionConstraintsCheck checkCollisionConstraints(const rl::sg::CollisionMap& collision_map,
                                                       const CollisionTypes& collision_types,
                                                       RequiredCollisionsCounter& required_counter);
 
-  rl::math::Vector calculateQDot(const rl::plan::BeliefState& belief, const rl::math::Transform& goal_pose,
+  rl::math::Vector calculateQDot(const rl::math::Vector& configuration, const rl::math::Transform& goal_pose,
                                  double delta);
   void moveBelief(rl::plan::BeliefState& belief, const std::vector<rl::math::Real>& q_dots);
 
-  std::string getPartName(const std::string& address);
+  std::string getPartName(const std::string& address) const;
   bool isSensorized(const std::string& part_name) const;
 
   std::shared_ptr<rl::kin::Kinematics> kinematics_;
   std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
   rl::plan::NoisyModel noisy_model_;
   double delta_;
+  unsigned maximum_steps_;
 
   std::mt19937 random_engine_;
 

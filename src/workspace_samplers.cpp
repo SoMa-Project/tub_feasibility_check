@@ -11,12 +11,13 @@ WorkspaceSampler::~WorkspaceSampler()
 
 Quaternion UniformOrientationSampler::generateOrientation(std::array<double, 3> randoms_01)
 {
+  // source http://planning.cs.uiuc.edu/node198.html
   auto& u = randoms_01;
   return Quaternion(sqrt(u[0]) * cos(M_2_PI * u[2]), sqrt(1 - u[0]) * sin(M_2_PI * u[1]),
                     sqrt(1 - u[0]) * cos(M_2_PI * u[1]), sqrt(u[0]) * sin(M_2_PI * u[2]));
 }
 
-Vector BoxSampler::generatePosition(std::array<double, 3> randoms_01)
+Vector BoxUniformOrientationSampler::generatePosition(std::array<double, 3> randoms_01)
 {
   Vector3 point;
   for (int i = 0; i < 3; ++i)
