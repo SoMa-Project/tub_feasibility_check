@@ -17,8 +17,8 @@
 #include "ros/ros.h"
 #include <ros/package.h>
 #include <eigen_conversions/eigen_msg.h>
-#include "kinematics_check/CheckKinematics.h"
-#include "kinematics_check/CerrtExample.h"
+#include "tub_feasibility_check/CheckKinematics.h"
+#include "tub_feasibility_check/CerrtExample.h"
 
 #include "MainWindow.h"
 #include "ifco_scene.h"
@@ -32,10 +32,10 @@ public:
   {
   }
 
-  bool checkKinematicsQuery(kinematics_check::CheckKinematics::Request& req,
-                            kinematics_check::CheckKinematics::Response& res);
+  bool checkKinematicsQuery(tub_feasibility_check::CheckKinematics::Request& req,
+                            tub_feasibility_check::CheckKinematics::Response& res);
 
-  bool cerrtExampleQuery(kinematics_check::CerrtExample::Request& req, kinematics_check::CerrtExample::Response& res);
+  bool cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req, tub_feasibility_check::CerrtExample::Response& res);
   void start(unsigned rate);
 
 public slots:
@@ -47,7 +47,7 @@ private:
   std::string getBoxShapeName(std::size_t box_id) const;
   std::size_t getBoxId(const std::string& box_name) const;
 
-  bool checkParameters(const kinematics_check::CheckKinematics::Request& req);
+  bool checkParameters(const tub_feasibility_check::CheckKinematics::Request& req);
 
   std::unique_ptr<IfcoScene> ifco_scene;
   QTimer loop_timer;

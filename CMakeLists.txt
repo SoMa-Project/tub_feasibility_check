@@ -93,46 +93,45 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         ${MOC_SRCS}
     )
 
-	target_compile_definitions(
-		tub_feasibility_check
-		PUBLIC
-		${QT_DEFINITIONS}
-		${SOQT_DEFINITIONS}
-		${COIN_DEFINITIONS}
-	)
+    target_compile_definitions(
+        tub_feasibility_check
+        PUBLIC
+        ${QT_DEFINITIONS}
+        ${SOQT_DEFINITIONS}
+        ${COIN_DEFINITIONS}
+    )
 
-       
-	target_include_directories(
-		tub_feasibility_check
-		PUBLIC
-		${Boost_INCLUDE_DIR}
-		${catkin_INCLUDE_DIRS}
-		${OPENGL_INCLUDE_DIR}
-		${QT_INCLUDES}
-		${SOQT_INCLUDE_DIRS}
-		${BULLET_INCLUDE_DIRS}
-		${LIBXML2_INCLUDE_DIRS}
-		${COIN_INCLUDE_DIRS}
-		${ROBLIB_INCLUDE_DIRS}
-	)
+    target_include_directories(
+        tub_feasibility_check
+        PUBLIC
+        ${Boost_INCLUDE_DIR}
+        ${catkin_INCLUDE_DIRS}
+        ${OPENGL_INCLUDE_DIR}
+        ${QT_INCLUDES}
+        ${SOQT_INCLUDE_DIRS}
+        ${BULLET_INCLUDE_DIRS}
+        ${LIBXML2_INCLUDE_DIRS}
+        ${COIN_INCLUDE_DIRS}
+        ${ROBLIB_INCLUDE_DIRS}
+    )
 
 
-  target_link_libraries(
-                tub_feasibility_check
-		rlplan
-		rlkin
-		rlsg
-                ${catkin_LIBRARIES}
-                ${ROS_LIBRARIES}
-                ${catkin_LIBRARIES}
-                ${OPENGL_LIBRARIES}
-                ${QT_LIBRARIES}
-                ${SOQT_LIBRARIES}
-                ${BULLET_LIBRARIES}
-                ${LIBXML2_LIBRARIES}
-		${COIN_LIBRARIES}
-        )
+    target_link_libraries(
+        tub_feasibility_check
+        rlplan
+        rlkin
+        rlsg
+        ${catkin_LIBRARIES}
+        ${ROS_LIBRARIES}
+        ${catkin_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        ${QT_LIBRARIES}
+        ${SOQT_LIBRARIES}
+        ${BULLET_LIBRARIES}
+        ${LIBXML2_LIBRARIES}
+        ${COIN_LIBRARIES}
+    )
 
-add_dependencies(tub_feasibility_check tub_feasibility_check_generate_messages)
+add_dependencies(tub_feasibility_check tub_feasibility_check_generate_messages_cpp)
 
 endif(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)

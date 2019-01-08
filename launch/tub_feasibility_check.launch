@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- TODO add parameters (e.g. scene_graph_file, show gui etc) args="$(find tub_feasibility_check)/model/$(arg foo)" respawn="true"-->
+  <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check"/>
+</launch>
+
+

@@ -48,8 +48,8 @@ void ServiceWorker::start(unsigned rate)
   loop_timer.start();
 }
 
-bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Request& req,
-                                         kinematics_check::CheckKinematics::Response& res)
+bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics::Request& req,
+                                         tub_feasibility_check::CheckKinematics::Response& res)
 {
   const double delta = 0.017;
   const unsigned maximum_steps = 1000;
@@ -171,8 +171,8 @@ bool ServiceWorker::checkKinematicsQuery(kinematics_check::CheckKinematics::Requ
   return true;
 }
 
-bool ServiceWorker::cerrtExampleQuery(kinematics_check::CerrtExample::Request& req,
-                                      kinematics_check::CerrtExample::Response& res)
+bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
+                                      tub_feasibility_check::CerrtExample::Response& res)
 {
   using namespace rl::math;
 
@@ -241,7 +241,7 @@ std::size_t ServiceWorker::getBoxId(const std::string& box_name) const
   return std::stoul(id_substring);
 }
 
-bool ServiceWorker::checkParameters(const kinematics_check::CheckKinematics::Request& req)
+bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics::Request& req)
 {
   bool all_ok = true;
 
