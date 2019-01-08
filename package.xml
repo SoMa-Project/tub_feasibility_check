@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <package>
-  <name>kinematics_check</name>
+  <name>tub_feasibility_check</name>
   <version>0.0.0</version>
-  <description>kinematics checking.</description>
+  <description>Feasibility checking (TUB) including kinematics checking.</description>
 
-  <maintainer email="arne.sieverling@tu-berlin.de">Arne Sieverling</maintainer>
+  <maintainer email="elod.pall@tu-berlin.de">Elod Pall</maintainer>
  
   <license>BSD</license>
 

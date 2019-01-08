@@ -1,20 +1,20 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(kinematics_check)
+project(tub_feasibility_check)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated-declarations -Wno-zero-as-null-pointer-constant -fno-inline-functions -fpermissive")
 
 add_definitions(-DEIGEN_DONT_ALIGN)
 
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  roslib
-  std_msgs
-  message_generation
-  geometry_msgs
-  shape_msgs
-  tf
-  tf_conversions
-  eigen_conversions
+    roscpp
+    roslib
+    std_msgs
+    message_generation
+    geometry_msgs
+    shape_msgs
+    tf
+    tf_conversions
+    eigen_conversions
 )
 
 message(${PROJECT_SOURCE_DIR})
@@ -37,26 +37,25 @@ enable_testing()
 
 
 add_service_files(
-   FILES
-   CheckKinematics.srv
-   CerrtExample.srv
- )
+    FILES
+    CheckKinematics.srv
+    CerrtExample.srv
+)
 
 add_message_files(
-  FILES
-  BoundingBoxWithPose.msg
-  AllowedCollision.msg
+    FILES
+    BoundingBoxWithPose.msg
+    AllowedCollision.msg
 )
-   
+
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs
-   shape_msgs
-   geometry_msgs
- )
-
+generate_messages(
+    DEPENDENCIES
+    std_msgs
+    shape_msgs
+    geometry_msgs
+)
 
 
 catkin_package(
@@ -64,39 +63,38 @@ catkin_package(
 )
 
 
-if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND ) # FALSE) #
-        set(SRCS
-		src/MainWindow.cpp
-		src/kinematics_check.cpp
-		src/Viewer.cpp
-                src/ifco_scene.cpp
-                src/service_worker.cpp
-              src/jacobian_controller.cpp
-              src/soma_cerrt.cpp
-    src/workspace_samplers.cpp
-    src/workspace_checkers.cpp
-    src/collision_types.cpp)
-	
-	qt4_wrap_cpp(
-		MOC_SRCS
-		src/Viewer.h
-                src/service_worker.h
-                src/ifco_scene.h
-                src/jacobian_controller.h
-		OPTIONS
-		-DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
-	)
-	
-	add_executable(
-		kinematics_check
-                ${SRCS}
-		${MOC_SRCS}
-	)
+if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
+    set(SRCS
+        src/MainWindow.cpp
+        src/kinematics_check.cpp
+        src/Viewer.cpp
+        src/ifco_scene.cpp
+        src/service_worker.cpp
+        src/jacobian_controller.cpp
+        src/soma_cerrt.cpp
+        src/workspace_samplers.cpp
+        src/workspace_checkers.cpp
+        src/collision_types.cpp
+    )
 
-        
+    qt4_wrap_cpp(
+        MOC_SRCS
+        src/Viewer.h
+        src/service_worker.h
+        src/ifco_scene.h
+        src/jacobian_controller.h
+        OPTIONS
+        -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
+    )
+
+    add_executable(
+        tub_feasibility_check
+        ${SRCS}
+        ${MOC_SRCS}
+    )
 
 	target_compile_definitions(
-		kinematics_check
+		tub_feasibility_check
 		PUBLIC
 		${QT_DEFINITIONS}
 		${SOQT_DEFINITIONS}
@@ -105,7 +103,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND ) # FALSE) #
 
        
 	target_include_directories(
-		kinematics_check
+		tub_feasibility_check
 		PUBLIC
 		${Boost_INCLUDE_DIR}
 		${catkin_INCLUDE_DIRS}
@@ -120,7 +118,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND ) # FALSE) #
 
 
   target_link_libraries(
-                kinematics_check
+                tub_feasibility_check
 		rlplan
 		rlkin
 		rlsg
@@ -135,6 +133,6 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND ) # FALSE) #
 		${COIN_LIBRARIES}
         )
 
-add_dependencies(kinematics_check kinematics_check_generate_messages)
+add_dependencies(tub_feasibility_check tub_feasibility_check_generate_messages)
 
 endif(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
