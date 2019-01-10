@@ -1,7 +1,10 @@
 <?xml version="1.0"?>
 <launch>
-    <!-- TODO add parameters (e.g. scene_graph_file, show gui etc) args="$(find tub_feasibility_check)/model/$(arg foo)" respawn="true"-->
-  <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check"/>
+    <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check">
+        <param name="scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/wam-rbohand-ifco.convex.xml" />
+        <param name="kinematics_file" value="$(find tub_feasibility_check)/model/rlkin/barrett-wam-ocado2.xml"/>
+        <param name="hide_window" type="bool" value="false" /> 
+    </node>
 </launch>
 
 

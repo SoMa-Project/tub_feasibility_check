@@ -13,8 +13,8 @@ int main(int argc, char** argv)
     std::string kinematics_file;
     // TODO fix to run in QT and access ros pkg path  - if solved add to readme steps to fix it
     std::string default_root_dir = ros::package::getPath("tub_feasibility_check");
-    n.param("scene_graph_file", scene_graph_file,  default_root_dir + "/model/rlsg/wam-rbohand-ifco.convex.xml");
-    n.param("kinematics_file", kinematics_file,  default_root_dir + "/model/rlkin/barrett-wam-ocado2.xml");
+    n.param("/feasibility_check/scene_graph_file", scene_graph_file,  default_root_dir + "/model/rlsg/wam-rbohand-ifco.convex.xml");
+    n.param("/feasibility_check/kinematics_file", kinematics_file,  default_root_dir + "/model/rlkin/barrett-wam-ocado2.xml");
 
     auto ifco_scene = IfcoScene::load(scene_graph_file, kinematics_file);
 
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     std::unique_ptr<MainWindow> main_window(new MainWindow);
 
     bool hide_window;
-    n.param("hide_window", hide_window, false);
+    n.param("/feasibility_check/hide_window", hide_window, false);
     if (!hide_window)
     {
       ifco_scene->connectToViewer(main_window->viewer);
@@ -44,6 +44,8 @@ int main(int argc, char** argv)
 
     worker_thread.start();
     service_worker.start(20);
+
+
 
     auto result = application.exec();
     worker_thread.wait();
