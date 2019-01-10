@@ -40,11 +40,19 @@ float64[3] max_orientation_deltas
 # A collision that is not listed here will trigger a failure.
 AllowedCollision[] allowed_collisions
 ---
-bool success
-# 0 if failed, 1 if goal reached, 2 if sapled goal on manifold is reached
-int32 status
+# Did not reach initial pose and failed to reach all of the sampled poses.
+uint8 FAILED=0
+# Reached the initial pose.
+uint8 REACHED_INITIAL=1
+# Failed to reach the initial pose, but reached one of the sampled poses.
+uint8 REACHED_SAMPLED=2
+
+# FAILED, INITIAL_REACHED or SAMPLED_REACHED
+uint8 status
 
 # The final joint configuration of the robot after reaching the
 # goal pose or a pose sampled from a manifold.
 float64[] final_configuration
+
+# The configuration space trajectory that reaches the goal.
 float64[] trajectory

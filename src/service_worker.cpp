@@ -94,14 +94,12 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
                                          maximum_steps, ifco_scene->getViewer());
-  int status = 0;
   auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types);
 
   if (result)
   {
     ROS_INFO_STREAM("Goal frame success: " << result.description());
-    res.success = true;
-    res.status = 1;
+    res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
@@ -154,9 +152,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
     if (result)
     {
       ROS_INFO_STREAM("Success: " << result.description());
-      // TODO remove success as a returen
-      res.success = true;
-      res.status = 2;
+      res.status = res.REACHED_SAMPLED;
       res.final_configuration = utilities::eigenToStd(result.trajectory.back());
       res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
       return true;
@@ -166,8 +162,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   }
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
-  res.success = false;
-  res.status = 0;
+  res.status = res.FAILED;
   return true;
 }
 
