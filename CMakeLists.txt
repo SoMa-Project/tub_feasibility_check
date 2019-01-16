@@ -72,6 +72,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/service_worker.cpp
         src/jacobian_controller.cpp
         src/soma_cerrt.cpp
+        src/soma_concerrt.cpp
         src/workspace_samplers.cpp
         src/workspace_checkers.cpp
         src/collision_types.cpp
