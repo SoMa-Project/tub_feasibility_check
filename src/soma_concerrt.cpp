@@ -39,3 +39,18 @@ void SomaConcerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initi
     particle.contacts = noisy_model_->scene->getLastCollisions();
   }
 }
+
+bool SomaConcerrt::isAdmissableGoal(const rl::plan::Particle& particle,
+                                    std::shared_ptr<WorkspaceChecker> goal_workspace_manifold_checker,
+                                    RequiredGoalContacts required_goal_contacts)
+{
+  for (auto& pair_and_contact_info : particle.contacts)
+    required_goal_contacts.erase(pair_and_contact_info.first);
+
+  if (!required_goal_contacts.empty())
+    return false;
+
+  noisy_model_->setPosition(particle.config);
+  noisy_model_->updateFrames();
+  return goal_workspace_manifold_checker->contains(noisy_model_->forwardPosition());
+}

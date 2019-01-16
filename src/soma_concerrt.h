@@ -4,6 +4,8 @@
 #include <rl/plan/Concerrt.h>
 #include <rl/plan/BeliefState.h>
 #include "workspace_samplers.h"
+#include "workspace_checkers.h"
+#include "pair_hash.h"
 
 struct SomaConcerrtSettings
 {
@@ -12,12 +14,16 @@ struct SomaConcerrtSettings
   rl::math::Vector motion_noise;
 };
 
+typedef std::unordered_set<std::pair<std::string, std::string>> RequiredGoalContacts;
+
 struct SomaConcerrtTask
 {
   std::shared_ptr<WorkspaceSampler> sampler_for_choose;
   rl::math::Vector initial_configuration_for_choose;
 
   std::vector<rl::math::Vector> start_configurations;
+  std::shared_ptr<WorkspaceChecker> goal_workspace_manifold_checker;
+  RequiredGoalContacts required_goal_contacts;
 };
 
 struct SomaConcerrtResult
@@ -52,6 +58,12 @@ protected:
                               const rl::math::Vector& mean) override;
 
 private:
+  /* Check that the particle lies within the goal manifold and has all the required goal contacts.
+   */
+  bool isAdmissableGoal(const rl::plan::Particle& particle,
+                        std::shared_ptr<WorkspaceChecker> goal_workspace_manifold_checker,
+                        RequiredGoalContacts required_goal_contacts);
+
   std::shared_ptr<rl::kin::Kinematics> kinematics_;
   std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
 
