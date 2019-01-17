@@ -31,6 +31,70 @@
 #include "utilities.h"
 #include "soma_cerrt.h"
 
+/* Provide a textual description for the given result of JacobianController::moveSingleParticle. */
+std::string describeSingleResult(const JacobianController::SingleResult& result)
+{
+  std::stringstream ss;
+
+  auto describeOutcome = [&ss](
+      const std::pair<JacobianController::SingleResult::Outcome, JacobianController::SingleResult::OutcomeInformation>&
+          outcome_and_info) {
+    auto printCollisions = [&ss, outcome_and_info] {
+      for (auto collision : outcome_and_info.second.collisions)
+        ss << " [" << (collision.first.empty() ? "unnamed" : collision.first) << ", " << collision.second << "]";
+    };
+
+    switch (outcome_and_info.first)
+    {
+      case JacobianController::SingleResult::Outcome::REACHED:
+        ss << "reached the goal frame";
+        break;
+      case JacobianController::SingleResult::Outcome::JOINT_LIMIT:
+        ss << "violated the joint limits:";
+        for (auto index : outcome_and_info.second.joint_indices)
+          ss << " " << index;
+        break;
+      case JacobianController::SingleResult::Outcome::SINGULARITY:
+        ss << "singularity";
+        break;
+      case JacobianController::SingleResult::Outcome::STEPS_LIMIT:
+        ss << "went over the steps limit";
+        break;
+      case JacobianController::SingleResult::Outcome::ACCEPTABLE_COLLISION:
+        ss << "acceptable collisions:";
+        printCollisions();
+        break;
+      case JacobianController::SingleResult::Outcome::UNACCEPTABLE_COLLISION:
+        ss << "unacceptable collisions:";
+        printCollisions();
+        break;
+      case JacobianController::SingleResult::Outcome::UNSENSORIZED_COLLISION:
+        ss << "unsensorized collisions:";
+        printCollisions();
+        break;
+      case JacobianController::SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS:
+        ss << "missing required collisions:";
+        printCollisions();
+        break;
+      default:
+        assert(false);
+    }
+  };
+
+  bool first = true;
+  for (auto o : result.outcomes)
+  {
+    if (!first)
+      ss << ", ";
+    else
+      first = false;
+
+    describeOutcome(o);
+  }
+
+  return ss.str();
+}
+
 void ServiceWorker::spinOnce()
 {
   ros::spinOnce();
@@ -98,13 +162,13 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   if (result)
   {
-    ROS_INFO_STREAM("Goal frame success: " << result.description());
+    ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
     res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
 
-  ROS_INFO_STREAM("Goal frame failures: " << result.description());
+  ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
   std::array<std::uniform_real_distribution<double>, 3> coordinate_distributions = {
     std::uniform_real_distribution<double>(req.min_position_deltas[0], req.max_position_deltas[0]),
@@ -151,14 +215,14 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
     if (result)
     {
-      ROS_INFO_STREAM("Success: " << result.description());
+      ROS_INFO_STREAM("Success: " << describeSingleResult(result));
       res.status = res.REACHED_SAMPLED;
       res.final_configuration = utilities::eigenToStd(result.trajectory.back());
       res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
       return true;
     }
     else
-      ROS_INFO_STREAM("Failure: " << result.description());
+      ROS_INFO_STREAM("Failure: " << describeSingleResult(result));
   }
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
