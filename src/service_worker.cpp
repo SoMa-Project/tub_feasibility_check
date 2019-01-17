@@ -30,6 +30,7 @@
 #include "workspace_samplers.h"
 #include "utilities.h"
 #include "soma_cerrt.h"
+#include "soma_concerrt.h"
 
 void ServiceWorker::spinOnce()
 {

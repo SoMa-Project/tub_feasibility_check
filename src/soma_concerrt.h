@@ -3,6 +3,7 @@
 
 #include <rl/plan/Concerrt.h>
 #include <rl/plan/BeliefState.h>
+#include <rl/plan/Policy.h>
 #include "workspace_samplers.h"
 #include "workspace_checkers.h"
 #include "pair_hash.h"
@@ -28,15 +29,23 @@ struct SomaConcerrtTask
 
 struct SomaConcerrtResult
 {
-  // place the result of planning that the user of solve wants (supposedly the policy graph)
+  rl::plan::Policy policy;
+  bool solved;
+  SomaConcerrtResult(rl::plan::Policy p, bool b): policy(p), solved(b){}
 };
 
 class SomaConcerrt : public rl::plan::Concerrt
 {
 public:
-  SomaConcerrt(std::shared_ptr<rl::kin::Kinematics> kinematics, std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
-               SomaConcerrtSettings settings)
-    : kinematics_(kinematics), bullet_scene_(bullet_scene), settings_(settings)
+  SomaConcerrt(std::shared_ptr<rl::kin::Kinematics> kinematics,
+               std::shared_ptr<rl::sg::bullet::Scene> bullet_scene,
+               SomaConcerrtSettings settings,
+               std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts)
+    : Concerrt(),
+      kinematics_(kinematics),
+      bullet_scene_(bullet_scene),
+      settings_(settings),
+      required_goal_contacts_(required_goal_contacts)
   {
     auto noisy_model = new rl::plan::NoisyModel;
     noisy_model->kin = kinematics.get();
@@ -57,12 +66,16 @@ protected:
   void sampleInitialParticles(std::vector<rl::plan::Particle>& initial_configurations,
                               const rl::math::Vector& mean) override;
 
+  /// return 1 if belief reaches goal with CONNECT
+  bool goalConnect(Vertex newVertex,
+                   bool addToGraph,
+                   ::rl::math::Vector3& slidingNormal,
+                   ::rl::math::Transform& goalT,
+                   const int graphID) override;
 private:
   /* Check that the particle lies within the goal manifold and has all the required goal contacts.
    */
-  bool isAdmissableGoal(const rl::plan::Particle& particle,
-                        std::shared_ptr<WorkspaceChecker> goal_workspace_manifold_checker,
-                        RequiredGoalContacts required_goal_contacts);
+  bool isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> belief);
 
   std::shared_ptr<rl::kin::Kinematics> kinematics_;
   std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
@@ -75,6 +88,9 @@ private:
   IgnoreAllCollisionTypes ignore_all_collision_types_;
 
   SomaConcerrtTask current_task_;
+
+  std::unique_ptr<WorkspaceChecker> goal_checker_;
+  std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts_;
 };
 
 #endif  // SOMA_CONCERRT_H

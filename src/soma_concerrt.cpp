@@ -3,10 +3,13 @@
 SomaConcerrtResult SomaConcerrt::solve(SomaConcerrtTask task)
 {
   current_task_ = task;
-  rl::plan::Concerrt::solve();
+  bool solved = rl::plan::Concerrt::solve();
 
-  // TODO place results in SomaConcerrtResult
-  return SomaConcerrtResult();
+  rl::plan::Policy policy;
+
+  getPolicy(policy);
+
+  return SomaConcerrtResult(policy, solved);
 }
 
 void SomaConcerrt::choose(rl::math::Vector& chosen)
@@ -40,17 +43,50 @@ void SomaConcerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initi
   }
 }
 
-bool SomaConcerrt::isAdmissableGoal(const rl::plan::Particle& particle,
-                                    std::shared_ptr<WorkspaceChecker> goal_workspace_manifold_checker,
-                                    RequiredGoalContacts required_goal_contacts)
+bool SomaConcerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> belief)
 {
-  for (auto& pair_and_contact_info : particle.contacts)
-    required_goal_contacts.erase(pair_and_contact_info.first);
+  //TODO why was this different then CERRT
+  auto& particles = belief->getParticles();
+  // for every particle, check that all required contact pairs are present, and the pose lies within a workspace
+  // goal manifold
+  for (auto& particle : particles)
+  {
+    auto nonpresent_contacts = required_goal_contacts_;
+    for (auto& contact_and_description : particle.contacts)
+      nonpresent_contacts.erase(contact_and_description.first);
 
-  if (!required_goal_contacts.empty())
-    return false;
+    if (!nonpresent_contacts.empty())
+      return false;
 
-  noisy_model_->setPosition(particle.config);
-  noisy_model_->updateFrames();
-  return goal_workspace_manifold_checker->contains(noisy_model_->forwardPosition());
+    model->setPosition(particle.config);
+    model->updateFrames();
+    if (!goal_checker_->contains(model->forwardPosition()))
+      return false;
+  }
+  return true;
+}
+
+
+bool SomaConcerrt::goalConnect(Vertex newVertex,
+                               bool addToGraph,
+                               ::rl::math::Vector3& slidingNormal,
+                               ::rl::math::Transform& goalT,
+                               const int graphID)
+{
+      if (isAdmissableGoal((*this->graphs[graphID])[newVertex].beliefState))
+      {
+
+          (*this->graphs[graphID])[newVertex].onSolutionPath = true;
+          (*this->graphs[graphID])[newVertex].atGoal = true;
+          return true;
+      }
+      // if not at goal try to get there with a Jacobian controller and sample if needed K-times
+//      else
+//      {
+//        if(addToGraph)
+//        {
+//          return true;
+//        }
+//      }
+      return false;
 }
