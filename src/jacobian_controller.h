@@ -180,8 +180,6 @@ private:
   // TODO find a way to remove QT signals and slots so this class does not use QT but still is able to
   // visualize the execution in viewer.
 signals:
-  void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);
-  void reset();
   void drawConfiguration(const rl::math::Vector& config);
 };
 

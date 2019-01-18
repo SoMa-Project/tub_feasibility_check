@@ -65,13 +65,8 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   random_engine_.seed(time(nullptr));
 
   if (viewer)
-  {
-    QObject::connect(this, SIGNAL(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)), *viewer,
-                     SLOT(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)));
-    QObject::connect(this, SIGNAL(reset()), *viewer, SLOT(reset()));
     QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)), *viewer,
                      SLOT(drawConfiguration(const rl::math::Vector&)));
-  }
 }
 
 JacobianController::SingleResult JacobianController::moveSingleParticle(const rl::math::Vector& initial_configuration,
@@ -85,7 +80,6 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
 
   Vector current_config = initial_configuration;
 
-  emit reset();
   emit drawConfiguration(current_config);
 
   SingleResult result;
@@ -185,7 +179,6 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
     // is a trajectory configuration for that step plus the accumulated error
     Vector current_error = current_config - result.no_noise_test_result.trajectory.front();
 
-    emit reset();
     emit drawConfiguration(current_config);
 
     // execute the steps of the trajectory

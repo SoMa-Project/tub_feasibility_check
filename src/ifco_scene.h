@@ -47,8 +47,14 @@ private:
     qRegisterMetaType<std::function<void(rl::sg::Scene&)>>("std::function<void(rl::sg::Scene&");
   }
 
+  /* Rotating colors used to visualize boxes in viewer. */
   std::vector<std::array<float, 3>> colors = { { 0, 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } };
-  decltype(colors)::const_iterator current_color = colors.begin();
+
+  /* Current color to visualize box in viewer. */
+  std::vector<std::array<float, 3>>::const_iterator current_color = colors.begin();
+
+  /* The transparency of the box in viewer. */
+  double box_transparency_ = 0.1;
 
   std::string scene_graph_file;
   std::string kinematics_file;
