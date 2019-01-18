@@ -23,7 +23,7 @@ class SomaCerrt : public rl::plan::Cerrt
 {
 public:
   SomaCerrt(std::shared_ptr<JacobianController> jacobian_controller, rl::plan::NoisyModel* noisy_model,
-            std::shared_ptr<WorkspaceSampler> sampler_for_choose, std::shared_ptr<WorkspaceSampler> initial_sampler,
+            std::shared_ptr<WorkspaceSampler> sampler_for_choose,
             std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts, double delta,
             Viewer* viewer);
 
@@ -36,7 +36,6 @@ private:
   std::shared_ptr<JacobianController> jacobian_controller_;
   Viewer* viewer_;
   std::shared_ptr<WorkspaceSampler> sampler_for_choose_;
-  std::shared_ptr<WorkspaceSampler> initial_sampler_;
   std::unique_ptr<CollisionTypes> collision_types_;
   std::unique_ptr<WorkspaceChecker> goal_checker_;
   std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts_;
