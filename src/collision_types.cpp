@@ -1,5 +1,7 @@
 #include "collision_types.h"
 
+const std::string RequiredCollisionsCounter::EveryPartPlaceholder = "*";
+
 WorldCollisionTypes::WorldCollisionTypes(const WorldCollisionTypes::PartToCollisionType& world_part_to_collision_type)
   : world_part_to_collision_type_(world_part_to_collision_type)
 {
@@ -69,6 +71,12 @@ bool IgnoreAllCollisionTypes::IgnoreAllRequiredCollisionsCounter::allRequiredPre
   return true;
 }
 
+std::vector<std::pair<std::string, std::string>>
+IgnoreAllCollisionTypes::IgnoreAllRequiredCollisionsCounter::unseenRequiredCollisions() const
+{
+  return std::vector<std::pair<std::string, std::string>>();
+}
+
 void IgnoreAllCollisionTypes::IgnoreAllRequiredCollisionsCounter::countCollision(const std::string&, const std::string&)
 {
 }
@@ -83,4 +91,15 @@ bool CollisionType::valid()
     return !ignored && !terminating && !required;
 
   return true;
+}
+
+std::vector<std::pair<std::string, std::string>>
+WorldCollisionTypes::WorldRequiredCollisionsCounter::unseenRequiredCollisions() const
+{
+  std::vector<std::pair<std::string, std::string>> unseen;
+
+  for (auto& world_part : nonpresent_required_world_collisions_)
+    unseen.push_back({ EveryPartPlaceholder, world_part });
+
+  return unseen;
 }

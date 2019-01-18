@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
+#include <vector>
 
 /* Stores the type of collision constraint/requirement. A valid CollisionType is either prohibited, or allowed with all
  * possible combinations of ignored, terminating and required.
@@ -26,9 +27,14 @@ struct CollisionType
 class RequiredCollisionsCounter
 {
 public:
+  /* This string means "Every part". */
+  static const std::string EveryPartPlaceholder;
+
   virtual ~RequiredCollisionsCounter();
   /* If this counter have seen all required collisions. */
   virtual bool allRequiredPresent() const = 0;
+  /* Return a collection of still unseen required collisions, possibly having EveryPartPlaceholder as a part. */
+  virtual std::vector<std::pair<std::string, std::string>> unseenRequiredCollisions() const = 0;
   /* Count the collision between robot_part and world_part. */
   virtual void countCollision(const std::string& robot_part, const std::string& world_part) = 0;
 };
@@ -65,6 +71,7 @@ private:
     ~WorldRequiredCollisionsCounter() override;
 
     bool allRequiredPresent() const override;
+    std::vector<std::pair<std::string, std::string>> unseenRequiredCollisions() const override;
     void countCollision(const std::string& robot_part, const std::string& world_part) override;
 
   private:
@@ -91,6 +98,7 @@ private:
   {
   public:
     bool allRequiredPresent() const override;
+    std::vector<std::pair<std::string, std::string>> unseenRequiredCollisions() const override;
     void countCollision(const std::string& robot_part, const std::string& world_part) override;
   };
 };
@@ -108,6 +116,7 @@ private:
   public:
     ~IgnoreAllRequiredCollisionsCounter() override;
     bool allRequiredPresent() const override;
+    std::vector<std::pair<std::string, std::string>> unseenRequiredCollisions() const override;
     void countCollision(const std::string& robot_part, const std::string& world_part) override;
   };
 };
