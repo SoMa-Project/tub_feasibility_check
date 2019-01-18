@@ -10,6 +10,7 @@
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
 #include "collision_types.h"
+#include "utilities.h"
 #include <unordered_map>
 
 class WorkspaceSampler;
@@ -54,7 +55,7 @@ public:
      * or one or more negative outcomes, that led to the termination of the planner. The outcomes
      * are mapped to additional outcome information.
      */
-    std::unordered_map<Outcome, OutcomeInformation> outcomes;
+    std::unordered_map<Outcome, OutcomeInformation, utilities::EnumClassHash> outcomes;
 
     /* SingleResult converts to true when the termination was successful and
      * false otherwise.
@@ -139,7 +140,7 @@ private:
   typedef std::vector<std::pair<std::string, std::string>> CollisionPairs;
   struct CollisionConstraintsCheck
   {
-    std::unordered_map<SingleResult::Outcome, SingleResult::OutcomeInformation> failures;
+    std::unordered_map<SingleResult::Outcome, SingleResult::OutcomeInformation, utilities::EnumClassHash> failures;
     std::vector<std::pair<std::string, std::string>> seen_terminating_collisions;
     std::set<std::string> seen_required_world_collisions;
     bool success_termination = false;
