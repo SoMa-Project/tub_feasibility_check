@@ -72,6 +72,23 @@ protected:
                    ::rl::math::Vector3& slidingNormal,
                    ::rl::math::Transform& goalT,
                    const int graphID) override;
+
+  bool expandTreeReactively(const int graphID,
+                            const Vertex& leafVertex,
+                            std::vector<Vertex>& leafVertexes_inLocalTree,
+                            std::vector<goalConnectType>& goalConnections) override;
+
+  /// returen 1 if new node at goal or connected to goal; adds new node and edge to graph
+  bool expandGraph(const ::std::vector<rl::plan::Particle>& particles,
+                             ::rl::math::Vector3& slidingNormal,
+                             Neighbor n,
+                             rl::plan::NoisyModel::ActionType u,
+                             ::rl::math::Transform goalT,
+                             double reachability,
+                             const int graphID,
+                             goalConnectType& gct,
+                             Vertex& newV,
+                             const ::rl::math::Vector& chosen) override;
 private:
   /* Check that the particle lies within the goal manifold and has all the required goal contacts.
    */

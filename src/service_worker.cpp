@@ -213,6 +213,35 @@ bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Reque
   soma_cerrt.goalEpsilon = 0.1;
   soma_cerrt.solve();
 
+  // soma ConCERRT
+  SomaConcerrtTask task;
+  task.required_goal_contacts =  { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } };
+  task.start_configurations =  &initial_configuration;
+  task.sampler_refernce_configuration = &initial_configuration;
+
+  SomaConcerrt Concerrt(jacobian_controller,
+                        choose_sampler,
+                        initial_sampler );
+
+  Concerrt.delta = delta;
+  std::vector<rl::plan::Particle> initial_particles;
+  Concerrt.nrParticles = initial_particles.size();
+  Concerrt.gamma = 0.8;
+  Concerrt.K_contingency_limit = 5;
+  Concerrt.angularDistanceWeight = 0;
+  Concerrt.epsilon = 0.1;
+  Concerrt.goalWorkspaceEpsilon = 0.1;
+  Concerrt.kd = true;
+  Concerrt.useMotionError = true;
+  Concerrt.duration = 30;
+  Concerrt.model = noisy_model.get();
+  Concerrt.viewer = ifco_scene->getViewer();
+  Concerrt.maximum_sample_attempts = 1;
+  Concerrt.required_goal_contacts = { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } };
+
+  Concerrt.solve(task);
+
+
   res.success = true;
   return true;
 }
