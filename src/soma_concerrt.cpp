@@ -1,8 +1,8 @@
 #include "soma_concerrt.h"
 
-SomaConcerrtResult SomaConcerrt::solve(SomaConcerrtTask task)
+SomaConcerrtResult SomaConcerrt::solve(int task)
 {
-  current_task_ = task;
+
   bool solved = rl::plan::Concerrt::solve();
 
   rl::plan::Policy policy;
@@ -14,14 +14,17 @@ SomaConcerrtResult SomaConcerrt::solve(SomaConcerrtTask task)
 
 void SomaConcerrt::choose(rl::math::Vector& chosen)
 {
-  for (unsigned i = 0; i < settings_.maximum_choose_attempts; ++i)
+  for (unsigned i = 0; i < maximum_choose_attempts; ++i)
   {
-    auto sampled_pose = current_task_.sampler_for_choose->generate(*gen);
+    i++;
+    auto sampled_pose = ROI_sampler->generate(*gen);
 
-    auto result = jacobian_controller_->moveSingleParticle(current_task_.initial_configuration_for_choose, sampled_pose,
-                                                           ignore_all_collision_types_);
+    auto result = jacobian_controller->moveSingleParticle(ROI_sampler_reference,
+                                                          sampled_pose,
+                                                          collisions_ignored);
     if (result)
       chosen = result.trajectory.back();
+
   }
 
   throw std::runtime_error("Choose unable to sample");
@@ -34,12 +37,12 @@ void SomaConcerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initi
   {
     auto& particle = initial_particles[i];
 
-    particle.config = current_task_.start_configurations[i];
+    particle.config = start_configurations[i];
     particle.ID = i;
-    noisy_model_->setPosition(particle.config);
-    noisy_model_->updateFrames();
-    noisy_model_->isColliding();
-    particle.contacts = noisy_model_->scene->getLastCollisions();
+    model->setPosition(particle.config);
+    model->updateFrames();
+    model->isColliding();
+    particle.contacts = model->scene->getLastCollisions();
   }
 }
 
@@ -51,7 +54,7 @@ bool SomaConcerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> bel
   // goal manifold
   for (auto& particle : particles)
   {
-    auto nonpresent_contacts = required_goal_contacts_;
+    auto nonpresent_contacts = required_goal_contacts;
     for (auto& contact_and_description : particle.contacts)
       nonpresent_contacts.erase(contact_and_description.first);
 
@@ -60,7 +63,7 @@ bool SomaConcerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> bel
 
     model->setPosition(particle.config);
     model->updateFrames();
-    if (!goal_checker_->contains(model->forwardPosition()))
+    if (!worksapce_ROI_checker->contains(model->forwardPosition()))
       return false;
   }
   return true;
