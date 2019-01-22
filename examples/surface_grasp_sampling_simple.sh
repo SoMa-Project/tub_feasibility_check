@@ -2,8 +2,12 @@
 
 # This script performs a surface grasp check. The target object is
 # represented by the green bounding box. This object is a terminating
-# collision. All other collisions are prohibited.
+# collision. All other collisions (except the bottom of the container) are prohibited.
 
+# This will check an easy go down movement. Collisions are only allowed with 
+# the bottom of the container and the object (collision is required). This movement
+# is feasible and thus the planner does not have to generate an alternative 
+# trajectory.
 rosservice call /check_kinematics "
 initial_configuration: [-0.5945735614121268, 0.42180752185581194, 0.5116913273945006, 1.592272893703166, 0.424190933949368, 1.2527738218055204, -1.7908341943112134]
 goal_pose:
@@ -24,6 +28,6 @@ max_position_deltas: [0.01, 0.01, 0.01]
 min_orientation_deltas: [0, 0, -0.5]
 max_orientation_deltas: [0, 0, 0.5]
 allowed_collisions:
-- {type: 1, box_id: 0, terminate_on_collision: true, ignored_collision: true}
+- {type: 1, box_id: 0, terminate_on_collision: true, ignored_collision: true, required_collision: true}
 - {type: 2, constraint_name: 'bottom', terminate_on_collision: false}
 "
