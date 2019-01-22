@@ -167,7 +167,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   return true;
 }
 
-bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
+bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
                                       tub_feasibility_check::CerrtExample::Response& res)
 {
   using namespace rl::math;
@@ -203,15 +203,6 @@ bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Reque
   auto initial_transform = noisy_model->forwardPosition();
   auto initial_sampler =
       std::make_shared<BoxUniformOrientationSampler>(initial_transform, std::array<double, 3>{ 0.01, 0.01, 0.01 });
-
-//  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, sampler, initial_sampler,
-//                       { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
-//                       *ifco_scene->getViewer());
-//  soma_cerrt.start = &initial_configuration;
-//  rl::math::Vector crazy_goal = initial_configuration * 1.1;
-//  soma_cerrt.goal = &crazy_goal;
-//  soma_cerrt.goalEpsilon = 0.1;
-//  soma_cerrt.solve();
 
   // soma ConCERRT
   auto worksapce_ROI_checker =

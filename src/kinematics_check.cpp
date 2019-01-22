@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     ros::ServiceServer checkKinematicsService = n.advertiseService("check_kinematics",
                                                     &ServiceWorker::checkKinematicsQuery, &service_worker);
     ros::ServiceServer cerrtExampleService = n.advertiseService("cerrt_example",
-        &ServiceWorker::cerrtExampleQuery, &service_worker);
+        &ServiceWorker::conCerrtExampleQuery, &service_worker);
 
     worker_thread.start();
     service_worker.start(20);

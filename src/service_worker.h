@@ -35,7 +35,7 @@ public:
   bool checkKinematicsQuery(tub_feasibility_check::CheckKinematics::Request& req,
                             tub_feasibility_check::CheckKinematics::Response& res);
 
-  bool cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req, tub_feasibility_check::CerrtExample::Response& res);
+  bool conCerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req, tub_feasibility_check::CerrtExample::Response& res);
   void start(unsigned rate);
 
 public slots:
