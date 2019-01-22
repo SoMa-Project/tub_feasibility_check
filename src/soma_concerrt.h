@@ -7,7 +7,7 @@
 #include "workspace_samplers.h"
 #include "workspace_checkers.h"
 #include "pair_hash.h"
-
+#include <QObject>
 
 
 struct SomaConcerrtResult
@@ -21,23 +21,30 @@ class SomaConcerrt : public rl::plan::Concerrt
 {
 public:
   SomaConcerrt(std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts,
-               std::shared_ptr<WorkspaceChecker> worksapce_ROI_checker,
+               std::shared_ptr<WorkspaceChecker> goal_manifold_checker,
                unsigned maximum_choose_attempts,
                std::shared_ptr<JacobianController> jacobian_controller,
                std::shared_ptr<WorkspaceSampler> ROI_sampler,
                rl::math::Vector ROI_sampler_reference,
                std::vector<rl::math::Vector> start_configurations,
-               rl::plan::NoisyModel* noisy_model):
+               rl::plan::NoisyModel* noisy_model,
+               boost::optional<Viewer*> viewer,
+               Eigen::Affine3d goal_transform):
     Concerrt(),
     required_goal_contacts(required_goal_contacts),
-    worksapce_ROI_checker(worksapce_ROI_checker),
+    goal_manifold_checker(goal_manifold_checker),
     maximum_choose_attempts(maximum_choose_attempts),
     jacobian_controller(jacobian_controller),
     ROI_sampler(ROI_sampler),
     ROI_sampler_reference(ROI_sampler_reference),
-    start_configurations(start_configurations)
+    start_configurations(start_configurations),
+    goal_pose(goal_transform)
   {
     model = noisy_model;
+
+    boost::uniform_01<double> random_01;
+    sample_01 = [this, &random_01]() { return random_01(*gen); };
+
   }
 
   SomaConcerrtResult solve(int task);
@@ -79,7 +86,7 @@ private:
 
   unsigned maximum_choose_attempts;
   std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts;
-  std::shared_ptr<WorkspaceChecker> worksapce_ROI_checker;
+  std::shared_ptr<WorkspaceChecker> goal_manifold_checker;
   std::shared_ptr<JacobianController> jacobian_controller;
   std::shared_ptr<WorkspaceSampler> ROI_sampler;
   rl::math::Vector ROI_sampler_reference;
@@ -87,6 +94,8 @@ private:
   IgnoreAllCollisionTypes collisions_ignored;
 
   std::vector<rl::math::Vector> start_configurations;
+  std::function<double()> sample_01;
+  Eigen::Affine3d  goal_pose;
 };
 
 #endif  // SOMA_CONCERRT_H

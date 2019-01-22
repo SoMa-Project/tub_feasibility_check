@@ -32,6 +32,70 @@
 #include "soma_cerrt.h"
 #include "soma_concerrt.h"
 
+/* Provide a textual description for the given result of JacobianController::moveSingleParticle. */
+std::string describeSingleResult(const JacobianController::SingleResult& result)
+{
+  std::stringstream ss;
+
+  auto describeOutcome = [&ss](
+      const std::pair<JacobianController::SingleResult::Outcome, JacobianController::SingleResult::OutcomeInformation>&
+          outcome_and_info) {
+    auto printCollisions = [&ss, outcome_and_info] {
+      for (auto collision : outcome_and_info.second.collisions)
+        ss << " [" << (collision.first.empty() ? "unnamed" : collision.first) << ", " << collision.second << "]";
+    };
+
+    switch (outcome_and_info.first)
+    {
+      case JacobianController::SingleResult::Outcome::REACHED:
+        ss << "reached the goal frame";
+        break;
+      case JacobianController::SingleResult::Outcome::JOINT_LIMIT:
+        ss << "violated the joint limits:";
+        for (auto index : outcome_and_info.second.joint_indices)
+          ss << " " << index;
+        break;
+      case JacobianController::SingleResult::Outcome::SINGULARITY:
+        ss << "singularity";
+        break;
+      case JacobianController::SingleResult::Outcome::STEPS_LIMIT:
+        ss << "went over the steps limit";
+        break;
+      case JacobianController::SingleResult::Outcome::ACCEPTABLE_COLLISION:
+        ss << "acceptable collisions:";
+        printCollisions();
+        break;
+      case JacobianController::SingleResult::Outcome::UNACCEPTABLE_COLLISION:
+        ss << "unacceptable collisions:";
+        printCollisions();
+        break;
+      case JacobianController::SingleResult::Outcome::UNSENSORIZED_COLLISION:
+        ss << "unsensorized collisions:";
+        printCollisions();
+        break;
+      case JacobianController::SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS:
+        ss << "missing required collisions:";
+        printCollisions();
+        break;
+      default:
+        assert(false);
+    }
+  };
+
+  bool first = true;
+  for (auto o : result.outcomes)
+  {
+    if (!first)
+      ss << ", ";
+    else
+      first = false;
+
+    describeOutcome(o);
+  }
+
+  return ss.str();
+}
+
 void ServiceWorker::spinOnce()
 {
   ros::spinOnce();
@@ -49,6 +113,23 @@ void ServiceWorker::start(unsigned rate)
   loop_timer.start();
 }
 
+ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene)
+  : QObject(nullptr), ifco_scene(std::move(ifco_scene))
+{
+  auto viewer = this->ifco_scene->getViewer();
+  if (viewer)
+  {
+    qRegisterMetaType<rl::math::Transform>("rl::math::Transform");
+    QObject::connect(this, SIGNAL(drawBox(rl::math::Vector, rl::math::Transform)), *viewer,
+                     SLOT(drawBox(rl::math::Vector, rl::math::Transform)));
+    QObject::connect(this, SIGNAL(resetBoxes()), *viewer, SLOT(resetBoxes()));
+    QObject::connect(this, SIGNAL(resetPoints()), *viewer, SLOT(resetPoints()));
+    QObject::connect(this, SIGNAL(resetLines()), *viewer, SLOT(resetLines()));
+    QObject::connect(this, SIGNAL(toggleWorkFrames(bool)), *viewer, SLOT(toggleWorkFrames(bool)));
+    QObject::connect(this, SIGNAL(drawWork(rl::math::Transform)), *viewer, SLOT(drawWork(rl::math::Transform)));
+  }
+}
+
 bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics::Request& req,
                                          tub_feasibility_check::CheckKinematics::Response& res)
 {
@@ -59,12 +140,17 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   if (!checkParameters(req))
     return false;
 
+  emit resetBoxes();
+  emit resetPoints();
+  emit toggleWorkFrames(true);
+
   // Create a frame from the position/quaternion data
   Eigen::Affine3d ifco_transform;
   Eigen::Affine3d goal_transform;
   tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
+  emit drawWork(goal_transform);
 
   WorldCollisionTypes::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
@@ -99,67 +185,53 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   if (result)
   {
-    ROS_INFO_STREAM("Goal frame success: " << result.description());
+    ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
     res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
 
-  ROS_INFO_STREAM("Goal frame failures: " << result.description());
+  ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
-  std::array<std::uniform_real_distribution<double>, 3> coordinate_distributions = {
-    std::uniform_real_distribution<double>(req.min_position_deltas[0], req.max_position_deltas[0]),
-    std::uniform_real_distribution<double>(req.min_position_deltas[1], req.max_position_deltas[1]),
-    std::uniform_real_distribution<double>(req.min_position_deltas[2], req.max_position_deltas[2])
-  };
+  WorkspaceSampler goal_manifold_sampler(
+      UniformPositionInAsymmetricBox(goal_transform, req.min_position_deltas, req.max_position_deltas),
+      DeltaXYZOrientation(rl::math::Quaternion(goal_transform.linear()), req.min_orientation_deltas,
+                          req.max_orientation_deltas));
 
-  std::array<std::uniform_real_distribution<double>, 3> angle_distributions = {
-    std::uniform_real_distribution<double>(req.min_orientation_deltas[0], req.max_orientation_deltas[0]),
-    std::uniform_real_distribution<double>(req.min_orientation_deltas[1], req.max_orientation_deltas[1]),
-    std::uniform_real_distribution<double>(req.min_orientation_deltas[2], req.max_orientation_deltas[2])
-  };
+  drawGoalManifold(goal_transform, req.min_position_deltas, req.max_position_deltas);
 
   std::mt19937 generator(time(nullptr));
+  std::uniform_real_distribution<double> random_01;
+  auto sample_01 = [&generator, &random_01]() { return random_01(generator); };
 
   int sample_count;
   ros::NodeHandle n;
   n.param("sample_count", sample_count, 20);
 
-  ROS_INFO("Beginning to sample within acceptable deltas");
+  ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Vector3 sampled_point;
-    std::array<double, 3> sampled_rotation;
+    rl::math::Transform sampled_transform = goal_manifold_sampler.generate(sample_01);
 
-    for (unsigned i = 0; i < 3; ++i)
-    {
-      sampled_point(i) = coordinate_distributions[i](generator);
-      sampled_rotation[i] = angle_distributions[i](generator);
-    }
-
-    rl::math::Transform sampled_transform;
-    sampled_transform.translation() = goal_transform.translation() + sampled_point;
-    sampled_transform.linear() = rl::math::AngleAxis(sampled_rotation[2], rl::math::Vector3::UnitZ()) *
-                                 rl::math::AngleAxis(sampled_rotation[1], rl::math::Vector3::UnitY()) *
-                                 rl::math::AngleAxis(sampled_rotation[0], rl::math::Vector3::UnitX()) *
-                                 goal_transform.linear();
-
-    ROS_INFO_STREAM("Trying to plan to the sampled frame number "
-                    << i << ". Translation sample: " << sampled_point.transpose() << ", rotation sample: "
-                    << sampled_rotation[0] << " " << sampled_rotation[1] << " " << sampled_rotation[2]);
+    ROS_INFO_STREAM(
+        "Trying to plan to the sampled frame number "
+        << i << ". Translation sample: " << (goal_transform.inverse() * sampled_transform.translation()).transpose()
+        << ", rotation sample: "
+        << (goal_transform.linear().transpose() * sampled_transform.linear()).eulerAngles(0, 1, 2).transpose());
+    emit resetPoints();
     auto result =
         jacobian_controller.moveSingleParticle(initial_configuration, sampled_transform, world_collision_types);
 
     if (result)
     {
-      ROS_INFO_STREAM("Success: " << result.description());
+      ROS_INFO_STREAM("Success: " << describeSingleResult(result));
       res.status = res.REACHED_SAMPLED;
       res.final_configuration = utilities::eigenToStd(result.trajectory.back());
       res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
       return true;
     }
     else
-      ROS_INFO_STREAM("Failure: " << result.description());
+      ROS_INFO_STREAM("Failure: " << describeSingleResult(result));
   }
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
@@ -167,23 +239,44 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   return true;
 }
 
-bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
-                                      tub_feasibility_check::CerrtExample::Response& res)
+bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CheckKinematics::Request& req,
+                                      tub_feasibility_check::CheckKinematics::Response& res)
 {
   using namespace rl::math;
 
   const double delta = 0.017;
   const unsigned maximum_steps = 1000;
 
+  ROS_INFO("Receiving query");
+  if (!checkParameters(req))
+    return false;
+
+  emit resetBoxes();
+  emit resetPoints();
+  emit toggleWorkFrames(true);
+
   Eigen::Affine3d ifco_transform;
   Eigen::Affine3d goal_transform;
   tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
+  emit drawWork(goal_transform);
+  emit drawWork(ifco_transform);
 
   ifco_scene->moveIfco(ifco_transform);
+  ifco_scene->removeBoxes();
+  for (std::size_t i = 0; i < req.bounding_boxes_with_poses.size(); ++i)
+  {
+    Eigen::Affine3d box_transform;
+    tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, box_transform);
+    ifco_scene->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
+  }
+
+
   auto jacobian_controller = std::make_shared<JacobianController>(
       ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta, maximum_steps, ifco_scene->getViewer());
+
+
   auto noisy_model = new rl::plan::NoisyModel;
   noisy_model->kin = ifco_scene->getKinematics().get();
   noisy_model->model = ifco_scene->getBulletScene()->getModel(0);
@@ -195,20 +288,46 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CerrtExample::Re
 
   std::mt19937 gen;
   gen.seed(std::time(0));
-  auto sampler =
-      std::make_shared<BoxUniformOrientationSampler>(goal_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
+
+
+  auto sampler = std::make_shared<WorkspaceSampler>(
+      UniformPositionInAsymmetricBox(ifco_transform,
+                                     boost::array<double, 3>{ -0.4, -0.3, 0.0 },
+                                     boost::array<double, 3>{ .4, .3, .3 }),
+      uniformOrientation);
+
+  drawGoalManifold(ifco_transform,
+                   boost::array<double, 3>{ -0.4, -0.3, 0.0 },
+                   boost::array<double, 3>{ .4, .3, .3 });
 
   noisy_model->setPosition(initial_configuration);
   noisy_model->updateFrames();
   auto initial_transform = noisy_model->forwardPosition();
-  auto initial_sampler =
-      std::make_shared<BoxUniformOrientationSampler>(initial_transform, std::array<double, 3>{ 0.01, 0.01, 0.01 });
+
+//  auto initial_sampler = std::make_shared<WorkspaceSampler>(
+//        UniformPositionInAsymmetricBox(goal_transform, boost::array<double, 3>{ -0.1, -0.1, -0.1 },
+//                                       boost::array<double, 3>{ .1, .1, .1 }),
+//        uniformOrientation);
+/*
+  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler,
+                       { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
+                       *ifco_scene_->getViewer());
+  soma_cerrt.start = &initial_configuration;
+  rl::math::Vector crazy_goal = initial_configuration * 1.1;
+  soma_cerrt.goal = &crazy_goal;
+  soma_cerrt.goalEpsilon = 0.1;
+  soma_cerrt.solve();
+*/
 
   // soma ConCERRT
-  auto worksapce_ROI_checker =
-      std::make_shared<BoxChecker>(initial_transform,
-                                   std::array<double, 3>{ 0.12, 0.0, 0.1 },
-                                   std::array<double, 3>{ 0.0, 0.0, 0.0 });
+  auto goal_manifold_checker = std::make_shared<BoxChecker>(goal_transform,
+                                                            req.min_position_deltas,
+                                                            req.max_position_deltas);
+
+
+  drawGoalManifold(goal_transform,
+                   req.min_position_deltas,
+                   req.max_position_deltas);
 
   std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts = { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } };
 
@@ -221,33 +340,39 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CerrtExample::Re
     start_configurations.push_back(initial_configuration);
   }
 
+
+
+
   SomaConcerrt Concerrt(required_goal_contacts,
-                        worksapce_ROI_checker,
-                        200,
+                        goal_manifold_checker,
+                        20,
                         jacobian_controller,
                         sampler,
                         sampler_reference,
                         start_configurations,
-                        noisy_model);
+                        noisy_model,
+                        ifco_scene->getViewer(),
+                        goal_transform);
+
   // not used, but required for runing the planenr
   Concerrt.start = &initial_configuration;
   // not used, but required for runing the planenr
   Concerrt.goal = &initial_configuration;
   Concerrt.delta = delta;
   Concerrt.nrParticles = start_configurations.size();
-  Concerrt.gamma = 0.8;
+  Concerrt.gamma = 0.7;
   Concerrt.K_contingency_limit = 5;
   Concerrt.angularDistanceWeight = 0;
   Concerrt.epsilon = 0.1;
   Concerrt.goalWorkspaceEpsilon = 0.1;
   Concerrt.kd = true;
   Concerrt.useMotionError = true;
-  Concerrt.duration = 30;
+  Concerrt.duration = 60;
   Concerrt.viewer = *ifco_scene->getViewer();
 
   Concerrt.solve(0);
 
-  res.success = true;
+  res.status = true;
   return true;
 }
 
@@ -269,6 +394,37 @@ std::size_t ServiceWorker::getBoxId(const std::string& box_name) const
 {
   auto id_substring = box_name.substr(4, box_name.size() - 1);
   return std::stoul(id_substring);
+}
+
+void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::array<double, 3>& min_position_deltas,
+                                     const boost::array<double, 3>& max_position_deltas,
+                                     double zero_dimension_correction)
+{
+  using namespace rl::math;
+
+  Vector3 size;
+  Vector3 center_correction;
+  unsigned zero_count = 0;
+  boost::optional<unsigned> zero_index;
+
+  for (unsigned i = 0; i < 3; ++i)
+  {
+    center_correction(i) = min_position_deltas[i] / 2 + max_position_deltas[i] / 2;
+    size(i) = max_position_deltas[i] - min_position_deltas[i];
+    if (!size(i))
+    {
+      ++zero_count;
+      zero_index = i;
+    }
+  }
+
+  if (zero_count == 2)
+  {
+    assert(zero_index.is_initialized());
+    size(*zero_index) = zero_dimension_correction;
+  }
+
+  emit drawBox(size, pose.translate(center_correction));
 }
 
 bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics::Request& req)

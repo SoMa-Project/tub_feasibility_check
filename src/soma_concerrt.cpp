@@ -8,26 +8,50 @@ SomaConcerrtResult SomaConcerrt::solve(int task)
   rl::plan::Policy policy;
 
   getPolicy(policy);
+  policy.exportGraphToFile("");
+  std::cout << "Solution " << solved << std::endl << std::flush;
 
   return SomaConcerrtResult(policy, solved);
 }
 
 void SomaConcerrt::choose(rl::math::Vector& chosen)
 {
-  for (unsigned i = 0; i < maximum_choose_attempts; ++i)
+
+  ::boost::uniform_real< ::rl::math::Real > goalDistr(0.0f, 1.0f);
+  // for real robot exeperiment IROS18 we used 0.3
+  if (goalDistr(*this->gen) > 0.2)
   {
-    i++;
-    auto sampled_pose = ROI_sampler->generate(*gen);
+
+  //for (unsigned i = 0; i < maximum_choose_attempts; ++i)
+    while (true)
+    {
+      auto sampled_pose = ROI_sampler->generate(sample_01
+                                                );
+
+      auto result = jacobian_controller->moveSingleParticle(ROI_sampler_reference,
+                                                            sampled_pose,
+                                                            collisions_ignored);
+      if (result)
+      {
+        chosen = result.trajectory.back();
+        return;
+      }
+    }
+  }
+  else
+  {
+    auto sampled_pose = goal_pose;
 
     auto result = jacobian_controller->moveSingleParticle(ROI_sampler_reference,
                                                           sampled_pose,
                                                           collisions_ignored);
-    if (result)
-      chosen = result.trajectory.back();
 
+    chosen = result.trajectory.back();
+    return;
   }
 
-  throw std::runtime_error("Choose unable to sample");
+
+    throw std::runtime_error("Choose unable to sample");
 }
 
 void SomaConcerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initial_particles, const rl::math::Vector&)
@@ -63,7 +87,7 @@ bool SomaConcerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> bel
 
     model->setPosition(particle.config);
     model->updateFrames();
-    if (!worksapce_ROI_checker->contains(model->forwardPosition()))
+    if (!goal_manifold_checker->contains(model->forwardPosition()))
       return false;
   }
   return true;
