@@ -28,4 +28,7 @@ To start the ros service you can call ``` roslaunch tub_feasibility_check tub_fe
 
 The service request parameters and response are documented within the srv file https://github.com/SoMa-Project/tub_feasibility_check/blob/master/srv/CheckKinematics.srv
 
+For example calls to the service (using the comand line) check out the scripts in the `example` folder.
+The simplest example is `surface_grasp_sampling_simple.sh`, which encodes a straight go down movement without any unallowed collision. (**TODO** the other examples still use the wrong ifco frames (see https://github.com/SoMa-Project/tub_feasibility_check/issues/4). fix that
+
 **TODO**: more details??
