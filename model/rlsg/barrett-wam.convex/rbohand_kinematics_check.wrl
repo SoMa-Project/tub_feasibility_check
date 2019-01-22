@@ -1,12 +1,12 @@
 #VRML V2.0 utf8
 
-DEF ScaffoldMount Transform
+Transform
   {
   rotation -0.5773503 -0.5773503 -0.5773503 2.0943951
   translation 0.003 0 0
   children 
     [
-    Shape
+    DEF Mount Shape
       {
       appearance Appearance
 	{
@@ -126,12 +126,12 @@ DEF ScaffoldMount Transform
 		}
 	      }
 	  }
-	DEF PalmScaffold Transform
+	Transform
 	  {
 	  rotation 3.71050275e-2 -4.75708320e-2 -0.99817848 2.14919710
 	  translation -2.96577271e-2 2.83292680e-2 1.25902623e-3
 	  children 
-	    Shape
+	    DEF PalmScaffold Shape
 	      {
 	      appearance Appearance
 		{
@@ -147,12 +147,12 @@ DEF ScaffoldMount Transform
 		}
 	      }
 	  }
-	DEF Palm1 Transform
+	Transform
 	  {
 	  rotation -0.34452247 0.10565368 -0.93281376 3.67458152
 	  translation -6.11586198e-2 3.23250074e-3 -6.13031117e-3
 	  children 
-	    Shape
+	    DEF Palm1 Shape
 	      {
 	      appearance Appearance
 		{
@@ -168,12 +168,12 @@ DEF ScaffoldMount Transform
 		}
 	      }
 	  }
-	DEF Thumb Transform
+	Transform
 	  {
 	  rotation -0.22141501 -0.11039344 0.96891105 0.95048576
 	  translation -7.47148469e-2 9.56771057e-3 -8.18631052e-2
 	  children 
-	    Shape
+	    DEF Thumb Shape
 	      {
 	      appearance Appearance
 		{
@@ -189,12 +189,12 @@ DEF ScaffoldMount Transform
 		}
 	      }
 	  }
-	DEF Palm2 Transform
+	Transform
 	  {
 	  rotation -0.62270116 0.18541179 -0.76017481 3.58329796
 	  translation -4.57854978e-2 -6.88831694e-3 1.28308068e-2
 	  children 
-	    Shape
+	    DEF Palm2 Shape
 	      {
 	      appearance Appearance
 		{
@@ -210,12 +210,12 @@ DEF ScaffoldMount Transform
 		}
 	      }
 	  }
-	DEF Palm3 Transform
+	Transform
 	  {
 	  rotation -0.62270116 0.18541179 -0.76017481 3.58329796
 	  translation -7.91772529e-2 1.49138579e-2 -2.91231293e-2
 	  children 
-	    Shape
+	    DEF Palm3 Shape
 	      {
 	      appearance Appearance
 		{

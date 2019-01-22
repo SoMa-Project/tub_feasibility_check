@@ -37,6 +37,16 @@ rl::math::Vector stdToEigen(const std::vector<T>& std_vector)
     eigen_vector(i) = std_vector[i];
   return eigen_vector;
 }
+
+/* Needed for older compiler versions, that do not have a default hash for enum classes. */
+struct EnumClassHash
+{
+  template <typename T>
+  std::size_t operator()(T t) const
+  {
+    return static_cast<std::size_t>(t);
+  }
+};
 }  // namespace utilities
 
 #endif

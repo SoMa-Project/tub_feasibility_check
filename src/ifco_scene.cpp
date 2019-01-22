@@ -82,7 +82,7 @@ void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::
     auto material = new SoVRMLMaterial;
     auto box = new SoVRMLBox;
     material->diffuseColor.setValue(used_color.at(0), used_color.at(1), used_color.at(2));
-    material->transparency.setValue(0.5);
+    material->transparency.setValue(box_transparency_);
     appearance->material.setValue(material);
     vrml_shape->appearance.setValue(appearance);
 

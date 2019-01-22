@@ -1,7 +1,20 @@
 #include <rl/plan/Particle.h>
-#include "jacobian_controller.h"
 #include <iostream>
 #include <fstream>
+#include "jacobian_controller.h"
+#include "utilities.h"
+
+std::vector<unsigned> getJointsOverLimits(const rl::kin::Kinematics& kinematics, const rl::math::Vector& config)
+{
+  assert(kinematics.getDof() == config.size());
+
+  std::vector<unsigned> joints_over_limits;
+  for (std::size_t i = 0; i < config.size(); ++i)
+    if (config(i) < kinematics.getMinimum(i) || config(i) > kinematics.getMaximum(i))
+      joints_over_limits.push_back(i);
+
+  return joints_over_limits;
+}
 
 JacobianController::SingleResult::operator bool() const
 {
@@ -11,59 +24,27 @@ JacobianController::SingleResult::operator bool() const
   if (outcomes.size() != 1)
     return false;
 
-  Outcome outcome = *outcomes.begin();
+  Outcome outcome = outcomes.begin()->first;
 
   // REACHED and ACCEPTABLE_COLLISION are the only positive outcomes.
   return outcome == SingleResult::Outcome::REACHED || outcome == SingleResult::Outcome::ACCEPTABLE_COLLISION;
 }
 
-std::string JacobianController::SingleResult::description() const
-{
-  auto describeOutcome = [](Outcome outcome) {
-    switch (outcome)
-    {
-      case SingleResult::Outcome::REACHED:
-        return "reached the goal frame";
-      case SingleResult::Outcome::JOINT_LIMIT:
-        return "violated the joint limit";
-      case SingleResult::Outcome::SINGULARITY:
-        return "ended in the singularity";
-      case SingleResult::Outcome::STEPS_LIMIT:
-        return "went over the steps limit";
-      case SingleResult::Outcome::ACCEPTABLE_COLLISION:
-        return "ended on acceptable collision";
-      case SingleResult::Outcome::UNACCEPTABLE_COLLISION:
-        return "ended on unacceptable collision";
-      case SingleResult::Outcome::UNSENSORIZED_COLLISION:
-        return "ended on unsensorized collision";
-      case SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS:
-        return "missing required collisions";
-      default:
-        assert(false);
-    }
-  };
-
-  std::stringstream ss;
-  bool first = true;
-  for (auto o : outcomes)
-  {
-    if (!first)
-      ss << ", ";
-    else
-      first = false;
-
-    ss << describeOutcome(o);
-  }
-
-  return ss.str();
-}
-
-JacobianController::SingleResult&
-JacobianController::SingleResult::setSingleOutcome(JacobianController::SingleResult::Outcome single_outcome)
+JacobianController::SingleResult& JacobianController::SingleResult::setSingleOutcome(
+    JacobianController::SingleResult::Outcome single_outcome,
+    JacobianController::SingleResult::OutcomeInformation outcome_information)
 {
   outcomes.clear();
-  outcomes.insert(single_outcome);
+  outcomes.insert({ single_outcome, outcome_information });
 
+  return *this;
+}
+
+JacobianController::SingleResult& JacobianController::SingleResult::addSingleOutcome(
+    JacobianController::SingleResult::Outcome outcome,
+    JacobianController::SingleResult::OutcomeInformation outcome_information)
+{
+  outcomes.insert({ outcome, outcome_information });
   return *this;
 }
 
@@ -84,13 +65,8 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   random_engine_.seed(time(nullptr));
 
   if (viewer)
-  {
-    QObject::connect(this, SIGNAL(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)), *viewer,
-                     SLOT(applyFunctionToScene(std::function<void(rl::sg::Scene&)>)));
-    QObject::connect(this, SIGNAL(reset()), *viewer, SLOT(reset()));
     QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)), *viewer,
                      SLOT(drawConfiguration(const rl::math::Vector&)));
-  }
 }
 
 JacobianController::SingleResult JacobianController::moveSingleParticle(const rl::math::Vector& initial_configuration,
@@ -104,8 +80,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
 
   Vector current_config = initial_configuration;
 
-  emit reset();
-  emit drawConfiguration(current_config);
+//  emit drawConfiguration(current_config);
 
   SingleResult result;
   result.trajectory.push_back(current_config);
@@ -116,19 +91,26 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
 
     // arrived at the target pose
     if (q_dot.isZero())
+    {
       // if there were no required collisions at the start, or all of them were seen during the execution,
       // then it's a succesful termination
-      return result.setSingleOutcome(required_counter->allRequiredPresent() ?
-                                         SingleResult::Outcome::REACHED :
-                                         SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS);
+      if (required_counter->allRequiredPresent())
+        return result.setSingleOutcome(SingleResult::Outcome::REACHED);
+      else
+        return result.setSingleOutcome(
+            SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS,
+            SingleResult::OutcomeInformation::CollisionInformation(required_counter->unseenRequiredCollisions()));
+    }
 
     current_config += q_dot;
 
     result.trajectory.push_back(current_config);
-    emit drawConfiguration(current_config);
+//    emit drawConfiguration(current_config);
 
     if (!noisy_model_.isValid(current_config))
-      result.outcomes.insert(SingleResult::Outcome::JOINT_LIMIT);
+      result.addSingleOutcome(
+          SingleResult::Outcome::JOINT_LIMIT,
+          SingleResult::OutcomeInformation::JointNumbers(getJointsOverLimits(*kinematics_, current_config)));
 
     noisy_model_.setPosition(current_config);
     noisy_model_.updateFrames();
@@ -137,7 +119,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
     noisy_model_.isColliding();
 
     if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
-      result.outcomes.insert(SingleResult::Outcome::SINGULARITY);
+      result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
     auto collision_constraints_check =
         checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_types, *required_counter);
@@ -147,11 +129,12 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
 
     if (!result.outcomes.empty())
       return result;
-
     // success termination means that a terminating collision was seen, and all other collision constraints
     // and requirements were obeyed
     else if (collision_constraints_check.success_termination)
-      return result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION);
+      return result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION,
+                                     SingleResult::OutcomeInformation::CollisionInformation(
+                                         collision_constraints_check.seen_terminating_collisions));
   }
 
   return result.setSingleOutcome(SingleResult::Outcome::STEPS_LIMIT);
@@ -196,7 +179,6 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
     // is a trajectory configuration for that step plus the accumulated error
     Vector current_error = current_config - result.no_noise_test_result.trajectory.front();
 
-    emit reset();
     emit drawConfiguration(current_config);
 
     // execute the steps of the trajectory
@@ -213,7 +195,9 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
       current_error += noise;
 
       if (!noisy_model_.isValid(current_config))
-        particle_result.outcomes.insert(SingleResult::Outcome::JOINT_LIMIT);
+        particle_result.addSingleOutcome(
+            SingleResult::Outcome::JOINT_LIMIT,
+            SingleResult::OutcomeInformation::JointNumbers(getJointsOverLimits(*kinematics_, current_config)));
 
       noisy_model_.setPosition(current_config);
       noisy_model_.updateFrames();
@@ -222,7 +206,7 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
       noisy_model_.isColliding();
 
       if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
-        particle_result.outcomes.insert(SingleResult::Outcome::SINGULARITY);
+        particle_result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
       auto collision_constraints_check =
           checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_types, *required_counter);
@@ -236,7 +220,9 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
       // a terminating collision was seen and all other constraints were obeyed
       if (collision_constraints_check.success_termination)
       {
-        particle_result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION);
+        particle_result.setSingleOutcome(SingleResult::Outcome::ACCEPTABLE_COLLISION,
+                                         SingleResult::OutcomeInformation::CollisionInformation(
+                                             collision_constraints_check.seen_terminating_collisions));
         break;
       }
     }
@@ -296,14 +282,17 @@ JacobianController::CollisionConstraintsCheck JacobianController::checkCollision
 
     // if the collision pair is ignored, touching with an unsensorized part is not a failure
     if (!isSensorized(shapes_in_contact.first) && !collision_type.ignored)
-      check.failures.insert(SingleResult::Outcome::UNSENSORIZED_COLLISION);
+      check.failures[SingleResult::Outcome::UNSENSORIZED_COLLISION].collisions.push_back(shapes_in_contact);
 
     required_counter.countCollision(shapes_in_contact.first, shapes_in_contact.second);
 
     if (collision_type.prohibited)
-      check.failures.insert(SingleResult::Outcome::UNACCEPTABLE_COLLISION);
+      check.failures[SingleResult::Outcome::UNACCEPTABLE_COLLISION].collisions.push_back(shapes_in_contact);
     if (collision_type.terminating)
+    {
       terminating_collision_present = true;
+      check.seen_terminating_collisions.push_back(shapes_in_contact);
+    }
   }
 
   // there was a terminating collision and there were no failures
@@ -313,7 +302,8 @@ JacobianController::CollisionConstraintsCheck JacobianController::checkCollision
     if (required_counter.allRequiredPresent())
       check.success_termination = true;
     else
-      check.failures.insert(SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS);
+      check.failures[SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS].collisions =
+          required_counter.unseenRequiredCollisions();
   }
 
   return check;
@@ -355,4 +345,21 @@ JacobianController::BeliefResult::operator bool() const
     return false;
 
   return std::all_of(particle_results->begin(), particle_results->end(), [](const SingleResult& r) { return r; });
+}
+
+JacobianController::SingleResult::OutcomeInformation
+JacobianController::SingleResult::OutcomeInformation::CollisionInformation(
+    std::vector<std::pair<std::string, std::string>> collisions)
+{
+  JacobianController::SingleResult::OutcomeInformation outcome_information;
+  outcome_information.collisions = collisions;
+  return outcome_information;
+}
+
+JacobianController::SingleResult::OutcomeInformation
+JacobianController::SingleResult::OutcomeInformation::JointNumbers(std::vector<unsigned> joint_indices)
+{
+  JacobianController::SingleResult::OutcomeInformation outcome_information;
+  outcome_information.joint_indices = joint_indices;
+  return outcome_information;
 }

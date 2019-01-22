@@ -10,6 +10,7 @@
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
 #include "collision_types.h"
+#include "utilities.h"
 #include <unordered_map>
 
 class WorkspaceSampler;
@@ -34,25 +35,38 @@ public:
       MISSED_REQUIRED_COLLISIONS
     };
 
+    /* A structure storing additional outcome information. When Outcome is collision-related, the collisions
+     * will be stored. When it is JOINT_LIMIT, the joint indices will be stored.
+     */
+    struct OutcomeInformation
+    {
+      std::vector<std::pair<std::string, std::string>> collisions;
+      std::vector<unsigned> joint_indices;
+
+      static OutcomeInformation CollisionInformation(std::vector<std::pair<std::string, std::string>> collisions);
+      static OutcomeInformation JointNumbers(std::vector<unsigned> joint_indices);
+    };
+
     /* The trajectory steps from start to termination. */
     std::vector<rl::math::Vector> trajectory;
 
-    /* Set of outcomes.
-     * It is either one positive outcome: REACHED or ACCEPTABLE_COLLISION,
-     * or a set of negative outcomes, that led to the termination of the planner.
+    /* A map of outcomes.
+     * It contains either only one positive outcome: REACHED or ACCEPTABLE_COLLISION,
+     * or one or more negative outcomes, that led to the termination of the planner. The outcomes
+     * are mapped to additional outcome information.
      */
-    std::set<Outcome> outcomes;
+    std::unordered_map<Outcome, OutcomeInformation, utilities::EnumClassHash> outcomes;
 
     /* SingleResult converts to true when the termination was successful and
      * false otherwise.
      */
     operator bool() const;
 
-    /* Put one outcome in outcomes and return self. */
-    SingleResult& setSingleOutcome(Outcome outcome);
+    /* Clear outcomes and put one outcome with information there and return self. */
+    SingleResult& setSingleOutcome(Outcome outcome, OutcomeInformation outcome_information = OutcomeInformation());
 
-    /* Textual description of the result. Lists all outcomes in a string. */
-    std::string description() const;
+    /* Add one outcome with information in outcomes and return self. */
+    SingleResult& addSingleOutcome(Outcome outcome, OutcomeInformation outcome_information = OutcomeInformation());
   };
 
   /* Represents the result of moveBelief. */
@@ -126,7 +140,8 @@ private:
   typedef std::vector<std::pair<std::string, std::string>> CollisionPairs;
   struct CollisionConstraintsCheck
   {
-    std::set<SingleResult::Outcome> failures;
+    std::unordered_map<SingleResult::Outcome, SingleResult::OutcomeInformation, utilities::EnumClassHash> failures;
+    std::vector<std::pair<std::string, std::string>> seen_terminating_collisions;
     std::set<std::string> seen_required_world_collisions;
     bool success_termination = false;
   };
@@ -162,11 +177,9 @@ private:
 
   std::mt19937 random_engine_;
 
-// TODO find a way to remove QT signals and slots so this class does not use QT but still is able to
-// visualize the execution in viewer.
+  // TODO find a way to remove QT signals and slots so this class does not use QT but still is able to
+  // visualize the execution in viewer.
 signals:
-  void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);
-  void reset();
   void drawConfiguration(const rl::math::Vector& config);
 };
 

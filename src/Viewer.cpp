@@ -146,7 +146,7 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 
   boxes->addChild(this->boxesDrawStyle);
 
-  boxesMaterial->diffuseColor.setValue(0, 0, 1);
+  boxesMaterial->diffuseColor.setValue(0.2, 0.2, 0.2);
   boxesMaterial->transparency.setValue(0.75f);
   boxesAppearance->material = this->boxesMaterial;
 

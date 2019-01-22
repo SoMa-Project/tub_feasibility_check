@@ -12,13 +12,11 @@
 
 SomaCerrt::SomaCerrt(std::shared_ptr<JacobianController> jacobian_controller, rl::plan::NoisyModel* noisy_model,
                      std::shared_ptr<WorkspaceSampler> sampler_for_choose,
-                     std::shared_ptr<WorkspaceSampler> initial_sampler,
                      std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts, double delta,
                      Viewer* viewer)
   : Cerrt()
   , jacobian_controller_(jacobian_controller)
   , sampler_for_choose_(sampler_for_choose)
-  , initial_sampler_(initial_sampler)
   , viewer_(viewer)
   , required_goal_contacts_(required_goal_contacts)
 {
