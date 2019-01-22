@@ -15,6 +15,7 @@ public:
 class BoxChecker : public WorkspaceChecker
 {
 public:
+  //TODO add epsilon for orientation
   BoxChecker(const rl::math::Transform& center_pose, std::array<double, 3> dimensions,
              std::array<double, 3> maximum_abs_XYZ_angles)
     : center_pose_(center_pose), dimensions_(dimensions), maximum_abs_XYZ_angles_(maximum_abs_XYZ_angles)
