@@ -195,7 +195,7 @@ bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Reque
 
   std::mt19937 gen;
   gen.seed(std::time(0));
-  auto choose_sampler =
+  auto sampler =
       std::make_shared<BoxUniformOrientationSampler>(goal_transform, std::array<double, 3>{ 0.1, 0.1, 0.1 });
 
   noisy_model->setPosition(initial_configuration);
@@ -204,28 +204,46 @@ bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Reque
   auto initial_sampler =
       std::make_shared<BoxUniformOrientationSampler>(initial_transform, std::array<double, 3>{ 0.01, 0.01, 0.01 });
 
-  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler, initial_sampler,
-                       { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
-                       *ifco_scene->getViewer());
-  soma_cerrt.start = &initial_configuration;
-  rl::math::Vector crazy_goal = initial_configuration * 1.1;
-  soma_cerrt.goal = &crazy_goal;
-  soma_cerrt.goalEpsilon = 0.1;
-  soma_cerrt.solve();
+//  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, sampler, initial_sampler,
+//                       { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
+//                       *ifco_scene->getViewer());
+//  soma_cerrt.start = &initial_configuration;
+//  rl::math::Vector crazy_goal = initial_configuration * 1.1;
+//  soma_cerrt.goal = &crazy_goal;
+//  soma_cerrt.goalEpsilon = 0.1;
+//  soma_cerrt.solve();
 
   // soma ConCERRT
-  SomaConcerrtTask task;
-  task.required_goal_contacts =  { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } };
-  task.start_configurations =  &initial_configuration;
-  task.sampler_refernce_configuration = &initial_configuration;
+  auto worksapce_ROI_checker =
+      std::make_shared<BoxChecker>(initial_transform,
+                                   std::array<double, 3>{ 0.12, 0.0, 0.1 },
+                                   std::array<double, 3>{ 0.0, 0.0, 0.0 });
 
-  SomaConcerrt Concerrt(jacobian_controller,
-                        choose_sampler,
-                        initial_sampler );
+  std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts = { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } };
 
+  rl::math::Vector sampler_reference(noisy_model->getDof());
+  sampler_reference = initial_configuration;
+  std::vector<rl::math::Vector> start_configurations;
+
+  for (auto i = 0; i < 20; i++)
+  {
+    start_configurations.push_back(initial_configuration);
+  }
+
+  SomaConcerrt Concerrt(required_goal_contacts,
+                        worksapce_ROI_checker,
+                        200,
+                        jacobian_controller,
+                        sampler,
+                        sampler_reference,
+                        start_configurations,
+                        noisy_model);
+  // not used, but required for runing the planenr
+  Concerrt.start = &initial_configuration;
+  // not used, but required for runing the planenr
+  Concerrt.goal = &initial_configuration;
   Concerrt.delta = delta;
-  std::vector<rl::plan::Particle> initial_particles;
-  Concerrt.nrParticles = initial_particles.size();
+  Concerrt.nrParticles = start_configurations.size();
   Concerrt.gamma = 0.8;
   Concerrt.K_contingency_limit = 5;
   Concerrt.angularDistanceWeight = 0;
@@ -234,13 +252,9 @@ bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Reque
   Concerrt.kd = true;
   Concerrt.useMotionError = true;
   Concerrt.duration = 30;
-  Concerrt.model = noisy_model.get();
-  Concerrt.viewer = ifco_scene->getViewer();
-  Concerrt.maximum_sample_attempts = 1;
-  Concerrt.required_goal_contacts = { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } };
+  Concerrt.viewer = *ifco_scene->getViewer();
 
-  Concerrt.solve(task);
-
+  Concerrt.solve(0);
 
   res.success = true;
   return true;
