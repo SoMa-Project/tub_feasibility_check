@@ -113,9 +113,9 @@ void ServiceWorker::start(unsigned rate)
 }
 
 ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene)
-  : QObject(nullptr), ifco_scene_(std::move(ifco_scene))
+  : QObject(nullptr), ifco_scene(std::move(ifco_scene))
 {
-  auto viewer = ifco_scene_->getViewer();
+  auto viewer = this->ifco_scene->getViewer();
   if (viewer)
   {
     qRegisterMetaType<rl::math::Transform>("rl::math::Transform");
@@ -168,18 +168,18 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   WorldCollisionTypes world_collision_types(part_to_type);
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
-  ifco_scene_->moveIfco(ifco_transform);
-  ifco_scene_->removeBoxes();
+  ifco_scene->moveIfco(ifco_transform);
+  ifco_scene->removeBoxes();
   for (std::size_t i = 0; i < req.bounding_boxes_with_poses.size(); ++i)
   {
     Eigen::Affine3d box_transform;
     tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, box_transform);
-    ifco_scene_->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
+    ifco_scene->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(ifco_scene_->getKinematics(), ifco_scene_->getBulletScene(), delta,
-                                         maximum_steps, ifco_scene_->getViewer());
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
+                                         maximum_steps, ifco_scene->getViewer());
   auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types);
 
   if (result)
@@ -252,13 +252,13 @@ bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Reque
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
 
-  ifco_scene_->moveIfco(ifco_transform);
+  ifco_scene->moveIfco(ifco_transform);
   auto jacobian_controller = std::make_shared<JacobianController>(
-      ifco_scene_->getKinematics(), ifco_scene_->getBulletScene(), delta, maximum_steps, ifco_scene_->getViewer());
+      ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta, maximum_steps, ifco_scene->getViewer());
   auto noisy_model = new rl::plan::NoisyModel;
-  noisy_model->kin = ifco_scene_->getKinematics().get();
-  noisy_model->model = ifco_scene_->getBulletScene()->getModel(0);
-  noisy_model->scene = ifco_scene_->getBulletScene().get();
+  noisy_model->kin = ifco_scene->getKinematics().get();
+  noisy_model->model = ifco_scene->getBulletScene()->getModel(0);
+  noisy_model->scene = ifco_scene->getBulletScene().get();
 
   Vector errors = Vector::Ones(initial_configuration.size()) * 0;
   noisy_model->initialError = &errors;
@@ -277,7 +277,7 @@ bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Reque
 
   SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler,
                        { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
-                       *ifco_scene_->getViewer());
+                       *ifco_scene->getViewer());
   soma_cerrt.start = &initial_configuration;
   rl::math::Vector crazy_goal = initial_configuration * 1.1;
   soma_cerrt.goal = &crazy_goal;
@@ -343,11 +343,11 @@ bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics
 {
   bool all_ok = true;
 
-  if (req.initial_configuration.size() != ifco_scene_->dof())
+  if (req.initial_configuration.size() != ifco_scene->dof())
   {
     ROS_ERROR_STREAM("The initial configuration size: " << req.initial_configuration.size()
                                                         << " does not match the degrees of freedom of the robot: "
-                                                        << ifco_scene_->dof());
+                                                        << ifco_scene->dof());
     all_ok = false;
   }
 

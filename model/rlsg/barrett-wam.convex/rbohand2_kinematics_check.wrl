@@ -152,7 +152,7 @@ Transform
 	  rotation -0.34452247 0.10565368 -0.93281376 3.67458152
 	  translation -6.11586198e-2 3.23250074e-3 -6.13031117e-3
 	  children 
-	    DEF Palm1 Shape
+            DEF Palm1 Shape
 	      {
 	      appearance Appearance
 		{
@@ -173,7 +173,7 @@ Transform
 	  rotation -0.22141501 -0.11039344 0.96891105 0.95048576
 	  translation -7.47148469e-2 9.56771057e-3 -8.18631052e-2
 	  children 
-	    DEF Thumb Shape
+            DEF Thumb Shape
 	      {
 	      appearance Appearance
 		{
@@ -194,7 +194,7 @@ Transform
 	  rotation -0.62270116 0.18541179 -0.76017481 3.58329796
 	  translation -4.57854978e-2 -6.88831694e-3 1.28308068e-2
 	  children 
-	    DEF Palm2 Shape
+            DEF Palm2 Shape
 	      {
 	      appearance Appearance
 		{
@@ -215,7 +215,7 @@ Transform
 	  rotation -0.62270116 0.18541179 -0.76017481 3.58329796
 	  translation -7.91772529e-2 1.49138579e-2 -2.91231293e-2
 	  children 
-	    DEF Palm3 Shape
+            DEF Palm3 Shape
 	      {
 	      appearance Appearance
 		{
