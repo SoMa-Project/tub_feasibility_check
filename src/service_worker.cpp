@@ -60,20 +60,16 @@ std::string describeSingleResult(const JacobianController::SingleResult& result)
       case JacobianController::SingleResult::Outcome::STEPS_LIMIT:
         ss << "went over the steps limit";
         break;
-      case JacobianController::SingleResult::Outcome::ACCEPTABLE_COLLISION:
+      case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
         ss << "acceptable collisions:";
         printCollisions();
         break;
-      case JacobianController::SingleResult::Outcome::UNACCEPTABLE_COLLISION:
+      case JacobianController::SingleResult::Outcome::PROHIBITED_COLLISION:
         ss << "unacceptable collisions:";
         printCollisions();
         break;
       case JacobianController::SingleResult::Outcome::UNSENSORIZED_COLLISION:
         ss << "unsensorized collisions:";
-        printCollisions();
-        break;
-      case JacobianController::SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS:
-        ss << "missing required collisions:";
         printCollisions();
         break;
       default:
@@ -151,21 +147,17 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
   emit drawWork(goal_transform);
 
-  WorldCollisionTypes::PartToCollisionType part_to_type;
+  WorldPartsCollisions::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
   {
     auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
                            getBoxShapeName(allowed_collision_msg.box_id) :
                            allowed_collision_msg.constraint_name;
-    CollisionType type;
-
-    type.terminating = allowed_collision_msg.terminate_on_collision;
-    type.required = allowed_collision_msg.required_collision;
-    type.ignored = allowed_collision_msg.ignored_collision;
+    auto type = allowed_collision_msg.terminating ? CollisionType::SENSORIZED_TERMINATING : CollisionType::ALLOWED;
 
     part_to_type.insert({ object_name, type });
   }
-  WorldCollisionTypes world_collision_types(part_to_type);
+  WorldPartsCollisions world_collision_types(part_to_type);
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
   ifco_scene->moveIfco(ifco_transform);

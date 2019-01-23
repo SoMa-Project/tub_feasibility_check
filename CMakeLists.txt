@@ -74,7 +74,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/soma_cerrt.cpp
         src/workspace_samplers.cpp
         src/workspace_checkers.cpp
-        src/collision_types.cpp
+        src/collision_specification.cpp
     )
 
     qt4_wrap_cpp(

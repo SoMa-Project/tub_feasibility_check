@@ -6,7 +6,7 @@
 #include <rl/math/Vector.h>
 #include <rl/math/Transform.h>
 #include <boost/optional.hpp>
-#include "collision_types.h"
+#include "collision_specification.h"
 #include "jacobian_controller.h"
 
 // TODO in dire need of rework. Have not figured out a way to write it cleanly so far.
@@ -62,7 +62,7 @@ private:
 template <class RandomEngine>
 boost::optional<rl::math::Vector> sampleWithJacobianControl(JacobianController& jacobian_controller,
                                                             const rl::math::Vector& initial_configuration,
-                                                            const CollisionTypes& collision_types,
+                                                            const CollisionSpecification& collision_types,
                                                             WorkspaceSampler& sampler, RandomEngine& random_engine,
                                                             unsigned maximum_attempts, double delta)
 {

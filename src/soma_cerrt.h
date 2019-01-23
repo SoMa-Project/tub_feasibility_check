@@ -9,7 +9,7 @@
 #include <rl/plan/Particle.h>
 #include <rl/sg/bullet/Scene.h>
 #include <random>
-#include "collision_types.h"
+#include "collision_specification.h"
 #include "workspace_checkers.h"
 #include "pair_hash.h"
 
@@ -36,7 +36,7 @@ private:
   std::shared_ptr<JacobianController> jacobian_controller_;
   Viewer* viewer_;
   std::shared_ptr<WorkspaceSampler> sampler_for_choose_;
-  std::unique_ptr<CollisionTypes> collision_types_;
+  std::unique_ptr<CollisionSpecification> collision_types_;
   std::unique_ptr<WorkspaceChecker> goal_checker_;
   std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts_;
 

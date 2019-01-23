@@ -26,7 +26,7 @@ SomaCerrt::SomaCerrt(std::shared_ptr<JacobianController> jacobian_controller, rl
   goalEpsilon = 0.001;
   random_gen_.seed(std::time(0));
 
-  collision_types_.reset(new IgnoreAllCollisionTypes);
+  collision_types_.reset(new AllowAllCollisions);
   goal_checker_.reset(new BoxChecker(Transform::Identity(), { 0.1, 0.1, 0.1 }, { 0.5, 0.5, 0.5 }));
   nrParticles = 20;
 }

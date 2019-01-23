@@ -14,8 +14,8 @@ goal_pose:
   position: {x: 0.4, y: -0.02, z: 0.25}
   orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
 ifco_pose:
-  position: {x: -0.12, y: 0, z: 0.1}
-  orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1}
+  position: {x: 0.48, y: 0, z: 0.2}
+  orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
 bounding_boxes_with_poses:
 - box:
     type: 0
@@ -40,5 +40,5 @@ max_position_deltas: [0.01, 0.01, 0.01]
 min_orientation_deltas: [0, 0, -1.5]
 max_orientation_deltas: [0, 0, 1.5]
 allowed_collisions:
-- {type: 1, box_id: 0, terminate_on_collision: true}
+- {type: 1, box_id: 0, terminating: true}
 " 

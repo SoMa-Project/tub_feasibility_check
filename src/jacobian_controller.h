@@ -9,7 +9,7 @@
 #include <rl/plan/BeliefState.h>
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
-#include "collision_types.h"
+#include "collision_specification.h"
 #include "utilities.h"
 #include <unordered_map>
 
@@ -26,13 +26,12 @@ public:
     enum class Outcome
     {
       REACHED,
-      ACCEPTABLE_COLLISION,
-      UNACCEPTABLE_COLLISION,
+      TERMINATING_COLLISION,
+      PROHIBITED_COLLISION,
       UNSENSORIZED_COLLISION,
       SINGULARITY,
       JOINT_LIMIT,
-      STEPS_LIMIT,
-      MISSED_REQUIRED_COLLISIONS
+      STEPS_LIMIT
     };
 
     /* A structure storing additional outcome information. When Outcome is collision-related, the collisions
@@ -51,7 +50,7 @@ public:
     std::vector<rl::math::Vector> trajectory;
 
     /* A map of outcomes.
-     * It contains either only one positive outcome: REACHED or ACCEPTABLE_COLLISION,
+     * It contains either only one positive outcome: REACHED or TERMINATING_COLLISION,
      * or one or more negative outcomes, that led to the termination of the planner. The outcomes
      * are mapped to additional outcome information.
      */
@@ -119,7 +118,7 @@ public:
    * @return An object specifying the outcome and documenting every step of the trajectory taken.
    */
   SingleResult moveSingleParticle(const rl::math::Vector& initial_configuration, const rl::math::Transform& target_pose,
-                                  const CollisionTypes& collision_types);
+                                  const CollisionSpecification& collision_types);
 
   /* Create a belief in initial configuration and propagate it to the target pose using jacobian control and obeying
    * collision constraints. Done in two phases: first, a single particle is moved without noise to target pose.
@@ -134,7 +133,7 @@ public:
    * @return An object storing results of both phases of execution.
    */
   BeliefResult moveBelief(const rl::math::Vector& initial_configuration, const rl::math::Transform& target_pose,
-                          const CollisionTypes& collision_types, MoveBeliefSettings settings);
+                          const CollisionSpecification& collision_types, MoveBeliefSettings settings);
 
 private:
   typedef std::vector<std::pair<std::string, std::string>> CollisionPairs;
@@ -142,7 +141,6 @@ private:
   {
     std::unordered_map<SingleResult::Outcome, SingleResult::OutcomeInformation, utilities::EnumClassHash> failures;
     std::vector<std::pair<std::string, std::string>> seen_terminating_collisions;
-    std::set<std::string> seen_required_world_collisions;
     bool success_termination = false;
   };
 
@@ -159,8 +157,7 @@ private:
    */
   // TODO remove "hidden" usage of required_counter, could be misleading.
   CollisionConstraintsCheck checkCollisionConstraints(const rl::sg::CollisionMap& collision_map,
-                                                      const CollisionTypes& collision_types,
-                                                      RequiredCollisionsCounter& required_counter);
+                                                      const CollisionSpecification& collision_types);
 
   rl::math::Vector calculateQDot(const rl::math::Vector& configuration, const rl::math::Transform& goal_pose,
                                  double delta);
@@ -181,6 +178,7 @@ private:
   // visualize the execution in viewer.
 signals:
   void drawConfiguration(const rl::math::Vector& config);
+  void drawWork(const rl::math::Transform& transform);
 };
 
 #endif  // JACOBIAN_CONTROLLER_H
