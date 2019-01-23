@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(tub_feasibility_check)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated-declarations -Wno-zero-as-null-pointer-constant -fno-inline-functions -fpermissive")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11 -Wno-deprecated-declarations -Wno-zero-as-null-pointer-constant -fno-inline-functions -fpermissive")
 
 add_definitions(-DEIGEN_DONT_ALIGN)
 
@@ -35,7 +35,6 @@ find_package(Coin REQUIRED)
 
 enable_testing()
 
-
 add_service_files(
     FILES
     CheckKinematics.srv
@@ -62,6 +61,28 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
+add_executable(
+    test_checker_sampler
+    src/workspace_samplers.cpp
+    src/workspace_checkers.cpp
+    test/test_workspace_checker_and_sampler.cpp
+)
+
+target_include_directories(
+    test_checker_sampler
+    PUBLIC
+    ${Boost_INCLUDE_DIR}
+    ${ROBLIB_INCLUDE_DIRS}
+)
+
+target_link_libraries(
+    test_checker_sampler
+    rlplan
+    rlkin
+    rlsg
+)
+
+add_test(NAME test_checker_sampler COMMAND test_checker_sampler)
 
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
     set(SRCS
@@ -71,7 +92,6 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/ifco_scene.cpp
         src/service_worker.cpp
         src/jacobian_controller.cpp
-        src/soma_cerrt.cpp
         src/workspace_samplers.cpp
         src/workspace_checkers.cpp
         src/collision_specification.cpp
