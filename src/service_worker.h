@@ -72,6 +72,9 @@ private:
 
   QMutex keep_running_mutex;
   bool keep_running = true;
+
+  std::array<double, 3> min_allowed_XYZ_angles{{ -M_PI, -M_PI / 2, -M_PI }};
+  std::array<double, 3> max_allowed_XYZ_angles{{ M_PI, M_PI / 2, M_PI }};
 };
 
 #endif  // KINEMATICS_CHECK_H

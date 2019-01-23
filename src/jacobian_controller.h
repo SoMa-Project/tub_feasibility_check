@@ -10,6 +10,7 @@
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
 #include "collision_specification.h"
+#include "workspace_checkers.h"
 #include "utilities.h"
 #include <unordered_map>
 
@@ -31,7 +32,8 @@ public:
       UNSENSORIZED_COLLISION,
       SINGULARITY,
       JOINT_LIMIT,
-      STEPS_LIMIT
+      STEPS_LIMIT,
+      TERMINATED_OUTSIDE_GOAL_MANIFOLD
     };
 
     /* A structure storing additional outcome information. When Outcome is collision-related, the collisions
@@ -118,7 +120,8 @@ public:
    * @return An object specifying the outcome and documenting every step of the trajectory taken.
    */
   SingleResult moveSingleParticle(const rl::math::Vector& initial_configuration, const rl::math::Transform& target_pose,
-                                  const CollisionSpecification& collision_types);
+                                  const CollisionSpecification& collision_specification,
+                                  boost::optional<const WorkspaceChecker&> goal_manifold_checker = boost::none);
 
   /* Create a belief in initial configuration and propagate it to the target pose using jacobian control and obeying
    * collision constraints. Done in two phases: first, a single particle is moved without noise to target pose.

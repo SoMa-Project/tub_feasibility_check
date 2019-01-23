@@ -72,17 +72,22 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   }
 }
 
-JacobianController::SingleResult JacobianController::moveSingleParticle(const rl::math::Vector& initial_configuration,
-                                                                        const rl::math::Transform& to_pose,
-                                                                        const CollisionSpecification& collision_types)
+JacobianController::SingleResult JacobianController::moveSingleParticle(
+    const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
+    const CollisionSpecification& collision_specification,
+    boost::optional<const WorkspaceChecker&> goal_manifold_checker)
 {
   using namespace rl::math;
+
+  SingleResult result;
+
+  if (goal_manifold_checker)
+    assert(goal_manifold_checker->contains(to_pose));
 
   Vector current_config = initial_configuration;
 
   emit drawConfiguration(current_config);
 
-  SingleResult result;
   result.trajectory.push_back(current_config);
 
   for (std::size_t i = 0; i < maximum_steps_; ++i)
@@ -113,7 +118,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
       result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
     auto collision_constraints_check =
-        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_types);
+        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification);
     // if the collision constraints were violated, failures are not empty
     std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
               std::inserter(result.outcomes, result.outcomes.begin()));
@@ -122,10 +127,17 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
       return result;
     // success termination means that a terminating collision was seen, and all other collision constraints
     // and requirements were obeyed
-    else if (collision_constraints_check.success_termination)
-      return result.setSingleOutcome(SingleResult::Outcome::TERMINATING_COLLISION,
-                                     SingleResult::OutcomeInformation::CollisionInformation(
-                                         collision_constraints_check.seen_terminating_collisions));
+
+    if (collision_constraints_check.success_termination)
+    {
+      auto collisions = SingleResult::OutcomeInformation::CollisionInformation(
+          collision_constraints_check.seen_terminating_collisions);
+
+      if (goal_manifold_checker && !goal_manifold_checker->contains(noisy_model_.forwardPosition()))
+        return result.setSingleOutcome(SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD, collisions);
+
+      return result.setSingleOutcome(SingleResult::Outcome::TERMINATING_COLLISION, collisions);
+    }
   }
 
   return result.setSingleOutcome(SingleResult::Outcome::STEPS_LIMIT);
@@ -134,7 +146,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(const rl
 // TODO try to resolve code duplication between this and moveSingleParticle
 JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::Vector& initial_configuration,
                                                                 const rl::math::Transform& to_pose,
-                                                                const CollisionSpecification& collision_types,
+                                                                const CollisionSpecification& collision_specification,
                                                                 MoveBeliefSettings settings)
 {
   using namespace rl::math;
@@ -143,7 +155,7 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
 
   BeliefResult result;
   // phase one: move a single particle without noise to find out the trajectory
-  result.no_noise_test_result = moveSingleParticle(initial_configuration, to_pose, collision_types);
+  result.no_noise_test_result = moveSingleParticle(initial_configuration, to_pose, collision_specification);
 
   if (!result)
     return result;
@@ -197,7 +209,7 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
         particle_result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
       auto collision_constraints_check =
-          checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_types);
+          checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification);
       std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
                 std::inserter(particle_result.outcomes, particle_result.outcomes.begin()));
 
