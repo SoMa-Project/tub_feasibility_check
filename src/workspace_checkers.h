@@ -1,12 +1,8 @@
 #ifndef WORKSPACE_CHECKERS_H
 #define WORKSPACE_CHECKERS_H
 
-#include <cmath>
-#include <rl/math/Vector.h>
 #include <rl/math/Transform.h>
-#include <boost/optional.hpp>
-#include "collision_types.h"
-#include "jacobian_controller.h"
+#include <boost/array.hpp>
 
 /* Checks whether a pose is contained within a workspace manifold. */
 class WorkspaceChecker
@@ -16,14 +12,21 @@ public:
   virtual bool contains(const rl::math::Transform& transform) const = 0;
 };
 
-/* A manifold with positions inside of a box and orientations having a maximum value of Euler XYZ rotation. */
+/* A manifold with positions inside of a box and orientations having a maximum value of Euler XYZ rotation.
+ * The allowed Euler angles are the following: X (-pi, pi), Y (-pi/2, pi/2), Z (-pi, pi). contains will not
+ * function properly when the angles are outside of the allowed ranges.
+ */
 class BoxChecker : public WorkspaceChecker
 {
 public:
-  //TODO add epsilon for orientation
-  BoxChecker(const rl::math::Transform& center_pose, boost::array<double, 3> dimensions,
-             boost::array<double, 3> maximum_abs_XYZ_angles)
-    : center_pose_(center_pose), dimensions_(dimensions), maximum_abs_XYZ_angles_(maximum_abs_XYZ_angles)
+  BoxChecker(const rl::math::Transform& center_pose, boost::array<double, 3> min_position_deltas,
+             boost::array<double, 3> max_position_deltas, boost::array<double, 3> min_XYZ_orientation_deltas,
+             boost::array<double, 3> max_XYZ_orientation_deltas)
+    : center_pose_(center_pose)
+    , min_position_deltas_(min_position_deltas)
+    , max_position_deltas_(max_position_deltas)
+    , min_XYZ_orientation_deltas_(min_XYZ_orientation_deltas)
+    , max_XYZ_orientation_deltas_(max_XYZ_orientation_deltas)
   {
   }
 
@@ -33,9 +36,13 @@ public:
 
 private:
   rl::math::Transform center_pose_;
-  boost::array<double, 3> dimensions_;
-  // TODO i don't think this will work as expected. do not know the theory that will help make it better
-  boost::array<double, 3> maximum_abs_XYZ_angles_;
+  boost::array<double, 3> min_position_deltas_;
+  boost::array<double, 3> max_position_deltas_;
+  boost::array<double, 3> min_XYZ_orientation_deltas_;
+  boost::array<double, 3> max_XYZ_orientation_deltas_;
+
+  /* absolute precision for comparing euler angles */
+  const double angle_epsilon_ = 1e-2;
 };
 
 #endif  // WORKSPACE_CHECKERS_H

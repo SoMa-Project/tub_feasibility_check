@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rlsg xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlsg.xsd">
-	<scene href="wam-rbohand-ifco.convex.wrl">
+        <scene href="wam-rbohand2-ifco.convex.wrl">
 		<model name="barrett-wam-wrist">
 			<body name="link0"/>
 			<body name="link1"/>

@@ -21,8 +21,8 @@ goal_pose:
   position: {x: 0.45, y: 0.10, z: 0.35}
   orientation: {x: 0.6830127, y: -0.6830127, z: 0.1830127, w: 0.1830127}
 ifco_pose:
-  position: {x: -0.12, y: 0, z: 0.1}
-  orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1}
+  position: {x: 0.48, y: 0, z: 0.2}
+  orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
 bounding_boxes_with_poses:
 - box:
     type: 0
@@ -41,7 +41,7 @@ max_position_deltas: [0.05, 0.05, 0.05]
 min_orientation_deltas: [0, 0, 0]
 max_orientation_deltas: [0, 0, 0]
 allowed_collisions:
-- {type: 2, constraint_name: 'bottom', terminate_on_collision: true}
+- {type: 2, constraint_name: 'bottom', terminating: true}
 "
 )
 
@@ -59,8 +59,8 @@ goal_pose:
   position: {x: 0.45, y: -0.4, z: 0.35}
   orientation: {x: 0.4909103, y: -0.3602125, z: 0.6225606, w: 0.4916018}
 ifco_pose:
-  position: {x: -0.12, y: 0, z: 0.1}
-  orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1}
+  position: {x: 0.48, y: 0, z: 0.2}
+  orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
 bounding_boxes_with_poses:
 - box:
     type: 0
@@ -79,7 +79,7 @@ max_position_deltas: [0.05, 0.05, 0.05]
 min_orientation_deltas: [0, 0, 0]
 max_orientation_deltas: [0, 0, 0]
 allowed_collisions:
-- {type: 2, constraint_name: 'bottom', terminate_on_collision: false}
-- {type: 1, box_id: 0, terminate_on_collision: false, required_collision: true, ignored_collision: true}
-- {type: 2, constraint_name: 'south', terminate_on_collision: true}
+- {type: 2, constraint_name: 'bottom'}
+- {type: 1, box_id: 0}
+- {type: 2, constraint_name: 'south', terminating: true}
 " 
