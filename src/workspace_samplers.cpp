@@ -28,7 +28,7 @@ rl::math::Vector3 UniformPositionInAsymmetricBox::operator()(std::function<doubl
   for (int i = 0; i < 3; ++i)
     point(i) = min_deltas_[i] + (max_deltas_[i] - min_deltas_[i]) * sample_random_01();
 
-  return box_pose_ * point;
+  return box_pose_.translation() + point;
 }
 
 WorkspaceSampler::WorkspaceSampler(WorkspaceSampler::SamplePosition sample_position,
@@ -57,7 +57,10 @@ rl::math::Quaternion DeltaXYZOrientation::operator()(std::function<double()> sam
   for (unsigned i = 0; i < 3; ++i)
     angles[i] = min_XYZ_deltas_[i] + (max_XYZ_deltas_[i] - min_XYZ_deltas_[i]) * sample_random_01();
 
-  return rl::math::AngleAxis(angles[2], rl::math::Vector3::UnitZ()) *
-         rl::math::AngleAxis(angles[1], rl::math::Vector3::UnitY()) *
-         rl::math::AngleAxis(angles[0], rl::math::Vector3::UnitX()) * initial_orientation_;
+  rl::math::Quaternion sampled_diff =
+      rl::math::AngleAxis(angles[2], rl::math::Vector3::UnitZ()) *
+      rl::math::AngleAxis(angles[1], rl::math::Vector3::UnitY()) *
+      rl::math::AngleAxis(angles[0], rl::math::Vector3::UnitX());
+
+  return sampled_diff * initial_orientation_;
 }

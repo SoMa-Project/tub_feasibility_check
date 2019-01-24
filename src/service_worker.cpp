@@ -29,7 +29,6 @@
 #include "jacobian_controller.h"
 #include "workspace_samplers.h"
 #include "utilities.h"
-#include "soma_cerrt.h"
 
 /* Provide a textual description for the given result of JacobianController::moveSingleParticle. */
 std::string describeSingleResult(const JacobianController::SingleResult& result)
@@ -60,24 +59,21 @@ std::string describeSingleResult(const JacobianController::SingleResult& result)
       case JacobianController::SingleResult::Outcome::STEPS_LIMIT:
         ss << "went over the steps limit";
         break;
-      case JacobianController::SingleResult::Outcome::ACCEPTABLE_COLLISION:
-        ss << "acceptable collisions:";
+      case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
+        ss << "terminating collisions:";
         printCollisions();
         break;
-      case JacobianController::SingleResult::Outcome::UNACCEPTABLE_COLLISION:
-        ss << "unacceptable collisions:";
+      case JacobianController::SingleResult::Outcome::PROHIBITED_COLLISION:
+        ss << "prohibited collisions:";
         printCollisions();
         break;
       case JacobianController::SingleResult::Outcome::UNSENSORIZED_COLLISION:
         ss << "unsensorized collisions:";
         printCollisions();
         break;
-      case JacobianController::SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS:
-        ss << "missing required collisions:";
+      case JacobianController::SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD:
+        ss << "terminating collisions outside the goal manifold:";
         printCollisions();
-        break;
-      default:
-        assert(false);
     }
   };
 
@@ -113,9 +109,9 @@ void ServiceWorker::start(unsigned rate)
 }
 
 ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene)
-  : QObject(nullptr), ifco_scene_(std::move(ifco_scene))
+  : QObject(nullptr), ifco_scene(std::move(ifco_scene))
 {
-  auto viewer = ifco_scene_->getViewer();
+  auto viewer = this->ifco_scene->getViewer();
   if (viewer)
   {
     qRegisterMetaType<rl::math::Transform>("rl::math::Transform");
@@ -150,42 +146,54 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
   emit drawWork(goal_transform);
+  BoxChecker goal_manifold_checker(goal_transform, req.min_position_deltas, req.max_position_deltas,
+                                   req.min_orientation_deltas, req.max_orientation_deltas);
 
-  WorldCollisionTypes::PartToCollisionType part_to_type;
+  WorldPartsCollisions::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
   {
     auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
                            getBoxShapeName(allowed_collision_msg.box_id) :
                            allowed_collision_msg.constraint_name;
-    CollisionType type;
-
-    type.terminating = allowed_collision_msg.terminate_on_collision;
-    type.required = allowed_collision_msg.required_collision;
-    type.ignored = allowed_collision_msg.ignored_collision;
+    auto type = allowed_collision_msg.terminating ? CollisionType::SENSORIZED_TERMINATING : CollisionType::ALLOWED;
 
     part_to_type.insert({ object_name, type });
   }
-  WorldCollisionTypes world_collision_types(part_to_type);
+  WorldPartsCollisions world_collision_types(part_to_type);
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
-  ifco_scene_->moveIfco(ifco_transform);
-  ifco_scene_->removeBoxes();
+  ifco_scene->moveIfco(ifco_transform);
+  ifco_scene->removeBoxes();
   for (std::size_t i = 0; i < req.bounding_boxes_with_poses.size(); ++i)
   {
     Eigen::Affine3d box_transform;
     tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, box_transform);
-    ifco_scene_->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
+    ifco_scene->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(ifco_scene_->getKinematics(), ifco_scene_->getBulletScene(), delta,
-                                         maximum_steps, ifco_scene_->getViewer());
-  auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types);
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
+                                         maximum_steps, ifco_scene->getViewer());
+  auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types,
+                                                       goal_manifold_checker);
 
   if (result)
   {
     ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
-    res.status = res.REACHED_INITIAL;
+    // when jacobian controller is successful, there is only one outcome in outcomes
+    auto outcome = result.outcomes.begin()->first;
+    // if there was a terminating collision, the end pose will not be the goal pose. The result is a success,
+    // meaning that the end pose lies within the goal manifold
+    switch (outcome)
+    {
+      case JacobianController::SingleResult::Outcome::REACHED:
+        res.status = res.REACHED_INITIAL;
+      case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
+        res.status = res.REACHED_SAMPLED;
+      default:
+        assert(false);
+    }
+
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
@@ -194,7 +202,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   WorkspaceSampler goal_manifold_sampler(
       UniformPositionInAsymmetricBox(goal_transform, req.min_position_deltas, req.max_position_deltas),
-      DeltaXYZOrientation(rl::math::Quaternion(goal_transform.linear()), req.min_orientation_deltas,
+      DeltaXYZOrientation(rl::math::Quaternion(goal_transform.rotation()), req.min_orientation_deltas,
                           req.max_orientation_deltas));
 
   drawGoalManifold(goal_transform, req.min_position_deltas, req.max_position_deltas);
@@ -218,8 +226,8 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
         << ", rotation sample: "
         << (goal_transform.linear().transpose() * sampled_transform.linear()).eulerAngles(0, 1, 2).transpose());
     emit resetPoints();
-    auto result =
-        jacobian_controller.moveSingleParticle(initial_configuration, sampled_transform, world_collision_types);
+    auto result = jacobian_controller.moveSingleParticle(initial_configuration, sampled_transform,
+                                                         world_collision_types, goal_manifold_checker);
 
     if (result)
     {
@@ -235,56 +243,6 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
   res.status = res.FAILED;
-  return true;
-}
-
-bool ServiceWorker::cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
-                                      tub_feasibility_check::CerrtExample::Response& res)
-{
-  using namespace rl::math;
-
-  const double delta = 0.017;
-  const unsigned maximum_steps = 1000;
-
-  Eigen::Affine3d ifco_transform;
-  Eigen::Affine3d goal_transform;
-  tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
-  tf::poseMsgToEigen(req.goal_pose, goal_transform);
-  auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
-
-  ifco_scene_->moveIfco(ifco_transform);
-  auto jacobian_controller = std::make_shared<JacobianController>(
-      ifco_scene_->getKinematics(), ifco_scene_->getBulletScene(), delta, maximum_steps, ifco_scene_->getViewer());
-  auto noisy_model = new rl::plan::NoisyModel;
-  noisy_model->kin = ifco_scene_->getKinematics().get();
-  noisy_model->model = ifco_scene_->getBulletScene()->getModel(0);
-  noisy_model->scene = ifco_scene_->getBulletScene().get();
-
-  Vector errors = Vector::Ones(initial_configuration.size()) * 0;
-  noisy_model->initialError = &errors;
-  noisy_model->motionError = &errors;
-
-  std::mt19937 gen;
-  gen.seed(std::time(0));
-  auto choose_sampler = std::make_shared<WorkspaceSampler>(
-      UniformPositionInAsymmetricBox(goal_transform, boost::array<double, 3>{ -0.1, -0.1, -0.1 },
-                                     boost::array<double, 3>{ .1, .1, .1 }),
-      uniformOrientation);
-
-  noisy_model->setPosition(initial_configuration);
-  noisy_model->updateFrames();
-  auto initial_transform = noisy_model->forwardPosition();
-
-  SomaCerrt soma_cerrt(jacobian_controller, noisy_model, choose_sampler,
-                       { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } }, delta,
-                       *ifco_scene_->getViewer());
-  soma_cerrt.start = &initial_configuration;
-  rl::math::Vector crazy_goal = initial_configuration * 1.1;
-  soma_cerrt.goal = &crazy_goal;
-  soma_cerrt.goalEpsilon = 0.1;
-  soma_cerrt.solve();
-
-  res.success = true;
   return true;
 }
 
@@ -343,13 +301,15 @@ bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics
 {
   bool all_ok = true;
 
-  if (req.initial_configuration.size() != ifco_scene_->dof())
+  if (req.initial_configuration.size() != ifco_scene->dof())
   {
     ROS_ERROR_STREAM("The initial configuration size: " << req.initial_configuration.size()
                                                         << " does not match the degrees of freedom of the robot: "
-                                                        << ifco_scene_->dof());
+                                                        << ifco_scene->dof());
     all_ok = false;
   }
+
+  auto indexToLetter = [](unsigned i) { return 'X' + i; };
 
   for (std::size_t i = 0; i < req.min_position_deltas.size(); ++i)
   {
@@ -366,6 +326,24 @@ bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics
       ROS_ERROR_STREAM("min_orientation_deltas[" << i << "]=" << req.min_orientation_deltas[i]
                                                  << " is larger than max_orientation_deltas[" << i
                                                  << "]=" << req.max_orientation_deltas[i]);
+      all_ok = false;
+    }
+
+    if (req.min_orientation_deltas[i] < min_allowed_XYZ_angles[i] ||
+        req.min_orientation_deltas[i] > max_allowed_XYZ_angles[i])
+    {
+      ROS_ERROR_STREAM("min_orientation_deltas[" << i << "] is outside the allowed range for " << indexToLetter(i)
+                                                 << ": " << min_allowed_XYZ_angles[i] << ", "
+                                                 << max_allowed_XYZ_angles[i]);
+      all_ok = false;
+    }
+
+    if (req.max_orientation_deltas[i] < min_allowed_XYZ_angles[i] ||
+        req.max_orientation_deltas[i] > max_allowed_XYZ_angles[i])
+    {
+      ROS_ERROR_STREAM("max_orientation_deltas[" << i << "] is outside the allowed range for " << indexToLetter(i)
+                                                 << ": " << min_allowed_XYZ_angles[i] << ", "
+                                                 << max_allowed_XYZ_angles[i]);
       all_ok = false;
     }
   }
