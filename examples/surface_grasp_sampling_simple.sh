@@ -23,7 +23,7 @@ bounding_boxes_with_poses:
   pose: 
     position: {x: 0.548410148325, y: -0.0112594768472, z: 0.351324941801}
     orientation: {x: 0.000448179713371, y: -0.00122113167373, z: -0.0165826804441, w: 0.999861651771}
-min_position_deltas: [-0.01, -0.01, -0.01]
+min_position_deltas: [-0.01, -0.01, -1]
 max_position_deltas: [0.01, 0.01, 0.01]
 min_orientation_deltas: [0, 0, -0.5]
 max_orientation_deltas: [0, 0, 0.5]
