@@ -295,8 +295,9 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
     assert(zero_index.is_initialized());
     size(*zero_index) = zero_dimension_correction;
   }
+  pose.translation() += center_correction;
 
-  emit drawBox(size, pose.translate(center_correction));
+  emit drawBox(size, pose);
 }
 
 bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics::Request& req)
