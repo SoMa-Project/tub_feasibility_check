@@ -29,6 +29,8 @@ bool BoxChecker::contains(const rl::math::Transform& transform) const
 
   Eigen::Vector3d position_difference = transform.translation() - center_pose_.translation();
 
+  std::cout << "Position difference: " << position_difference.transpose() << "\n";
+
   for (std::size_t i = 0; i < 3; ++i)
     if (position_difference(i) < min_position_deltas_[i] || position_difference(i) > max_position_deltas_[i])
       return false;
@@ -38,6 +40,11 @@ bool BoxChecker::contains(const rl::math::Transform& transform) const
   // Eigen eulerAngles is not used, because the range of first angle is (0, pi), which is
   // not good for us - we need a range symmetric around 0
   auto XYZ_euler_angles = convertToXYZEuler(rotation_difference);
+
+  std::cout << "XYZ Euler rotation difference: ";
+  for (auto &c: XYZ_euler_angles)
+    std::cout << c << " ";
+  std::cout << std::endl;
 
   // angle_epsilon_ needed because of the imprecision of rotation matrix calculations, i.e. when the sampled
   // rotation is 0 in one angle
