@@ -27,7 +27,7 @@ bool BoxChecker::contains(const rl::math::Transform& transform) const
 {
   using namespace rl::math;
 
-  Eigen::Vector3d position_difference = transform.translation() - center_pose_.translation();
+  Eigen::Vector3d position_difference = center_pose_.inverse() * transform.translation();
 
   for (std::size_t i = 0; i < 3; ++i)
     if (position_difference(i) < min_position_deltas_[i] || position_difference(i) > max_position_deltas_[i])
