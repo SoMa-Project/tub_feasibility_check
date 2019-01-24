@@ -33,6 +33,10 @@ float64[3] max_position_deltas
 # [min_orientation_deltas[0, 1, 2], max_orientation_deltas[0, 1, 2]]
 # For every i: min_orientation_deltas[i] <= max_orientation_deltas[i] should be
 # true
+# Furthermore, the values cannot be outside of the following intervals:
+# 0: (-pi, pi)
+# 1: (-pi/2, pi/2)
+# 2: (-pi, pi)
 float64[3] min_orientation_deltas
 float64[3] max_orientation_deltas
 

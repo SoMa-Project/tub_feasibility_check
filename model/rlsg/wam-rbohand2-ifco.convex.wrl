@@ -4,7 +4,7 @@ Transform {
 		DEF barrett-wam-wrist Transform {
 			children [
 				Inline {
-					url "barrett-wam.convex/barrett-wam-ocado2.wrl"
+                                        url "barrett-wam.convex/barrett-wam-rbohand2.wrl"
 				}
 			]
 		}

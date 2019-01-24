@@ -28,6 +28,6 @@ max_position_deltas: [0.12, 0.12, 0.12]
 min_orientation_deltas: [-0.02, -0.02, -0.5]
 max_orientation_deltas: [0.02, 0.02, 0.5]
 allowed_collisions:
-- {type: 1, box_id: 0, terminate_on_collision: true, ignored_collision: true, required_collision: true}
-- {type: 2, constraint_name: 'bottom', terminate_on_collision: false}
+- {type: 1, box_id: 0, terminating: true}
+- {type: 2, constraint_name: 'bottom'}
 "

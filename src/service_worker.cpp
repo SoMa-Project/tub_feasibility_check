@@ -29,8 +29,9 @@
 #include "jacobian_controller.h"
 #include "workspace_samplers.h"
 #include "utilities.h"
-#include "soma_cerrt.h"
+#include "pair_hash.h"
 #include "soma_concerrt.h"
+#include "tub_feasibility_check/Configuration.h"
 
 /* Provide a textual description for the given result of JacobianController::moveSingleParticle. */
 std::string describeSingleResult(const JacobianController::SingleResult& result)
@@ -61,24 +62,21 @@ std::string describeSingleResult(const JacobianController::SingleResult& result)
       case JacobianController::SingleResult::Outcome::STEPS_LIMIT:
         ss << "went over the steps limit";
         break;
-      case JacobianController::SingleResult::Outcome::ACCEPTABLE_COLLISION:
-        ss << "acceptable collisions:";
+      case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
+        ss << "terminating collisions:";
         printCollisions();
         break;
-      case JacobianController::SingleResult::Outcome::UNACCEPTABLE_COLLISION:
-        ss << "unacceptable collisions:";
+      case JacobianController::SingleResult::Outcome::PROHIBITED_COLLISION:
+        ss << "prohibited collisions:";
         printCollisions();
         break;
       case JacobianController::SingleResult::Outcome::UNSENSORIZED_COLLISION:
         ss << "unsensorized collisions:";
         printCollisions();
         break;
-      case JacobianController::SingleResult::Outcome::MISSED_REQUIRED_COLLISIONS:
-        ss << "missing required collisions:";
+      case JacobianController::SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD:
+        ss << "terminating collisions outside the goal manifold:";
         printCollisions();
-        break;
-      default:
-        assert(false);
     }
   };
 
@@ -151,22 +149,20 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
   emit drawWork(goal_transform);
+  BoxChecker goal_manifold_checker(goal_transform, req.min_position_deltas, req.max_position_deltas,
+                                   req.min_orientation_deltas, req.max_orientation_deltas);
 
-  WorldCollisionTypes::PartToCollisionType part_to_type;
+  WorldPartsCollisions::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
   {
     auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
                            getBoxShapeName(allowed_collision_msg.box_id) :
                            allowed_collision_msg.constraint_name;
-    CollisionType type;
-
-    type.terminating = allowed_collision_msg.terminate_on_collision;
-    type.required = allowed_collision_msg.required_collision;
-    type.ignored = allowed_collision_msg.ignored_collision;
+    auto type = allowed_collision_msg.terminating ? CollisionType::SENSORIZED_TERMINATING : CollisionType::ALLOWED;
 
     part_to_type.insert({ object_name, type });
   }
-  WorldCollisionTypes world_collision_types(part_to_type);
+  WorldPartsCollisions world_collision_types(part_to_type);
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
   ifco_scene->moveIfco(ifco_transform);
@@ -181,12 +177,29 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
                                          maximum_steps, ifco_scene->getViewer());
-  auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types);
+  auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types,
+                                                       goal_manifold_checker);
 
   if (result)
   {
     ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
-    res.status = res.REACHED_INITIAL;
+    // when jacobian controller is successful, there is only one outcome in outcomes
+    auto outcome = result.outcomes.begin()->first;
+    // if there was a terminating collision, the end pose will not be the goal pose. The result is a success,
+    // meaning that the end pose lies within the goal manifold
+    switch (outcome)
+    {
+      case JacobianController::SingleResult::Outcome::REACHED:
+        res.status = res.REACHED_INITIAL;
+        break;
+      case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
+        res.status = res.REACHED_SAMPLED;
+        break;
+      default:
+        assert(false);
+    }
+
+    res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
@@ -195,7 +208,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   WorkspaceSampler goal_manifold_sampler(
       UniformPositionInAsymmetricBox(goal_transform, req.min_position_deltas, req.max_position_deltas),
-      DeltaXYZOrientation(rl::math::Quaternion(goal_transform.linear()), req.min_orientation_deltas,
+      DeltaXYZOrientation(rl::math::Quaternion(goal_transform.rotation()), req.min_orientation_deltas,
                           req.max_orientation_deltas));
 
   drawGoalManifold(goal_transform, req.min_position_deltas, req.max_position_deltas);
@@ -219,8 +232,8 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
         << ", rotation sample: "
         << (goal_transform.linear().transpose() * sampled_transform.linear()).eulerAngles(0, 1, 2).transpose());
     emit resetPoints();
-    auto result =
-        jacobian_controller.moveSingleParticle(initial_configuration, sampled_transform, world_collision_types);
+    auto result = jacobian_controller.moveSingleParticle(initial_configuration, sampled_transform,
+                                                         world_collision_types, goal_manifold_checker);
 
     if (result)
     {
@@ -322,7 +335,9 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CheckKinematics:
   // soma ConCERRT
   auto goal_manifold_checker = std::make_shared<BoxChecker>(goal_transform,
                                                             req.min_position_deltas,
-                                                            req.max_position_deltas);
+                                                            req.max_position_deltas,
+                                                            req.min_orientation_deltas,
+                                                            req.max_orientation_deltas);
 
 
   drawGoalManifold(goal_transform,
@@ -423,8 +438,9 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
     assert(zero_index.is_initialized());
     size(*zero_index) = zero_dimension_correction;
   }
+  pose.translate(center_correction);
 
-  emit drawBox(size, pose.translate(center_correction));
+  emit drawBox(size, pose);
 }
 
 bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics::Request& req)
@@ -438,6 +454,8 @@ bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics
                                                         << ifco_scene->dof());
     all_ok = false;
   }
+
+  auto indexToLetter = [](unsigned i) { return 'X' + i; };
 
   for (std::size_t i = 0; i < req.min_position_deltas.size(); ++i)
   {
@@ -454,6 +472,24 @@ bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics
       ROS_ERROR_STREAM("min_orientation_deltas[" << i << "]=" << req.min_orientation_deltas[i]
                                                  << " is larger than max_orientation_deltas[" << i
                                                  << "]=" << req.max_orientation_deltas[i]);
+      all_ok = false;
+    }
+
+    if (req.min_orientation_deltas[i] < min_allowed_XYZ_angles[i] ||
+        req.min_orientation_deltas[i] > max_allowed_XYZ_angles[i])
+    {
+      ROS_ERROR_STREAM("min_orientation_deltas[" << i << "] is outside the allowed range for " << indexToLetter(i)
+                                                 << ": " << min_allowed_XYZ_angles[i] << ", "
+                                                 << max_allowed_XYZ_angles[i]);
+      all_ok = false;
+    }
+
+    if (req.max_orientation_deltas[i] < min_allowed_XYZ_angles[i] ||
+        req.max_orientation_deltas[i] > max_allowed_XYZ_angles[i])
+    {
+      ROS_ERROR_STREAM("max_orientation_deltas[" << i << "] is outside the allowed range for " << indexToLetter(i)
+                                                 << ": " << min_allowed_XYZ_angles[i] << ", "
+                                                 << max_allowed_XYZ_angles[i]);
       all_ok = false;
     }
   }

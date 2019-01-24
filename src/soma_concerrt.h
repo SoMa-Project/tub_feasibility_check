@@ -6,6 +6,7 @@
 #include <rl/plan/Policy.h>
 #include "workspace_samplers.h"
 #include "workspace_checkers.h"
+#include "collision_specification.h"
 #include "pair_hash.h"
 #include <QObject>
 
@@ -91,7 +92,7 @@ private:
   std::shared_ptr<WorkspaceSampler> ROI_sampler;
   rl::math::Vector ROI_sampler_reference;
 
-  IgnoreAllCollisionTypes collisions_ignored;
+  AllowAllCollisions collisions_ignored;
 
   std::vector<rl::math::Vector> start_configurations;
   std::function<double()> sample_01;

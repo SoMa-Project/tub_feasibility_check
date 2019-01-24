@@ -62,6 +62,28 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
+add_executable(
+    test_checker_sampler
+    src/workspace_samplers.cpp
+    src/workspace_checkers.cpp
+    test/test_workspace_checker_and_sampler.cpp
+)
+
+target_include_directories(
+    test_checker_sampler
+    PUBLIC
+    ${Boost_INCLUDE_DIR}
+    ${ROBLIB_INCLUDE_DIRS}
+)
+
+target_link_libraries(
+    test_checker_sampler
+    rlplan
+    rlkin
+    rlsg
+)
+
+add_test(NAME test_checker_sampler COMMAND test_checker_sampler)
 
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
     set(SRCS
@@ -71,11 +93,10 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/ifco_scene.cpp
         src/service_worker.cpp
         src/jacobian_controller.cpp
-        src/soma_cerrt.cpp
         src/soma_concerrt.cpp
         src/workspace_samplers.cpp
         src/workspace_checkers.cpp
-        src/collision_types.cpp
+        src/collision_specification.cpp
     )
 
     qt4_wrap_cpp(

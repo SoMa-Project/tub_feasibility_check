@@ -41,22 +41,11 @@ Transform {
 	rotation   -0.7071081 -0.0000026 0.7071055  3.1415978 
 	children [
 		Inline {
-			url "rbohand_kinematics_check.wrl"
+                        url "rbohand2_kinematics_check.wrl"
 		}    
 	] 
 }
 
 ]
-
-#Transform {
-# translation 0 0 0.15
-# children 
-#  DEF sensor Shape {
-#  geometry Box { size 0.01 0.03 0.3 }
-#  appearance Appearance {
-#   material Material {}
-#  }
-# }
-#}
 
 }

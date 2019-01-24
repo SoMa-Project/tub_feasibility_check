@@ -20,13 +20,6 @@ UniformPositionInAsymmetricBox::UniformPositionInAsymmetricBox(rl::math::Transfo
                                                                boost::array<double, 3> max_deltas)
   : box_pose_(box_pose), min_deltas_(min_deltas), max_deltas_(max_deltas)
 {
-  // TODO why is this removed?
-  // source http://planning.cs.uiuc.edu/node198.html
-/*
-  auto& u = randoms_01;
-  return Quaternion(sqrt(u[0]) * cos(M_2_PI * u[2]), sqrt(1 - u[0]) * sin(M_2_PI * u[1]),
-                    sqrt(1 - u[0]) * cos(M_2_PI * u[1]), sqrt(u[0]) * sin(M_2_PI * u[2]));
-*/
 }
 
 rl::math::Vector3 UniformPositionInAsymmetricBox::operator()(std::function<double()> sample_random_01)
@@ -64,7 +57,10 @@ rl::math::Quaternion DeltaXYZOrientation::operator()(std::function<double()> sam
   for (unsigned i = 0; i < 3; ++i)
     angles[i] = min_XYZ_deltas_[i] + (max_XYZ_deltas_[i] - min_XYZ_deltas_[i]) * sample_random_01();
 
-  return rl::math::AngleAxis(angles[2], rl::math::Vector3::UnitZ()) *
-         rl::math::AngleAxis(angles[1], rl::math::Vector3::UnitY()) *
-         rl::math::AngleAxis(angles[0], rl::math::Vector3::UnitX()) * initial_orientation_;
+  rl::math::Quaternion sampled_diff =
+      rl::math::AngleAxis(angles[2], rl::math::Vector3::UnitZ()) *
+      rl::math::AngleAxis(angles[1], rl::math::Vector3::UnitY()) *
+      rl::math::AngleAxis(angles[0], rl::math::Vector3::UnitX());
+
+  return sampled_diff * initial_orientation_;
 }
