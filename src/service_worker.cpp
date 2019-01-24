@@ -188,8 +188,10 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
     {
       case JacobianController::SingleResult::Outcome::REACHED:
         res.status = res.REACHED_INITIAL;
+        break;
       case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
         res.status = res.REACHED_SAMPLED;
+        break;
       default:
         assert(false);
     }
