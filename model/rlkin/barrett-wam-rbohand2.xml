@@ -12,7 +12,7 @@
 			<translation>
 				<x>0</x>
 				<y>0</y>
-				<z>0</z>
+				<z>-0.346</z>
 			</translation>
 		</world>
 		<transform id="base">
@@ -139,8 +139,9 @@
 				<a>0</a>
 				<alpha>90</alpha>
 			</dh>
-			<max>90</max>
-			<min>-90</min>
+			<!-- use joint limits with an epsilon. Real values are 90 (max), -90 (min) -->
+			<max>85</max>
+			<min>-85</min>
 		</revolute>
 		<link id="link6">
 			<ignore idref="link4"/>
