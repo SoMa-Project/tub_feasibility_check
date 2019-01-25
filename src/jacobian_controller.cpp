@@ -81,9 +81,6 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
 
   SingleResult result;
 
-  if (goal_manifold_checker)
-    assert(goal_manifold_checker->contains(to_pose));
-
   Vector current_config = initial_configuration;
 
   emit drawConfiguration(current_config);
