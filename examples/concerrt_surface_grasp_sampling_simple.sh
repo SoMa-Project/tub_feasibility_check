@@ -23,10 +23,10 @@ bounding_boxes_with_poses:
   pose: 
     position: {x: 0.548410148325, y: -0.0112594768472, z: 0.351324941801}
     orientation: {x: 0.000448179713371, y: -0.00122113167373, z: -0.0165826804441, w: 0.999861651771}
-min_position_deltas: [-0.12, -0.12, -0.12]
-max_position_deltas: [0.12, 0.12, 0.12]
-min_orientation_deltas: [-0.02, -0.02, -0.5]
-max_orientation_deltas: [0.02, 0.02, 0.5]
+min_position_deltas: [-0.08, -0.08, -0.0]
+max_position_deltas: [0.08, 0.02, 0.1]
+min_orientation_deltas: [-0.8, -0.8, -0.8]
+max_orientation_deltas: [0.8, 0.8, 0.8]
 allowed_collisions:
 - {type: 1, box_id: 0, terminating: true}
 - {type: 2, constraint_name: 'bottom'}

@@ -31,7 +31,6 @@
 #include "utilities.h"
 #include "pair_hash.h"
 #include "soma_concerrt.h"
-#include "tub_feasibility_check/Configuration.h"
 
 /* Provide a textual description for the given result of JacobianController::moveSingleParticle. */
 std::string describeSingleResult(const JacobianController::SingleResult& result)
@@ -276,18 +275,20 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CheckKinematics:
   emit drawWork(goal_transform);
   emit drawWork(ifco_transform);
 
+  Eigen::Affine3d box_transform_ref;
   ifco_scene->moveIfco(ifco_transform);
   ifco_scene->removeBoxes();
   for (std::size_t i = 0; i < req.bounding_boxes_with_poses.size(); ++i)
   {
     Eigen::Affine3d box_transform;
     tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, box_transform);
+    tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, box_transform_ref);
     ifco_scene->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
   }
 
 
   auto jacobian_controller = std::make_shared<JacobianController>(
-      ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta, maximum_steps, ifco_scene->getViewer());
+      ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta, maximum_steps);
 
 
   auto noisy_model = new rl::plan::NoisyModel;
@@ -305,13 +306,13 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CheckKinematics:
 
   auto sampler = std::make_shared<WorkspaceSampler>(
       UniformPositionInAsymmetricBox(ifco_transform,
-                                     boost::array<double, 3>{ -0.4, -0.3, 0.0 },
-                                     boost::array<double, 3>{ .4, .3, .3 }),
+                                     boost::array<double, 3>{ -0.2, -0.2, 0.0 },
+                                     boost::array<double, 3>{ .3, .2, .2 }),
       uniformOrientation);
 
   drawGoalManifold(ifco_transform,
-                   boost::array<double, 3>{ -0.4, -0.3, 0.0 },
-                   boost::array<double, 3>{ .4, .3, .3 });
+                   boost::array<double, 3>{ -0.2, -0.2, 0.0 },
+                   boost::array<double, 3>{ .3, .2, .2 });
 
   noisy_model->setPosition(initial_configuration);
   noisy_model->updateFrames();
@@ -339,12 +340,18 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CheckKinematics:
                                                             req.min_orientation_deltas,
                                                             req.max_orientation_deltas);
 
-
-  drawGoalManifold(goal_transform,
+  auto goalBaised_sampler = std::make_shared<WorkspaceSampler>(
+          UniformPositionInAsymmetricBox(box_transform_ref, req.min_position_deltas, req.max_position_deltas),
+          DeltaXYZOrientation(rl::math::Quaternion(goal_transform.rotation()), req.min_orientation_deltas,
+                                                   req.max_orientation_deltas));
+  drawGoalManifold(box_transform_ref,
                    req.min_position_deltas,
                    req.max_position_deltas);
 
-  std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts = { { "sensor_Finger1", "box_0" }, { "sensor_Finger2", "box_0" } };
+  std::unordered_set<std::pair<std::string, std::string>> required_goal_contacts = { //{ "sensor_Finger1", "box_0" },
+//                                                                                     { "sensor_Finger2", "box_0" },
+//                                                                                     { "sensor_Finger3", "box_0" },
+                                                                                     { "sensor_Finger1", "box_0" }};
 
   rl::math::Vector sampler_reference(noisy_model->getDof());
   sampler_reference = initial_configuration;
@@ -367,6 +374,7 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CheckKinematics:
                         start_configurations,
                         noisy_model,
                         ifco_scene->getViewer(),
+                        goalBaised_sampler,
                         goal_transform);
 
   // not used, but required for runing the planenr
@@ -382,7 +390,7 @@ bool ServiceWorker::conCerrtExampleQuery(tub_feasibility_check::CheckKinematics:
   Concerrt.goalWorkspaceEpsilon = 0.1;
   Concerrt.kd = true;
   Concerrt.useMotionError = true;
-  Concerrt.duration = 60;
+  Concerrt.duration = 600;
   Concerrt.viewer = *ifco_scene->getViewer();
 
   Concerrt.solve(0);
