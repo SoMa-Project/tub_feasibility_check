@@ -146,10 +146,8 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
   emit drawWork(goal_transform);
-  WorkspaceChecker goal_manifold_checker(
-      BoxPositionChecker(goal_transform, req.min_position_deltas, req.max_position_deltas),
-      AroundTargetOrientationChecker(goal_transform.rotation(), req.min_orientation_deltas,
-                                     req.max_orientation_deltas));
+  WorkspaceChecker goal_manifold_checker(BoxPositionChecker(goal_transform, req.min_position_deltas, req.max_position_deltas),
+                                   AroundTargetOrientationChecker(goal_transform.rotation(), req.min_orientation_deltas, req.max_orientation_deltas));
 
   WorldPartsCollisions::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
@@ -184,20 +182,10 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
     ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
     // when jacobian controller is successful, there is only one outcome in outcomes
     auto outcome = result.outcomes.begin()->first;
+
     // if there was a terminating collision, the end pose will not be the goal pose. The result is a success,
     // meaning that the end pose lies within the goal manifold
-    switch (outcome)
-    {
-      case JacobianController::SingleResult::Outcome::REACHED:
-        res.status = res.REACHED_INITIAL;
-        break;
-      case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
-        res.status = res.REACHED_SAMPLED;
-        break;
-      default:
-        assert(false);
-    }
-
+    res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
