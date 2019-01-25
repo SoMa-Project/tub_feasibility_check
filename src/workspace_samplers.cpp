@@ -28,7 +28,7 @@ rl::math::Vector3 UniformPositionInAsymmetricBox::operator()(std::function<doubl
   for (int i = 0; i < 3; ++i)
     point(i) = min_deltas_[i] + (max_deltas_[i] - min_deltas_[i]) * sample_random_01();
 
-  return box_pose_.translation() + point;
+  return box_pose_ * point;
 }
 
 WorkspaceSampler::WorkspaceSampler(WorkspaceSampler::SamplePosition sample_position,
