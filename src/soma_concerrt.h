@@ -30,6 +30,7 @@ public:
                std::vector<rl::math::Vector> start_configurations,
                rl::plan::NoisyModel* noisy_model,
                boost::optional<Viewer*> viewer,
+               std::shared_ptr<WorkspaceSampler> goalBiased_sampler,
                Eigen::Affine3d goal_transform):
     Concerrt(),
     required_goal_contacts(required_goal_contacts),
@@ -39,6 +40,7 @@ public:
     ROI_sampler(ROI_sampler),
     ROI_sampler_reference(ROI_sampler_reference),
     start_configurations(start_configurations),
+    goalBiased_sampler(goalBiased_sampler),
     goal_pose(goal_transform)
   {
     model = noisy_model;
@@ -83,6 +85,10 @@ protected:
 private:
   /* Check that the particle lies within the goal manifold and has all the required goal contacts.
    */
+
+  rl::plan::NoisyModel::ActionType
+  selectAction(const Graph& graph, const Vertex& nearest) override;
+
   bool isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> belief);
 
   unsigned maximum_choose_attempts;
@@ -96,6 +102,8 @@ private:
 
   std::vector<rl::math::Vector> start_configurations;
   std::function<double()> sample_01;
+
+  std::shared_ptr<WorkspaceSampler> goalBiased_sampler;
   Eigen::Affine3d  goal_pose;
 };
 

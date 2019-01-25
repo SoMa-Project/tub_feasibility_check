@@ -17,16 +17,14 @@ SomaConcerrtResult SomaConcerrt::solve(int task)
 void SomaConcerrt::choose(rl::math::Vector& chosen)
 {
 
-  ::boost::uniform_real< ::rl::math::Real > goalDistr(0.0f, 1.0f);
-  // for real robot exeperiment IROS18 we used 0.3
+  ::boost::uniform_real< ::rl::math::Real > goalDistr(0.0f, 1.0f);  
   if (goalDistr(*this->gen) > 0.2)
   {
 
   //for (unsigned i = 0; i < maximum_choose_attempts; ++i)
     while (true)
     {
-      auto sampled_pose = ROI_sampler->generate(sample_01
-                                                );
+      auto sampled_pose = ROI_sampler->generate(sample_01);
 
       auto result = jacobian_controller->moveSingleParticle(ROI_sampler_reference,
                                                             sampled_pose,
@@ -40,7 +38,8 @@ void SomaConcerrt::choose(rl::math::Vector& chosen)
   }
   else
   {
-    auto sampled_pose = goal_pose;
+
+    auto sampled_pose = goalBiased_sampler->generate(sample_01);
 
     auto result = jacobian_controller->moveSingleParticle(ROI_sampler_reference,
                                                           sampled_pose,
@@ -70,6 +69,14 @@ void SomaConcerrt::sampleInitialParticles(std::vector<rl::plan::Particle>& initi
   }
 }
 
+std::string printContacts(std::unordered_set<std::pair<std::string, std::string>> cList)
+{
+  std::string s;
+  for (auto& c : cList)
+    s += " " + c.first;
+  return s;
+}
+
 bool SomaConcerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> belief)
 {
   //TODO why was this different then CERRT
@@ -83,12 +90,18 @@ bool SomaConcerrt::isAdmissableGoal(boost::shared_ptr<rl::plan::BeliefState> bel
       nonpresent_contacts.erase(contact_and_description.first);
 
     if (!nonpresent_contacts.empty())
+    {
+      std::cout << "missing contact:"<< printContacts(nonpresent_contacts)  << std::endl << std::flush;
       return false;
+    }
 
     model->setPosition(particle.config);
     model->updateFrames();
     if (!goal_manifold_checker->contains(model->forwardPosition()))
+    {
+      std::cout << "not on manifold" << std::endl << std::flush;
       return false;
+    }
   }
   return true;
 }
@@ -108,8 +121,40 @@ bool SomaConcerrt::goalConnect(Vertex newVertex,
           return true;
       }
       // if not at goal try to get there with a Jacobian controller and sample if needed K-times
-//      else
-//      {
+      else
+      {
+        /*
+        ::std::vector<rl::plan::Particle> particles_new;
+        ::std::vector<rl::plan::Particle> particles = (*this->graphs[graphID])[newVertex].beliefState->getParticles();
+        for (auto p : particles)
+        {
+          this->model->setPosition(p.config);
+          this->model->updateFrames();
+          ::rl::math::Transform pTransform = this->model->forwardPosition();
+          Eigen::Vector3d vz(0,0,-0.5);
+          ::rl::math::Transform gTransform = pTransform * Eigen::Translation<double,3>(0, 0, -1);
+
+
+          auto result = jacobian_controller->moveSingleParticle(p.config,
+                                                                gTransform,
+                                                                collisions_ignored);
+          if (!result)
+          {
+            std::cout << "particle goal connect failed\n"<< std::flush;
+            return false;
+          }
+          else
+          {
+            //utilities::eigenToStd(result.trajectory.back());
+            model->setPosition(result.trajectory.back());
+            model->updateFrames();
+            model->isColliding();
+            initColls = this->scene->getLastCollisions();
+            p_init.contacts = initColls;
+            rl::plan::Particle p_new(result.trajectory.back(), );
+          }*/
+
+        }
 //        if(addToGraph)
 //        {
 //          return true;
@@ -118,6 +163,43 @@ bool SomaConcerrt::goalConnect(Vertex newVertex,
       return false;
 }
 
+rl::plan::NoisyModel::ActionType
+SomaConcerrt::selectAction(const Graph& graph, const Vertex& nearest)
+{
+  if( graph[nearest].beliefState->isInCollision())
+  {
+    // randomly decide to do a slide or not
+    boost::random::uniform_01<boost::random::mt19937> doSlideDistr(*this->gen);
+    bool doSlide = doSlideDistr() < this->gamma;
+    if (doSlide)
+    {
+      // TODO this is not in CERRT right now. We can add  to the planner if needed
+      //      if(doSlideDistr() < this->gamma)
+      //        return GUARDEDSLIDE;
+      //      else
+      return rl::plan::NoisyModel::CONNECTSLIDE;
+    }
+    else
+    {
+      return rl::plan::NoisyModel::CONNECT;
+    }
+  }
+  else
+  {
+    // randomly decide to do a guarded move or not
+    boost::random::uniform_01<boost::random::mt19937> doGuardDistr(*this->gen);
+    bool doGuardedMove = doGuardDistr() < this->gamma;
+
+    if (doGuardedMove)
+    {
+      return rl::plan::NoisyModel::GUARDED;
+    }
+    else
+    {
+      return rl::plan::NoisyModel::CONNECT;
+    }
+  }
+}
 
 // one step reactive exploration in a given graph
 bool SomaConcerrt::expandTreeReactively(const int graphID,
@@ -236,6 +318,7 @@ bool SomaConcerrt::expandTreeReactively(const int graphID,
 
   if (sampleResult)
   {
+    viewer->drawConfiguration(particles[0].config);
     if (!splitParticles)
     {
       // save the way we reacched the goal
