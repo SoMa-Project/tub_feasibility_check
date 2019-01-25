@@ -182,20 +182,8 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
     ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
     // when jacobian controller is successful, there is only one outcome in outcomes
     auto outcome = result.outcomes.begin()->first;
-    // if there was a terminating collision, the end pose will not be the goal pose. The result is a success,
-    // meaning that the end pose lies within the goal manifold
-    switch (outcome)
-    {
-      case JacobianController::SingleResult::Outcome::REACHED:
-        res.status = res.REACHED_INITIAL;
-        break;
-      case JacobianController::SingleResult::Outcome::TERMINATING_COLLISION:
-        res.status = res.REACHED_SAMPLED;
-        break;
-      default:
-        assert(false);
-    }
 
+    res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
     return true;
   }
@@ -215,7 +203,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   int sample_count;
   ros::NodeHandle n;
-  n.param("sample_count", sample_count, 20);
+  n.param("/feasibility_check/sample_count", sample_count, 20);
 
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
