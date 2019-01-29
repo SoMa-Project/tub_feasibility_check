@@ -1,6 +1,8 @@
 #include <cmath>
 #include "workspace_checkers.h"
 
+using namespace rl::math;
+
 /* Convert a rotation to matrix to corresponding XYZ Euler angles. The ranges of resulting angles
  * are following: X (-pi, pi) Y (-pi/2, pi/2) Z (-pi, pi).
  */
@@ -15,34 +17,62 @@ std::array<double, 3> convertToXYZEuler(const Eigen::Matrix3d& rotation_matrix)
   return result;
 }
 
-WorkspaceChecker::~WorkspaceChecker()
+WorkspaceChecker::WorkspaceChecker(WorkspaceChecker::CheckPosition position_check,
+                                   WorkspaceChecker::CheckOrientation orientation_check)
+  : orientation_check_(orientation_check), position_check_(position_check)
 {
 }
 
-BoxChecker::~BoxChecker()
+bool WorkspaceChecker::contains(const rl::math::Transform& transform_to_check)
+{
+  return position_check_(transform_to_check.translation()) && orientation_check_(transform_to_check.rotation());
+}
+
+BoxPositionChecker::BoxPositionChecker(const rl::math::Transform& center_pose,
+                                       boost::array<double, 3> min_position_deltas,
+                                       boost::array<double, 3> max_position_deltas, double position_epsilon)
+  : center_pose_(center_pose)
+  , min_position_deltas_(min_position_deltas)
+  , max_position_deltas_(max_position_deltas)
+  , position_epsilon_(position_epsilon)
 {
 }
 
-bool BoxChecker::contains(const rl::math::Transform& transform) const
+bool BoxPositionChecker::operator()(const rl::math::Vector3& position_to_check)
 {
-  using namespace rl::math;
-
-  Eigen::Vector3d position_difference = center_pose_.inverse() * transform.translation();
+  Eigen::Vector3d position_difference = center_pose_.inverse() * position_to_check;
 
   std::cout << "Position difference: " << position_difference.transpose() << "\n";
 
   for (std::size_t i = 0; i < 3; ++i)
-    if (position_difference(i) < min_position_deltas_[i] || position_difference(i) > max_position_deltas_[i])
+    if (position_difference(i) + position_epsilon_ < min_position_deltas_[i] ||
+        position_difference(i) - position_epsilon_ > max_position_deltas_[i])
       return false;
 
-  Eigen::Matrix3d rotation_difference = transform.linear() * center_pose_.linear().transpose();
+  return true;
+}
+
+AroundTargetOrientationChecker::AroundTargetOrientationChecker(rl::math::Rotation target_orientation,
+                                                               boost::array<double, 3> min_XYZ_orientation_deltas,
+                                                               boost::array<double, 3> max_XYZ_orientation_deltas,
+                                                               double angle_epsilon)
+  : target_orientation_(target_orientation)
+  , min_XYZ_orientation_deltas_(min_XYZ_orientation_deltas)
+  , max_XYZ_orientation_deltas_(max_XYZ_orientation_deltas)
+  , angle_epsilon_(angle_epsilon)
+{
+}
+
+bool AroundTargetOrientationChecker::operator()(const rl::math::Rotation& orientation_to_check)
+{
+  Rotation orientation_difference = orientation_to_check * target_orientation_.transpose();
 
   // Eigen eulerAngles is not used, because the range of first angle is (0, pi), which is
   // not good for us - we need a range symmetric around 0
-  auto XYZ_euler_angles = convertToXYZEuler(rotation_difference);
+  auto XYZ_euler_angles = convertToXYZEuler(orientation_difference);
 
   std::cout << "XYZ Euler rotation difference: ";
-  for (auto &c: XYZ_euler_angles)
+  for (auto& c : XYZ_euler_angles)
     std::cout << c << " ";
   std::cout << std::endl;
 

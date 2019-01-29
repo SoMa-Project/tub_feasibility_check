@@ -33,7 +33,17 @@ find_package(SoQt REQUIRED)
 find_package(LibXml2 REQUIRED)
 find_package(Coin REQUIRED)
 
-enable_testing()
+include_directories(include
+${Boost_INCLUDE_DIR}
+${catkin_INCLUDE_DIRS}
+${OPENGL_INCLUDE_DIR}
+${QT_INCLUDES}
+${SOQT_INCLUDE_DIRS}
+${BULLET_INCLUDE_DIRS}
+${LIBXML2_INCLUDE_DIRS}
+${COIN_INCLUDE_DIRS}
+${ROBLIB_INCLUDE_DIRS}
+    )
 
 add_service_files(
     FILES
@@ -61,28 +71,12 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
-add_executable(
-    test_checker_sampler
-    src/workspace_samplers.cpp
-    src/workspace_checkers.cpp
-    test/test_workspace_checker_and_sampler.cpp
-)
-
-target_include_directories(
-    test_checker_sampler
-    PUBLIC
-    ${Boost_INCLUDE_DIR}
-    ${ROBLIB_INCLUDE_DIRS}
-)
-
-target_link_libraries(
-    test_checker_sampler
-    rlplan
-    rlkin
-    rlsg
-)
-
-add_test(NAME test_checker_sampler COMMAND test_checker_sampler)
+catkin_add_gtest(workspace_checker_sampler_test test/test_workspace_checker_and_sampler.cpp src/workspace_samplers.cpp
+    src/workspace_checkers.cpp)
+target_link_libraries(workspace_checker_sampler_test
+        rlplan
+        rlkin
+        rlsg)
 
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
     set(SRCS

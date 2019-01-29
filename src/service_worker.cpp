@@ -146,8 +146,8 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   tf::poseMsgToEigen(req.goal_pose, goal_transform);
   auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
   emit drawWork(goal_transform);
-  BoxChecker goal_manifold_checker(goal_transform, req.min_position_deltas, req.max_position_deltas,
-                                   req.min_orientation_deltas, req.max_orientation_deltas);
+  WorkspaceChecker goal_manifold_checker(BoxPositionChecker(goal_transform, req.min_position_deltas, req.max_position_deltas),
+                                   AroundTargetOrientationChecker(goal_transform.rotation(), req.min_orientation_deltas, req.max_orientation_deltas));
 
   WorldPartsCollisions::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
