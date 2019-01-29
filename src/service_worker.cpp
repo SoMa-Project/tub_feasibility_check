@@ -185,6 +185,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
     res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
+    res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
     return true;
   }
 
