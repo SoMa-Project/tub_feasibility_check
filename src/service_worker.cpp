@@ -185,6 +185,8 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
     res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());
+    res.trajectory = utilities::concatanateEigneToStd(result.trajectory, result.trajectory.front().size());
+    ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
     return true;
   }
 
@@ -224,7 +226,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
       ROS_INFO_STREAM("Success: " << describeSingleResult(result));
       res.status = res.REACHED_SAMPLED;
       res.final_configuration = utilities::eigenToStd(result.trajectory.back());
-      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
+      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, result.trajectory.front().size());
       return true;
     }
     else
