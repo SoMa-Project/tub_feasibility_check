@@ -115,6 +115,8 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene)
   if (viewer)
   {
     qRegisterMetaType<rl::math::Transform>("rl::math::Transform");
+    QObject::connect(this, SIGNAL(drawConfiguration(rl::math::Vector)), *viewer,
+                     SLOT(drawConfiguration(rl::math::Vector)));
     QObject::connect(this, SIGNAL(drawBox(rl::math::Vector, rl::math::Transform)), *viewer,
                      SLOT(drawBox(rl::math::Vector, rl::math::Transform)));
     QObject::connect(this, SIGNAL(resetBoxes()), *viewer, SLOT(resetBoxes()));
@@ -234,6 +236,26 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
   res.status = res.FAILED;
+  return true;
+}
+
+bool ServiceWorker::visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTrajectory::Request& req,
+                                             tub_feasibility_check::VisualizeTrajectory::Response&)
+{
+  std::size_t number_of_steps = req.trajectory.size() / ifco_scene->dof();
+  for (unsigned rep = 0; rep < 10; ++rep)
+  {
+    for (std::size_t i = 0; i < number_of_steps; ++i)
+    {
+      rl::math::Vector config(7);
+      for (std::size_t j = 0; j < ifco_scene->dof(); ++j)
+        config(j) = req.trajectory[j * number_of_steps + i];
+
+      emit drawConfiguration(config);
+      usleep(100000);
+    }
+  }
+
   return true;
 }
 

@@ -19,6 +19,7 @@
 #include <eigen_conversions/eigen_msg.h>
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CerrtExample.h"
+#include "tub_feasibility_check/VisualizeTrajectory.h"
 
 #include "MainWindow.h"
 #include "ifco_scene.h"
@@ -36,6 +37,9 @@ public:
   bool cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
                          tub_feasibility_check::CerrtExample::Response& res);
 
+  bool visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTrajectory::Request& req,
+                                tub_feasibility_check::VisualizeTrajectory::Response& res);
+
   void start(unsigned rate);
 
 public slots:
@@ -43,6 +47,7 @@ public slots:
   void stop();
 
 signals:
+  void drawConfiguration(const rl::math::Vector& config);
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
   void drawWork(const rl::math::Transform& transform);
   void resetBoxes();
