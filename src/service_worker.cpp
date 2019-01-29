@@ -243,7 +243,7 @@ bool ServiceWorker::visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTra
                                              tub_feasibility_check::VisualizeTrajectory::Response&)
 {
   std::size_t number_of_steps = req.trajectory.size() / ifco_scene->dof();
-  for (unsigned rep = 0; rep < 10; ++rep)
+  for (unsigned rep = 0; rep < req.num_repeats; ++rep)
   {
     for (std::size_t i = 0; i < number_of_steps; ++i)
     {
