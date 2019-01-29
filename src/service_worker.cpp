@@ -226,7 +226,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
       ROS_INFO_STREAM("Success: " << describeSingleResult(result));
       res.status = res.REACHED_SAMPLED;
       res.final_configuration = utilities::eigenToStd(result.trajectory.back());
-      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, result.trajectory.front().size());
+      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
       return true;
     }
     else
