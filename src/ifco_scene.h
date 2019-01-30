@@ -15,6 +15,7 @@
 
 #include "Viewer.h"
 #include "utilities.h"
+#include "bounding_box.h"
 
 class IfcoScene : public QObject
 {
@@ -26,7 +27,7 @@ public:
   void connectToViewer(Viewer* new_viewer);
 
   void moveIfco(const rl::math::Transform& ifco_pose);
-  void createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose, const std::string& name);
+  void createBox(const std::string& name, const BoundingBox& box);
   void removeBoxes();
 
   std::shared_ptr<rl::kin::Kinematics> getKinematics() { return kinematics; }

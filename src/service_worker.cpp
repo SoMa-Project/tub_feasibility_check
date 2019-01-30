@@ -101,6 +101,84 @@ void ServiceWorker::stop()
   loop_timer.stop();
 }
 
+boost::optional<ServiceWorker::CheckKinematicsParameters>
+ServiceWorker::processQueryParameters(const tub_feasibility_check::CheckKinematics::Request& req) const
+{
+  CheckKinematicsParameters result;
+
+  if (!checkDimensionsAndBounds(req))
+    return boost::none;
+
+  auto checkOrientationNotSet = [](const std::string& name, const geometry_msgs::Quaternion* o) {
+    if (o->w == 0 && o->x == 0 && o->y == 0 && o->z == 0)
+    {
+      ROS_ERROR_STREAM("Orientation in " << name << " is not set!");
+      return false;
+    }
+
+    return true;
+  };
+  std::vector<std::pair<std::string, const geometry_msgs::Quaternion*>> orientations_to_check = {
+    { "goal_pose", &req.goal_pose.orientation },
+    { "ifco_pose", &req.ifco_pose.orientation },
+    { "goal_manifold_frame", &req.goal_manifold_frame.orientation },
+    { "goal_manifold_orientation", &req.goal_manifold_orientation }
+  };
+
+  bool all_ok = true;
+  for (auto& name_and_orientation : orientations_to_check)
+    if (!checkOrientationNotSet(name_and_orientation.first, name_and_orientation.second))
+      all_ok = false;
+
+  if (!all_ok)
+    return boost::none;
+
+  tf::poseMsgToEigen(req.ifco_pose, result.ifco_pose);
+  tf::poseMsgToEigen(req.goal_pose, result.goal_pose);
+  tf::poseMsgToEigen(req.goal_manifold_frame, result.goal_manifold_frame);
+
+  Eigen::Quaternion<rl::math::Real> goal_manifold_orientation;
+  tf::quaternionMsgToEigen(req.goal_manifold_orientation, goal_manifold_orientation);
+
+  result.initial_configuration = utilities::stdToEigen(req.initial_configuration);
+  result.goal_manifold_checker =
+      WorkspaceChecker(BoxPositionChecker(result.goal_manifold_frame, req.min_position_deltas, req.max_position_deltas),
+                       AroundTargetOrientationChecker(goal_manifold_orientation.matrix(), req.min_orientation_deltas,
+                                                      req.max_orientation_deltas));
+  result.goal_manifold_sampler = WorkspaceSampler(
+      UniformPositionInAsymmetricBox(result.goal_manifold_frame, req.min_position_deltas, req.max_position_deltas),
+      DeltaXYZOrientation(goal_manifold_orientation, req.min_orientation_deltas, req.max_orientation_deltas));
+
+  for (std::size_t i = 0; i < req.bounding_boxes_with_poses.size(); ++i)
+  {
+    BoundingBox bounding_box;
+    Eigen::Affine3d transform;
+    auto& dimensions = req.bounding_boxes_with_poses[i].box.dimensions;
+
+    // segfaults when poseMsgToEigen is executed directly to bounding_box.center_transform
+    tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, transform);
+    bounding_box.center_transform = transform;
+
+    for (unsigned j = 0; j < 3; ++j)
+      bounding_box.dimensions[j] = dimensions[j];
+    result.name_to_object_bounding_box.insert({ getBoxName(i), bounding_box });
+  }
+
+  WorldPartsCollisions::PartToCollisionType part_to_type;
+  for (auto& allowed_collision_msg : req.allowed_collisions)
+  {
+    auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
+                           getBoxName(allowed_collision_msg.box_id) :
+                           allowed_collision_msg.constraint_name;
+    auto type = allowed_collision_msg.terminating ? CollisionType::SENSORIZED_TERMINATING : CollisionType::ALLOWED;
+
+    part_to_type.insert({ object_name, type });
+  }
+  result.collision_specification = WorldPartsCollisions(part_to_type);
+
+  return result;
+}
+
 void ServiceWorker::start(unsigned rate)
 {
   QObject::connect(&loop_timer, SIGNAL(timeout()), this, SLOT(spinOnce()));
@@ -115,6 +193,8 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene)
   if (viewer)
   {
     qRegisterMetaType<rl::math::Transform>("rl::math::Transform");
+    QObject::connect(this, SIGNAL(drawConfiguration(rl::math::Vector)), *viewer,
+                     SLOT(drawConfiguration(rl::math::Vector)));
     QObject::connect(this, SIGNAL(drawBox(rl::math::Vector, rl::math::Transform)), *viewer,
                      SLOT(drawBox(rl::math::Vector, rl::math::Transform)));
     QObject::connect(this, SIGNAL(resetBoxes()), *viewer, SLOT(resetBoxes()));
@@ -132,50 +212,27 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  if (!checkParameters(req))
+  auto parameters = processQueryParameters(req);
+  if (!parameters)
     return false;
 
   emit resetBoxes();
   emit resetPoints();
   emit toggleWorkFrames(true);
-
-  // Create a frame from the position/quaternion data
-  Eigen::Affine3d ifco_transform;
-  Eigen::Affine3d goal_transform;
-  tf::poseMsgToEigen(req.ifco_pose, ifco_transform);
-  tf::poseMsgToEigen(req.goal_pose, goal_transform);
-  auto initial_configuration = utilities::stdToEigen(req.initial_configuration);
-  emit drawWork(goal_transform);
-  WorkspaceChecker goal_manifold_checker(BoxPositionChecker(goal_transform, req.min_position_deltas, req.max_position_deltas),
-                                   AroundTargetOrientationChecker(goal_transform.rotation(), req.min_orientation_deltas, req.max_orientation_deltas));
-
-  WorldPartsCollisions::PartToCollisionType part_to_type;
-  for (auto& allowed_collision_msg : req.allowed_collisions)
-  {
-    auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
-                           getBoxShapeName(allowed_collision_msg.box_id) :
-                           allowed_collision_msg.constraint_name;
-    auto type = allowed_collision_msg.terminating ? CollisionType::SENSORIZED_TERMINATING : CollisionType::ALLOWED;
-
-    part_to_type.insert({ object_name, type });
-  }
-  WorldPartsCollisions world_collision_types(part_to_type);
+  emit drawWork(parameters->goal_pose);
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
-  ifco_scene->moveIfco(ifco_transform);
+  ifco_scene->moveIfco(parameters->ifco_pose);
   ifco_scene->removeBoxes();
-  for (std::size_t i = 0; i < req.bounding_boxes_with_poses.size(); ++i)
-  {
-    Eigen::Affine3d box_transform;
-    tf::poseMsgToEigen(req.bounding_boxes_with_poses[i].pose, box_transform);
-    ifco_scene->createBox(req.bounding_boxes_with_poses[i].box.dimensions, box_transform, getBoxName(i));
-  }
+  for (auto name_and_box : parameters->name_to_object_bounding_box)
+    ifco_scene->createBox(name_and_box.first, name_and_box.second);
 
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
                                          maximum_steps, ifco_scene->getViewer());
-  auto result = jacobian_controller.moveSingleParticle(initial_configuration, goal_transform, world_collision_types,
-                                                       goal_manifold_checker);
+  auto result =
+      jacobian_controller.moveSingleParticle(parameters->initial_configuration, parameters->goal_pose,
+                                             *parameters->collision_specification, *parameters->goal_manifold_checker);
 
   if (result)
   {
@@ -191,12 +248,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
 
   ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
-  WorkspaceSampler goal_manifold_sampler(
-      UniformPositionInAsymmetricBox(goal_transform, req.min_position_deltas, req.max_position_deltas),
-      DeltaXYZOrientation(rl::math::Quaternion(goal_transform.rotation()), req.min_orientation_deltas,
-                          req.max_orientation_deltas));
-
-  drawGoalManifold(goal_transform, req.min_position_deltas, req.max_position_deltas);
+  drawGoalManifold(parameters->goal_manifold_frame, req.min_position_deltas, req.max_position_deltas);
 
   std::mt19937 generator(time(nullptr));
   std::uniform_real_distribution<double> random_01;
@@ -209,16 +261,13 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_transform = goal_manifold_sampler.generate(sample_01);
+    rl::math::Transform sampled_transform = parameters->goal_manifold_sampler->generate(sample_01);
 
-    ROS_INFO_STREAM(
-        "Trying to plan to the sampled frame number "
-        << i << ". Translation sample: " << (goal_transform.inverse() * sampled_transform.translation()).transpose()
-        << ", rotation sample: "
-        << (goal_transform.linear().transpose() * sampled_transform.linear()).eulerAngles(0, 1, 2).transpose());
+    ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
     emit resetPoints();
-    auto result = jacobian_controller.moveSingleParticle(initial_configuration, sampled_transform,
-                                                         world_collision_types, goal_manifold_checker);
+    auto result = jacobian_controller.moveSingleParticle(parameters->initial_configuration, sampled_transform,
+                                                         *parameters->collision_specification,
+                                                         *parameters->goal_manifold_checker);
 
     if (result)
     {
@@ -237,14 +286,23 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   return true;
 }
 
-std::string ServiceWorker::getBoxName(std::size_t box_id) const
+bool ServiceWorker::visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTrajectory::Request& req,
+                                             tub_feasibility_check::VisualizeTrajectory::Response&)
 {
-  std::stringstream ss;
-  ss << "box_" << box_id;
-  return ss.str();
+  std::size_t number_of_steps = req.trajectory.size() / ifco_scene->dof();
+  for (std::size_t i = 0; i < number_of_steps; ++i)
+  {
+    rl::math::Vector config(7);
+    for (std::size_t j = 0; j < ifco_scene->dof(); ++j)
+      config(j) = req.trajectory[j * number_of_steps + i];
+
+    emit drawConfiguration(config);
+  }
+
+  return true;
 }
 
-std::string ServiceWorker::getBoxShapeName(std::size_t box_id) const
+std::string ServiceWorker::getBoxName(std::size_t box_id) const
 {
   std::stringstream ss;
   ss << "box_" << box_id;
@@ -289,7 +347,7 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
   emit drawBox(size, pose);
 }
 
-bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics::Request& req)
+bool ServiceWorker::checkDimensionsAndBounds(const tub_feasibility_check::CheckKinematics::Request& req) const
 {
   bool all_ok = true;
 
@@ -300,6 +358,15 @@ bool ServiceWorker::checkParameters(const tub_feasibility_check::CheckKinematics
                                                         << ifco_scene->dof());
     all_ok = false;
   }
+
+  if (req.min_position_deltas.size() != 3)
+    ROS_ERROR_STREAM("min_position_deltas size should be 3, is " << req.min_position_deltas.size());
+  if (req.max_position_deltas.size() != 3)
+    ROS_ERROR_STREAM("max_position_deltas size should be 3, is " << req.max_position_deltas.size());
+  if (req.min_orientation_deltas.size() != 3)
+    ROS_ERROR_STREAM("min_orientation_deltas size should be 3, is " << req.min_orientation_deltas.size());
+  if (req.max_orientation_deltas.size() != 3)
+    ROS_ERROR_STREAM("max_orientation_deltas size should be 3, is " << req.max_orientation_deltas.size());
 
   auto indexToLetter = [](unsigned i) { return 'X' + i; };
 
