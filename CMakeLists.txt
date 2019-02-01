@@ -49,6 +49,7 @@ add_service_files(
     FILES
     CheckKinematics.srv
     CerrtExample.srv
+    VisualizeTrajectory.srv
 )
 
 add_message_files(

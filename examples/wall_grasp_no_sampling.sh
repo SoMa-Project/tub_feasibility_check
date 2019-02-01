@@ -18,23 +18,27 @@
 result=$(rosservice call /check_kinematics "
 initial_configuration: [0.1, 0.1, 0, 2.3, 0, 0.5, 0]
 goal_pose:
-  position: {x: 0.45, y: 0.10, z: 0.35}
-  orientation: {x: 0.6830127, y: -0.6830127, z: 0.1830127, w: 0.1830127}
+  position: {x: 0.45, y: 0.10, z: 0.004}
+  orientation: {x: 0.6830127, y: 0.6830127, z: -0.1830127, w: 0.1830127}
 ifco_pose:
-  position: {x: 0.48, y: 0, z: 0.2}
+  position: {x: 0.48, y: 0, z: -0.146}
   orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
+goal_manifold_frame:
+  position: {x: 0.45, y: 0.10, z: 0.004}
+  orientation: {x: 0.6830127, y: 0.6830127, z: -0.1830127, w: 0.1830127}
+goal_manifold_orientation: {x: 0.6830127, y: 0.6830127, z: -0.1830127, w: 0.1830127}
 bounding_boxes_with_poses:
 - box:
     type: 0
     dimensions: [0.09, 0.09, 0.09]
   pose:
-    position: {x: 0.45, y: -0.02, z: 0.3}
+    position: {x: 0.45, y: -0.02, z: -0.046}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
 - box:
     type: 0
     dimensions: [0.08, 0.08, 0.08]
   pose:
-    position: {x: 0.6, y: -0.2, z: 0.3}
+    position: {x: 0.6, y: -0.2, z: -0.046}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
 min_position_deltas: [-0.05, -0.05, -0.05]
 max_position_deltas: [0.05, 0.05, 0.05]
@@ -56,26 +60,30 @@ final_configuration=$(echo $result | perl -n -e'/final_configuration: (\[[^]]*\]
 rosservice call /check_kinematics "
 initial_configuration: $final_configuration
 goal_pose:
-  position: {x: 0.45, y: -0.4, z: 0.35}
+  position: {x: 0.45, y: -0.4, z: 0.004}
   orientation: {x: 0.4909103, y: -0.3602125, z: 0.6225606, w: 0.4916018}
 ifco_pose:
-  position: {x: 0.48, y: 0, z: 0.2}
+  position: {x: 0.48, y: 0, z: -0.146}
   orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
+goal_manifold_frame:
+  position: {x: 0.45, y: -0.2, z: 0.004}
+  orientation: {x: 0.4909103, y: -0.3602125, z: 0.6225606, w: 0.4916018}
+goal_manifold_orientation: {x: 0.4909103, y: -0.3602125, z: 0.6225606, w: 0.4916018}
 bounding_boxes_with_poses:
 - box:
     type: 0
     dimensions: [0.09, 0.09, 0.09]
   pose:
-    position: {x: 0.45, y: -0.02, z: 0.3}
+    position: {x: 0.45, y: -0.02, z: -0.046}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
 - box:
     type: 0
     dimensions: [0.08, 0.08, 0.08]
   pose:
-    position: {x: 0.6, y: -0.2, z: 0.3}
+    position: {x: 0.6, y: -0.2, z: -0.046}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
-min_position_deltas: [-0.05, -0.05, -0.05]
-max_position_deltas: [0.05, 0.05, 0.05]
+min_position_deltas: [-0.2, -0.2, -0.2]
+max_position_deltas: [0.2, 0.2, 0.2]
 min_orientation_deltas: [0, 0, 0]
 max_orientation_deltas: [0, 0, 0]
 allowed_collisions:
