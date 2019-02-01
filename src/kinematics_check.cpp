@@ -1,5 +1,5 @@
 #include "service_worker.h"
-#include "MainWindow.h"
+#include "mainwindow.h"
 #include <ros/package.h>
 
 int main(int argc, char** argv)
@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     n.param("/feasibility_check/hide_window", hide_window, false);
     if (!hide_window)
     {
-      ifco_scene->connectToViewer(main_window->viewer);
+      ifco_scene->connectToViewer(main_window->viewer());
       main_window->show();
     }
     else
