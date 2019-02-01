@@ -28,7 +28,6 @@
 #include "workspace_samplers.h"
 #include "ifco_scene.h"
 
-
 class ServiceWorker : public QObject
 {
   Q_OBJECT
