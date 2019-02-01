@@ -53,7 +53,7 @@ public slots:
 signals:
   void drawConfiguration(const rl::math::Vector& size);
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
-  void drawWork(const rl::math::Transform& transform);
+  void drawNamedFrame(const rl::math::Transform& transform, const std::string& name);
   void resetBoxes();
   void resetPoints();
   void resetLines();

@@ -45,6 +45,8 @@
 #include <rl/plan/Viewer.h>
 #include <rl/sg/so/Scene.h>
 
+#include <unordered_map>
+
 class Viewer : public QWidget, public rl::plan::Viewer
 {
 	Q_OBJECT
@@ -91,7 +93,9 @@ public slots:
 	
 	void drawSweptVolume(const rl::plan::VectorList& path);
 	
-	void drawWork(const rl::math::Transform& t);
+  void drawWork(const rl::math::Transform& t);
+
+  void drawNamedFrame(const rl::math::Transform& t, const std::string& name = "");
 	
 	void drawWorkEdge(const rl::math::Vector& u, const rl::math::Vector& v);
 	
@@ -112,6 +116,8 @@ public slots:
 	void resetSpheres();
 	
 	void resetVertices();
+
+  void resetFrames();
 	
 	void saveImage(const QString& filename);
 	
@@ -132,6 +138,8 @@ public slots:
 protected:
 	
 private:
+  std::unordered_map<std::string, SoVRMLTransform*> name_to_frame_;
+
   SoVRMLSwitch* boxes;
 
   SoVRMLAppearance* boxesAppearance;

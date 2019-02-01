@@ -15,7 +15,7 @@ public:
 
   WorkspaceChecker(CheckPosition position_check, CheckOrientation orientation_check);
 
-  bool contains(const rl::math::Transform& transform_to_check);
+  bool contains(const rl::math::Transform& transform_to_check) const;
 
 private:
   CheckOrientation orientation_check_;

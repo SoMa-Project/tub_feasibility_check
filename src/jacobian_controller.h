@@ -181,7 +181,7 @@ private:
   // visualize the execution in viewer.
 signals:
   void drawConfiguration(const rl::math::Vector& config);
-  void drawWork(const rl::math::Transform& transform);
+  void drawNamedFrame(const rl::math::Transform& transform, const std::string& name);
 };
 
 #endif  // JACOBIAN_CONTROLLER_H
