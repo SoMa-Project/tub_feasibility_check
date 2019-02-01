@@ -193,6 +193,7 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene)
   if (viewer)
   {
     qRegisterMetaType<rl::math::Transform>("rl::math::Transform");
+    qRegisterMetaType<std::string>("std::string");
     QObject::connect(this, SIGNAL(drawConfiguration(rl::math::Vector)), *viewer,
                      SLOT(drawConfiguration(rl::math::Vector)));
     QObject::connect(this, SIGNAL(drawBox(rl::math::Vector, rl::math::Transform)), *viewer,
@@ -201,7 +202,8 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene)
     QObject::connect(this, SIGNAL(resetPoints()), *viewer, SLOT(resetPoints()));
     QObject::connect(this, SIGNAL(resetLines()), *viewer, SLOT(resetLines()));
     QObject::connect(this, SIGNAL(toggleWorkFrames(bool)), *viewer, SLOT(toggleWorkFrames(bool)));
-    QObject::connect(this, SIGNAL(drawWork(rl::math::Transform)), *viewer, SLOT(drawWork(rl::math::Transform)));
+    QObject::connect(this, SIGNAL(drawNamedFrame(rl::math::Transform, std::string)), *viewer,
+                     SLOT(drawNamedFrame(rl::math::Transform, std::string)));
   }
 }
 
@@ -219,13 +221,17 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   emit resetBoxes();
   emit resetPoints();
   emit toggleWorkFrames(true);
-  emit drawWork(parameters->goal_pose);
+  emit drawNamedFrame(parameters->goal_pose, "goal");
+  emit drawNamedFrame(parameters->ifco_pose, "ifco");
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
   ifco_scene->moveIfco(parameters->ifco_pose);
   ifco_scene->removeBoxes();
   for (auto name_and_box : parameters->name_to_object_bounding_box)
+  {
     ifco_scene->createBox(name_and_box.first, name_and_box.second);
+    emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
+  }
 
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
@@ -249,6 +255,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
   drawGoalManifold(parameters->goal_manifold_frame, req.min_position_deltas, req.max_position_deltas);
+  emit drawNamedFrame(parameters->goal_manifold_frame, "goal manifold");
 
   std::mt19937 generator(time(nullptr));
   std::uniform_real_distribution<double> random_01;
@@ -262,6 +269,7 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   for (unsigned i = 0; i < sample_count; ++i)
   {
     rl::math::Transform sampled_transform = parameters->goal_manifold_sampler->generate(sample_01);
+    emit drawNamedFrame(sampled_transform, "sampled goal");
 
     ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
     emit resetPoints();

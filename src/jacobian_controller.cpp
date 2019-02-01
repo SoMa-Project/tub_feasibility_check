@@ -68,7 +68,8 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
   {
     QObject::connect(this, SIGNAL(drawConfiguration(const rl::math::Vector&)), *viewer,
                      SLOT(drawConfiguration(const rl::math::Vector&)));
-    QObject::connect(this, SIGNAL(drawWork(rl::math::Transform)), *viewer, SLOT(drawWork(rl::math::Transform)));
+    QObject::connect(this, SIGNAL(drawNamedFrame(rl::math::Transform, std::string)), *viewer,
+                     SLOT(drawNamedFrame(rl::math::Transform, std::string)));
   }
 }
 
@@ -247,7 +248,7 @@ rl::math::Vector JacobianController::calculateQDot(const rl::math::Vector& confi
 
   // Compute the jacobian
   Transform ee_world = noisy_model_.forwardPosition();
-  emit drawWork(ee_world);
+  emit drawNamedFrame(ee_world, "jacobian controller goal");
   Vector6 tdot;
   transform::toDelta(ee_world, goal_pose, tdot);
 

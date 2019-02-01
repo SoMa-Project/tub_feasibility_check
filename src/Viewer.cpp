@@ -30,6 +30,8 @@
 #include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
 #include <Inventor/VRMLnodes/SoVRMLSphere.h>
 #include <Inventor/VRMLnodes/SoVRMLBox.h>
+#include <Inventor/VRMLnodes/SoVRMLText.h>
+#include <Inventor/VRMLnodes/SoVRMLFontStyle.h>
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
@@ -74,7 +76,6 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 	edges3IndexedLineSet(new SoVRMLIndexedLineSet()),
 	edges3Material(new SoVRMLMaterial()),
 	edges3Shape(new SoVRMLShape()),
-	frameIndexedLineSet(new SoVRMLIndexedLineSet()),
 	lines(new SoVRMLSwitch()),
 	linesAppearance(new SoVRMLAppearance()),
 	linesCoordinate(new SoVRMLCoordinate()),
@@ -222,37 +223,6 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 	this->edges3->addChild(this->edges3Shape);
 	
 	this->root->addChild(this->edges3);
-	
-	// frame
-	
-	this->frameIndexedLineSet->colorPerVertex = false;
-	
-	SoVRMLColor* frameColor = new SoVRMLColor();
-	this->frameIndexedLineSet->color = frameColor;
-	frameColor->color.set1Value(0, 1.0f, 0.0f, 0.0f);
-	frameColor->color.set1Value(1, 0.0f, 1.0f, 0.0f);
-	frameColor->color.set1Value(2, 0.0f, 0.0f, 1.0f);
-	
-	this->frameIndexedLineSet->colorIndex.set1Value(0, 0);
-	this->frameIndexedLineSet->colorIndex.set1Value(1, 1);
-	this->frameIndexedLineSet->colorIndex.set1Value(2, 2);
-	
-	SoVRMLCoordinate* frameCoordinate = new SoVRMLCoordinate();
-	this->frameIndexedLineSet->coord = frameCoordinate;
-	frameCoordinate->point.set1Value(0, 0.0f, 0.0f, 0.0f);
-	frameCoordinate->point.set1Value(1, 0.25f, 0.0f, 0.0f);
-	frameCoordinate->point.set1Value(2, 0.0f, 0.25f, 0.0f);
-	frameCoordinate->point.set1Value(3, 0.0f, 0.0f, 0.25f);
-	
-	this->frameIndexedLineSet->coordIndex.set1Value(0, 0);
-	this->frameIndexedLineSet->coordIndex.set1Value(1, 1);
-	this->frameIndexedLineSet->coordIndex.set1Value(2, SO_END_FACE_INDEX);
-	this->frameIndexedLineSet->coordIndex.set1Value(3, 0);
-	this->frameIndexedLineSet->coordIndex.set1Value(4, 2);
-	this->frameIndexedLineSet->coordIndex.set1Value(5, SO_END_FACE_INDEX);
-	this->frameIndexedLineSet->coordIndex.set1Value(6, 0);
-	this->frameIndexedLineSet->coordIndex.set1Value(7, 3);
-	this->frameIndexedLineSet->coordIndex.set1Value(8, SO_END_FACE_INDEX);
 	
 	// lines
 	
@@ -411,12 +381,8 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
 
 	this->work->setName("work");
 	this->work->whichChoice = SO_SWITCH_NONE;
-	
+
 	this->work->addChild(this->workDrawStyle);
-	
-	this->workTransform->addChild(this->frameIndexedLineSet);
-	
-	this->work->addChild(this->workTransform);
 	
 	this->root->addChild(this->work);
 	
@@ -828,17 +794,75 @@ Viewer::drawSweptVolume(const rl::plan::VectorList& path)
 void
 Viewer::drawWork(const rl::math::Transform& t)
 {
-	SbMatrix matrix;
-	
-	for (int i = 0; i < 4; ++i)
-	{
-		for (int j = 0; j < 4; ++j)
-		{
-			matrix[i][j] = static_cast< float >(t(j, i));
-		}
-	}
-	
-	this->workTransform->setMatrix(matrix);
+  drawNamedFrame(t);
+}
+
+void Viewer::drawNamedFrame(const rl::math::Transform& t, const std::string& name)
+{
+  SbMatrix matrix;
+
+  for (int i = 0; i < 4; ++i)
+  {
+    for (int j = 0; j < 4; ++j)
+    {
+      matrix[i][j] = static_cast< float >(t(j, i));
+    }
+  }
+
+  if (!name_to_frame_.count(name))
+  {
+    auto frameTransform = new SoVRMLTransform;
+    frameTransform->setMatrix(matrix);
+
+    auto frameIndexedLineSet = new SoVRMLIndexedLineSet;
+    frameIndexedLineSet->colorPerVertex = false;
+
+    auto frameColor = new SoVRMLColor();
+    frameIndexedLineSet->color = frameColor;
+    frameColor->color.set1Value(0, 1.0f, 0.0f, 0.0f);
+    frameColor->color.set1Value(1, 0.0f, 1.0f, 0.0f);
+    frameColor->color.set1Value(2, 0.0f, 0.0f, 1.0f);
+
+    frameIndexedLineSet->colorIndex.set1Value(0, 0);
+    frameIndexedLineSet->colorIndex.set1Value(1, 1);
+    frameIndexedLineSet->colorIndex.set1Value(2, 2);
+
+    auto frameCoordinate = new SoVRMLCoordinate();
+    frameIndexedLineSet->coord = frameCoordinate;
+    frameCoordinate->point.set1Value(0, 0.0f, 0.0f, 0.0f);
+    frameCoordinate->point.set1Value(1, 0.15f, 0.0f, 0.0f);
+    frameCoordinate->point.set1Value(2, 0.0f, 0.15f, 0.0f);
+    frameCoordinate->point.set1Value(3, 0.0f, 0.0f, 0.15f);
+
+    frameIndexedLineSet->coordIndex.set1Value(0, 0);
+    frameIndexedLineSet->coordIndex.set1Value(1, 1);
+    frameIndexedLineSet->coordIndex.set1Value(2, SO_END_FACE_INDEX);
+    frameIndexedLineSet->coordIndex.set1Value(3, 0);
+    frameIndexedLineSet->coordIndex.set1Value(4, 2);
+    frameIndexedLineSet->coordIndex.set1Value(5, SO_END_FACE_INDEX);
+    frameIndexedLineSet->coordIndex.set1Value(6, 0);
+    frameIndexedLineSet->coordIndex.set1Value(7, 3);
+    frameIndexedLineSet->coordIndex.set1Value(8, SO_END_FACE_INDEX);
+
+    frameTransform->addChild(frameIndexedLineSet);
+
+    if (!name.empty())
+    {
+      auto vrmlText = new SoVRMLText;
+
+      auto fontStyle = new SoVRMLFontStyle;
+      fontStyle->size.setValue(0.02);
+
+      vrmlText->string.setValue(name.c_str());
+      vrmlText->fontStyle.setValue(fontStyle);
+      frameTransform->addChild(vrmlText);
+    }
+
+    work->addChild(frameTransform);
+    name_to_frame_[name] = frameTransform;
+  }
+  else
+    name_to_frame_[name]->setMatrix(matrix);
 }
 
 void
@@ -967,7 +991,12 @@ void
 Viewer::resetVertices()
 {
 	this->verticesCollidingCoordinate->point.setNum(0);
-	this->verticesFreeCoordinate->point.setNum(0);
+  this->verticesFreeCoordinate->point.setNum(0);
+}
+
+void Viewer::resetFrames()
+{
+  work->removeAllChildren();
 }
 
 void

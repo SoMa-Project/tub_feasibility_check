@@ -24,11 +24,11 @@ bounding_boxes_with_poses:
     position: {x: 0.548410148325, y: -0.0112594768472, z: 0.005324942}
     orientation: {x: 0.000448179713371, y: -0.00122113167373, z: -0.0165826804441, w: 0.999861651771}
 goal_manifold_frame:
-  position: {x: 0.524368202392, y: -0.110797924543, z: -0.044818284}
-  orientation: {x: 0.685114499881, y: 0.663267754151, z: 0.217253436334, w: -0.208554435956}
+    position: {x: 0.548410148325, y: -0.0112594768472, z: 0.005324942}
+    orientation: {x: 0.000448179713371, y: -0.00122113167373, z: -0.0165826804441, w: 0.999861651771}
 goal_manifold_orientation: {x: 0.685114499881, y: 0.663267754151, z: 0.217253436334, w: -0.208554435956}
-min_position_deltas: [-0.01, -0.01, -0.01]
-max_position_deltas: [0.01, 0.01, 0.01]
+min_position_deltas: [-0.04, -0.07, 0.03]
+max_position_deltas: [0.04, -0.01, 0.07]
 min_orientation_deltas: [0, 0, -0.5]
 max_orientation_deltas: [0, 0, 0.5]
 allowed_collisions:

@@ -23,7 +23,7 @@ WorkspaceChecker::WorkspaceChecker(WorkspaceChecker::CheckPosition position_chec
 {
 }
 
-bool WorkspaceChecker::contains(const rl::math::Transform& transform_to_check)
+bool WorkspaceChecker::contains(const rl::math::Transform& transform_to_check) const
 {
   return position_check_(transform_to_check.translation()) && orientation_check_(transform_to_check.rotation());
 }
