@@ -69,29 +69,28 @@ void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)
   emit applyFunctionToScene(findAndMoveIfco);
 }
 
-void IfcoScene::createBox(const std::vector<double> dimensions, const rl::math::Transform& box_pose,
-                          const std::string& name)
+void IfcoScene::createBox(const std::string& name, const BoundingBox& box)
 {
-  BOOST_ASSERT_MSG(dimensions.size() == 3, "Box dimensions must have 3 elements");
+  BOOST_ASSERT_MSG(box.dimensions.size() == 3, "Box dimensions must have 3 elements");
 
   auto used_color = *current_color;
-  auto createBoxInScene = [dimensions, box_pose, name, used_color, this](rl::sg::Scene& scene) {
+  auto createBoxInScene = [box, name, used_color, this](rl::sg::Scene& scene) {
     auto body = scene.getModel(ifco_model_index)->create();
     auto vrml_shape = new SoVRMLShape;
     auto appearance = new SoVRMLAppearance;
     auto material = new SoVRMLMaterial;
-    auto box = new SoVRMLBox;
+    auto vrml_box = new SoVRMLBox;
     material->diffuseColor.setValue(used_color.at(0), used_color.at(1), used_color.at(2));
     material->transparency.setValue(box_transparency_);
     appearance->material.setValue(material);
     vrml_shape->appearance.setValue(appearance);
 
-    box->size.setValue(static_cast<float>(dimensions[0]), static_cast<float>(dimensions[1]),
-                       static_cast<float>(dimensions[2]));
-    vrml_shape->geometry.setValue(box);
+    vrml_box->size.setValue(static_cast<float>(box.dimensions[0]), static_cast<float>(box.dimensions[1]),
+                       static_cast<float>(box.dimensions[2]));
+    vrml_shape->geometry.setValue(vrml_box);
 
     auto sg_shape = body->create(vrml_shape);
-    sg_shape->setTransform(box_pose);
+    sg_shape->setTransform(box.center_transform);
     sg_shape->setName(name);
   };
 

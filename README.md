@@ -31,4 +31,15 @@ The service request parameters and response are documented within the srv file h
 For example calls to the service (using the comand line) check out the scripts in the `example` folder.
 The simplest example is `surface_grasp_sampling_simple.sh`, which encodes a straight go down movement without any unallowed collision. (**TODO** the other examples still use the wrong ifco frames (see https://github.com/SoMa-Project/tub_feasibility_check/issues/4). fix that
 
-**TODO**: more details??
+### Service call parameters
+#### AllowedCollisions
+##### Objects
+You can allow collisions with arbitrary objects in the ifco. **TODO**: Describe attributes etc.
+##### Environmental Constraints
+You can allow collisions with parts of the ifco. Therefore you have to set the attribute `constraint_name`. Possible values are: `bottom, north, east, south, west`. 
+Since the ifco_pose can be set arbitrarily it makes no sense to refer to them after applying the current ifco transform. Instead the initial placement of the ifco and the robot is used to determine the naming.
+You can see the naming in this image:
+
+![ifco wall naming](https://github.com/SoMa-Project/tub_feasibility_check/blob/master/examples/ifco_tub_feasibility_naming.png)
+
+**TODO**: more paramters, more details in general?
