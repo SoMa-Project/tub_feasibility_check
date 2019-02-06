@@ -8,6 +8,9 @@
 # minimum and maximum translations and rotations of the end effector
 # with respect to the goal pose.
 
+# Random seed, used for sampling functions. If 0, unix time will be used.
+uint32 seed
+
 # The initial joint configuration of the robot.
 float64[] initial_configuration
 
