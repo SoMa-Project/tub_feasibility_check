@@ -142,7 +142,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
 }
 
 // TODO try to resolve code duplication between this and moveSingleParticle
-JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::Vector& initial_configuration,
+JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::BeliefState& initial_belief,
                                                                 const rl::math::Transform& to_pose,
                                                                 const CollisionSpecification& collision_specification,
                                                                 MoveBeliefSettings settings)
@@ -152,8 +152,8 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
   using rl::plan::Particle;
 
   BeliefResult result;
-  // phase one: move a single particle without noise to find out the trajectory
-  result.no_noise_test_result = moveSingleParticle(initial_configuration, to_pose, collision_specification);
+  // phase one: move a single particle without noise from the mean of the belief to find out the joint trajectory
+  result.no_noise_test_result = moveSingleParticle(initial_belief.configMean(), to_pose, collision_specification);
 
   if (!result)
     return result;
@@ -163,19 +163,18 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
   *noisy_model_.motionError = settings.joints_std_error;
   *noisy_model_.initialError = settings.initial_std_error;
 
-  // for every particle, sample initial noise, and then execute the trajectory with motion noise
+  // for every particle execute the trajectory with motion noise
   for (std::size_t i = 0; i < settings.number_of_particles; ++i)
   {
-    Vector current_config(initial_configuration.size());
-    noisy_model_.sampleInitialError(current_config);
-    current_config += initial_configuration;
+    auto current_config = initial_belief.getParticles()[i].config;
 
     auto& particle_result = result.particle_results->at(i);
     particle_result.trajectory.push_back(current_config);
 
     // current_error is used to store accumulated error. The target of the particle for a step
     // is a trajectory configuration for that step plus the accumulated error
-    Vector current_error = current_config - result.no_noise_test_result.trajectory.front();
+    // initially, current_error is the distance from the particle config to the belief mean
+    Vector current_error = current_config - initial_belief.configMean();
 
     emit drawConfiguration(current_config);
 
@@ -184,7 +183,7 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::
     {
       // target with the inclusion of accumulated error
       Vector target_with_error = result.no_noise_test_result.trajectory[j] + current_error;
-      Vector noise(initial_configuration.size());
+      Vector noise(noisy_model_.getDof());
       noisy_model_.sampleMotionError(noise);
       // move the particle all the way to target_with_error applying noise
       noisy_model_.interpolateNoisy(current_config, target_with_error, 1, noise, current_config);

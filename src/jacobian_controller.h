@@ -135,7 +135,7 @@ public:
    *
    * @return An object storing results of both phases of execution.
    */
-  BeliefResult moveBelief(const rl::math::Vector& initial_configuration, const rl::math::Transform& target_pose,
+  BeliefResult moveBelief(const rl::plan::BeliefState& initial_belief, const rl::math::Transform& target_pose,
                           const CollisionSpecification& collision_types, MoveBeliefSettings settings);
 
 private:
