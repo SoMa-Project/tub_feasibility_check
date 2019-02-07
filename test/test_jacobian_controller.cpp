@@ -1,21 +1,19 @@
-#define BOOST_TEST_MODULE test_jacobian_controller
-
+#include <gtest/gtest.h>
 #include <QApplication>
-#include <boost/test/included/unit_test.hpp>
 #include <rl/plan/DistanceModel.h>
 #include <Eigen/Geometry>
-#include "../ifco_scene.h"
-#include "../jacobian_controller.h"
-#include "../MainWindow.h"
-#include "../workspace_samplers.h"
+#include "../src/ifco_scene.h"
+#include "../src/jacobian_controller.h"
+#include "../src/MainWindow.h"
+#include "../src/workspace_samplers.h"
 
 using namespace rl::math;
 using namespace rl::plan;
-using namespace boost::unit_test;
 
-struct Fixture
+class JacobianControllerBeliefsTest : public ::testing::Test
 {
-  Fixture()
+protected:
+  JacobianControllerBeliefsTest()
   {
     std::string default_root_dir = "/home/ilia/cmp_2/contact-motion-planning";
     std::string scene_graph_file = default_root_dir + "/soma/rlsg/wam-rbohand-ifco.convex.xml";
@@ -25,9 +23,9 @@ struct Fixture
     Transform t;
     ifco_scene->moveIfco(t.translate(Vector3(1000, 1000, 1000)));  // goodbye
 
-    controller = std::make_shared<JacobianController>(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), 0.017);
+    controller = std::make_shared<JacobianController>(ifco_scene->getKinematics(), ifco_scene->getBulletScene(),
+                                                      0.017, 10000);
 
-    settings.delta = 0.017;
     pose_in_front.translation() = Vector3(0.45, -0.4, 0.35);
     pose_in_front.linear() = Quaternion(0.1830127, 0.6830127, -0.6830127, 0.1830127).matrix();
 
@@ -39,13 +37,19 @@ struct Fixture
     model.kin = kinematics;
     model.model = scene.getModel(0);
     model.scene = &scene;
+
+    allow_all_poses.reset(
+        new WorkspaceChecker([](const Vector3&) { return true; }, [](const Rotation&) { return true; }));
   }
 
   std::unique_ptr<IfcoScene> ifco_scene;
   std::shared_ptr<JacobianController> controller;
-  JacobianController::Settings settings;
+  JacobianController::MoveBeliefSettings settings;
   Transform pose_in_front = Transform::Identity();
   Vector initial_configuration;
+
+  AllowAllCollisions allow_all_collisions;
+  std::unique_ptr<WorkspaceChecker> allow_all_poses;
 
   // to check the solutions
   rl::kin::Kinematics* kinematics;
@@ -56,96 +60,78 @@ struct Fixture
   const unsigned trials = 40;
   // number of maximum sample attempts for sampling tests
   const unsigned maximum_sample_attempts = 40;
+
+  const double delta = 0.017;
 };
 
-BOOST_FIXTURE_TEST_SUITE(jacobian_controller_suite, Fixture)
-
-BOOST_AUTO_TEST_CASE(multiple_particles_no_error)
+TEST_F(JacobianControllerBeliefsTest, multiple_particles_no_error)
 {
   settings.number_of_particles = 30;
-  settings.initial_std_error = Vector::Zero(ifco_scene->dof());
   settings.joints_std_error = Vector::Zero(ifco_scene->dof());
 
-  auto result = controller->go(initial_configuration, pose_in_front, {}, settings);
-  auto& particles = result.final_belief.getParticles();
+  std::vector<rl::plan::Particle> initial_configs(settings.number_of_particles, Particle(initial_configuration));
+  rl::plan::BeliefState initial_belief(initial_configs, &model);
+  auto result = controller->moveBelief(initial_belief, pose_in_front, allow_all_collisions, *allow_all_poses, settings);
+  auto belief = result.belief(model);
+  ASSERT_TRUE(belief.is_initialized());
+  auto& particles = belief->getParticles();
 
-  BOOST_CHECK(result);
-  BOOST_CHECK(particles.size() == settings.number_of_particles);
-  BOOST_CHECK(std::all_of(particles.begin(), particles.end(),
+  ASSERT_TRUE(result);
+  ASSERT_TRUE(result.particle_results.is_initialized());
+  ASSERT_TRUE(result.particle_results->size() == settings.number_of_particles);
+  ASSERT_TRUE(std::all_of(particles.begin(), particles.end(),
                           [particles](const Particle& p) { return p.config == particles.front().config; }));
 
-  model.setPosition(result.final_belief.configMean());
+  model.setPosition(belief->configMean());
   model.updateFrames();
   model.updateJacobian();
   model.updateJacobianInverse();
   auto ee_position = model.forwardPosition();
-  BOOST_CHECK(ee_position.isApprox(pose_in_front, settings.delta));
+  ASSERT_TRUE(ee_position.isApprox(pose_in_front, delta));
 }
 
-BOOST_AUTO_TEST_CASE(no_initial_error_motion_error)
+TEST_F(JacobianControllerBeliefsTest, no_initial_error_motion_error)
 {
   settings.number_of_particles = 100;
-  settings.initial_std_error = Vector::Zero(ifco_scene->dof());
   settings.joints_std_error = Vector::Ones(ifco_scene->dof()) * 0.01;
 
-  auto result = controller->go(initial_configuration, pose_in_front, {}, settings);
-  BOOST_CHECK(result);
-  model.setPosition(result.final_belief.configMean());
+  std::vector<rl::plan::Particle> initial_configs(settings.number_of_particles, Particle(initial_configuration));
+  rl::plan::BeliefState initial_belief(initial_configs, &model);
+  auto result = controller->moveBelief(initial_belief, pose_in_front, allow_all_collisions, *allow_all_poses, settings);
+  auto belief = result.belief(model);
+  auto& particles = belief->getParticles();
+
+  ASSERT_TRUE(result);
+  model.setPosition(belief->configMean());
   model.updateFrames();
   model.updateJacobian();
   model.updateJacobianInverse();
   auto ee_position = model.forwardPosition();
-  BOOST_CHECK(ee_position.isApprox(pose_in_front, settings.delta));
+  ASSERT_TRUE(ee_position.isApprox(pose_in_front, delta));
 
-  auto& particles = result.final_belief.getParticles();
   for (std::size_t i = 0; i < particles.size() - 1; ++i)
-    BOOST_REQUIRE(particles[i].config != particles[i + 1].config);
+    ASSERT_TRUE(particles[i].config != particles[i + 1].config);
 
   Vector travelled_conf_distance = Vector::Zero(ifco_scene->dof());
-  for (std::size_t i = 1; i < result.mean_trajectory.size(); ++i)
-    travelled_conf_distance += (result.mean_trajectory[i] - result.mean_trajectory[i - 1]).array().abs().matrix();
+  auto& mean_trajectory = result.no_noise_test_result.trajectory;
+  for (std::size_t i = 1; i < mean_trajectory.size(); ++i)
+    travelled_conf_distance += (mean_trajectory[i] - mean_trajectory[i - 1]).array().abs().matrix();
 
   Matrix theoretical_covariance =
       (travelled_conf_distance.array().abs() * settings.joints_std_error.array().square()).matrix().asDiagonal();
 
   auto theoretical_norm = theoretical_covariance.norm();
-  auto real_norm = result.final_belief.configCovariance().norm();
-  auto difference_norm = (theoretical_covariance - result.final_belief.configCovariance()).norm();
+  auto real_norm = belief->configCovariance().norm();
+  auto difference_norm = (theoretical_covariance - belief->configCovariance()).norm();
 
   std::cout << "Theoretical norm: " << theoretical_norm << ", real norm: " << real_norm
             << ", difference norm: " << difference_norm << "\n";
 
-  BOOST_CHECK(theoretical_covariance.isApprox(result.final_belief.configCovariance()));
+  ASSERT_TRUE(theoretical_covariance.isApprox(belief->configCovariance()));
 }
 
-BOOST_AUTO_TEST_CASE(test_box_positions)
+int main(int argc, char** argv)
 {
-  auto center = Transform::Identity();
-  center.rotate(Eigen::AngleAxisd(1.1, Vector3(0.57735027, 0.57735027, 0.57735027)));
-  center.translate(Vector3(0.45, -0.4, 0.35));
-
-  Vector initial_configuration(7);
-  initial_configuration << 0.1, 0.1, 0, 2.3, 0, 0.5, 0;
-
-  std::array<double, 3> dimensions{ 0.1, 0.3, 0.2 };
-  std::mt19937 random_engine;
-  random_engine.seed(std::time(0));
-
-  auto box_sampler = BoxSampler(center, dimensions);
-  for (unsigned i = 0; i < trials; ++i)
-  {
-    auto sample = sampleWithJacobianControl(*controller, initial_configuration, {}, box_sampler, random_engine,
-                                            maximum_sample_attempts, 0.017);
-    BOOST_REQUIRE(sample);
-
-    model.setPosition(*sample);
-    model.updateFrames();
-    auto sampled_point = center.inverse() * model.forwardPosition();
-
-    BOOST_CHECK(abs(sampled_point.translation().x()) <= dimensions[0] / 2);
-    BOOST_CHECK(abs(sampled_point.translation().y()) <= dimensions[1] / 2);
-    BOOST_CHECK(abs(sampled_point.translation().z()) <= dimensions[2] / 2);
-  }
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
-
-BOOST_AUTO_TEST_SUITE_END()

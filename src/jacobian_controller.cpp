@@ -145,6 +145,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
 JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::BeliefState& initial_belief,
                                                                 const rl::math::Transform& to_pose,
                                                                 const CollisionSpecification& collision_specification,
+                                                                const WorkspaceChecker& goal_manifold_checker,
                                                                 MoveBeliefSettings settings)
 {
   using namespace rl::math;
@@ -155,13 +156,12 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
   // phase one: move a single particle without noise from the mean of the belief to find out the joint trajectory
   result.no_noise_test_result = moveSingleParticle(initial_belief.configMean(), to_pose, collision_specification);
 
-  if (!result)
+  if (!result.no_noise_test_result)
     return result;
 
   result.particle_results = std::vector<SingleResult>(settings.number_of_particles);
 
   *noisy_model_.motionError = settings.joints_std_error;
-  *noisy_model_.initialError = settings.initial_std_error;
 
   // for every particle execute the trajectory with motion noise
   for (std::size_t i = 0; i < settings.number_of_particles; ++i)
@@ -217,17 +217,26 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
       // a terminating collision was seen and all other constraints were obeyed
       if (collision_constraints_check.success_termination)
       {
-        particle_result.setSingleOutcome(SingleResult::Outcome::TERMINATING_COLLISION,
-                                         SingleResult::OutcomeInformation::CollisionInformation(
-                                             collision_constraints_check.seen_terminating_collisions));
+        auto collisions = SingleResult::OutcomeInformation::CollisionInformation(
+            collision_constraints_check.seen_terminating_collisions);
+
+        if (!goal_manifold_checker.contains(noisy_model_.forwardPosition()))
+          particle_result.setSingleOutcome(SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD, collisions);
+        else
+          particle_result.setSingleOutcome(SingleResult::Outcome::TERMINATING_COLLISION, collisions);
+
         break;
       }
     }
 
     // have successfully executed the whole trajectory
-    // TODO unclear whether it should be reached: it can deviate pretty far from the target pose. It does not
-    // mean the same as REACHED in moveSingleParticle
-    particle_result.setSingleOutcome(SingleResult::Outcome::REACHED);
+    if (particle_result.outcomes.empty())
+    {
+      if (!goal_manifold_checker.contains(noisy_model_.forwardPosition()))
+        particle_result.setSingleOutcome(SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD);
+      else
+        particle_result.setSingleOutcome(SingleResult::Outcome::REACHED);
+    }
   }
 
   return result;
@@ -352,4 +361,18 @@ JacobianController::SingleResult::OutcomeInformation::JointNumbers(std::vector<u
   JacobianController::SingleResult::OutcomeInformation outcome_information;
   outcome_information.joint_indices = joint_indices;
   return outcome_information;
+}
+
+boost::optional<rl::plan::BeliefState> JacobianController::BeliefResult::belief(rl::plan::DistanceModel& model) const
+{
+  using namespace rl::plan;
+
+  if (!particle_results)
+    return boost::none;
+
+  std::vector<Particle> particles(particle_results->size());
+  for (std::size_t i = 0; i < particle_results->size(); ++i)
+    particles[i].config = particle_results->at(i).trajectory.back();
+
+  return BeliefState(particles, &model);
 }

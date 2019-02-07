@@ -83,6 +83,8 @@ public:
      */
     boost::optional<std::vector<SingleResult>> particle_results;
 
+    boost::optional<rl::plan::BeliefState> belief(rl::plan::DistanceModel& model) const;
+
     /* BeliefResult converts to true when no_noise_test_result is successful and every
      * particle's SingleResult is successful.
      */
@@ -93,7 +95,6 @@ public:
   struct MoveBeliefSettings
   {
     std::size_t number_of_particles;
-    rl::math::Vector initial_std_error;
     rl::math::Vector joints_std_error;
   };
 
@@ -136,7 +137,8 @@ public:
    * @return An object storing results of both phases of execution.
    */
   BeliefResult moveBelief(const rl::plan::BeliefState& initial_belief, const rl::math::Transform& target_pose,
-                          const CollisionSpecification& collision_types, MoveBeliefSettings settings);
+                          const CollisionSpecification& collision_types, const WorkspaceChecker& goal_manifold_checker,
+                          MoveBeliefSettings settings);
 
 private:
   typedef std::vector<std::pair<std::string, std::string>> CollisionPairs;

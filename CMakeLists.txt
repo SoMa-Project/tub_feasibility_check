@@ -67,17 +67,19 @@ generate_messages(
     geometry_msgs
 )
 
+qt4_wrap_cpp(
+        MOC_SRCS
+        src/Viewer.h
+        src/service_worker.h
+        src/ifco_scene.h
+        src/jacobian_controller.h
+        OPTIONS
+        -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
+)
 
 catkin_package(
   CATKIN_DEPENDS message_runtime
 )
-
-catkin_add_gtest(workspace_checker_sampler_test test/test_workspace_checker_and_sampler.cpp src/workspace_samplers.cpp
-    src/workspace_checkers.cpp)
-target_link_libraries(workspace_checker_sampler_test
-        rlplan
-        rlkin
-        rlsg)
 
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
     set(SRCS
@@ -92,15 +94,25 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/collision_specification.cpp
     )
 
-    qt4_wrap_cpp(
-        MOC_SRCS
-        src/Viewer.h
-        src/service_worker.h
-        src/ifco_scene.h
-        src/jacobian_controller.h
-        OPTIONS
-        -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
-    )
+catkin_add_gtest(workspace_checker_sampler_test test/test_workspace_checker_and_sampler.cpp src/workspace_samplers.cpp
+    src/workspace_checkers.cpp)
+catkin_add_gtest(jacobian_controller_beliefs_test test/test_jacobian_controller.cpp
+        src/Viewer.cpp
+        src/ifco_scene.cpp
+        src/service_worker.cpp
+        src/jacobian_controller.cpp
+        src/workspace_samplers.cpp
+        src/workspace_checkers.cpp
+        src/collision_specification.cpp
+    ${MOC_SRCS})
+target_link_libraries(workspace_checker_sampler_test
+        rlplan
+        rlkin
+        rlsg)
+target_link_libraries(jacobian_controller_beliefs_test rlplan rlkin rlsg ${QT_LIBRARIES} ${OPENGL_LIBRARIES}
+    ${ROS_LIBRARIES} ${catkin_LIBRARIES} ${SOQT_LIBRARIES})
+
+
 
     add_executable(
         tub_feasibility_check
