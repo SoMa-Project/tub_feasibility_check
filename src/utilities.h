@@ -47,6 +47,7 @@ struct EnumClassHash
     return static_cast<std::size_t>(t);
   }
 };
+
 }  // namespace utilities
 
 #endif
