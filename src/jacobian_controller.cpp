@@ -163,14 +163,6 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
 
   *noisy_model_.motionError = settings.joints_std_error;
 
-  std::ofstream no_noise_file("move_belief_no_noise.log");
-  for (auto& c: result.no_noise_test_result.trajectory)
-    no_noise_file << c << ",";
-
-  std::stringstream ss;
-  ss << "move_belief_[" << settings.joints_std_error << "].log";
-  std::ofstream debug_file(ss.str());
-
   // for every particle execute the trajectory with motion noise
   for (std::size_t i = 0; i < settings.number_of_particles; ++i)
   {
@@ -178,12 +170,6 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
 
     auto& particle_result = result.particle_results->at(i);
     particle_result.trajectory.push_back(current_config);
-    debug_file << current_config << ",";
-
-    // current_error is used to store accumulated error. The target of the particle for a step
-    // is a trajectory configuration for that step plus the accumulated error
-    // initially, current_error is the distance from the particle config to the belief mean
-    Vector current_error = current_config - initial_belief.configMean();
 
     emit drawConfiguration(current_config);
 
@@ -191,15 +177,14 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
     for (std::size_t j = 1; j < result.no_noise_test_result.trajectory.size(); ++j)
     {
       // target with the inclusion of accumulated error
-      Vector target_with_error = result.no_noise_test_result.trajectory[j] + current_error;
+      Vector target_with_error =
+          current_config + result.no_noise_test_result.trajectory[j] - result.no_noise_test_result.trajectory[j - 1];
       Vector noise(noisy_model_.getDof());
       noisy_model_.sampleMotionError(noise);
       // move the particle all the way to target_with_error applying noise
       noisy_model_.interpolateNoisy(current_config, target_with_error, 1, noise, current_config);
-      debug_file << current_config << ",";
 
       particle_result.trajectory.push_back(current_config);
-      current_error += noise;
 
       if (!noisy_model_.isValid(current_config))
         particle_result.addSingleOutcome(
@@ -238,8 +223,6 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
         break;
       }
     }
-
-    debug_file << "\n";
 
     // have successfully executed the whole trajectory
     if (particle_result.outcomes.empty())

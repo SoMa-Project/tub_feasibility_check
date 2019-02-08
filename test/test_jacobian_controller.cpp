@@ -127,6 +127,7 @@ TEST_F(JacobianControllerBeliefsTest, no_initial_error_motion_error)
   std::cout << "Theoretical norm: " << theoretical_norm << ", real norm: " << real_norm
             << ", difference norm: " << difference_norm << "\n";
 
+  // TODO a statistical test
   ASSERT_TRUE(theoretical_covariance.isApprox(belief->configCovariance()));
 }
 
