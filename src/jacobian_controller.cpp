@@ -81,6 +81,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
   using namespace rl::math;
 
   SingleResult result;
+  auto required_counter = collision_specification.makeRequiredCollisionChecker();
 
   Vector current_config = initial_configuration;
 
@@ -94,7 +95,14 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
 
     // arrived at the target pose
     if (q_dot.isZero())
-      return result.setSingleOutcome(SingleResult::Outcome::REACHED);
+    {
+      if (required_counter->allRequiredPresent())
+        return result.setSingleOutcome(SingleResult::Outcome::REACHED);
+      else
+        return result.setSingleOutcome(
+            SingleResult::Outcome::MISSING_REQUIRED_COLLISIONS,
+            SingleResult::OutcomeInformation::CollisionInformation(required_counter->missingRequiredCollisions()));
+    }
 
     current_config += q_dot;
 
@@ -116,7 +124,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
       result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
     auto collision_constraints_check =
-        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification);
+        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification, *required_counter);
     // if the collision constraints were violated, failures are not empty
     std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
               std::inserter(result.outcomes, result.outcomes.begin()));
@@ -139,99 +147,6 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
   }
 
   return result.setSingleOutcome(SingleResult::Outcome::STEPS_LIMIT);
-}
-
-// TODO try to resolve code duplication between this and moveSingleParticle
-JacobianController::BeliefResult JacobianController::moveBelief(const rl::math::Vector& initial_configuration,
-                                                                const rl::math::Transform& to_pose,
-                                                                const CollisionSpecification& collision_specification,
-                                                                MoveBeliefSettings settings)
-{
-  using namespace rl::math;
-  using rl::plan::BeliefState;
-  using rl::plan::Particle;
-
-  BeliefResult result;
-  // phase one: move a single particle without noise to find out the trajectory
-  result.no_noise_test_result = moveSingleParticle(initial_configuration, to_pose, collision_specification);
-
-  if (!result)
-    return result;
-
-  result.particle_results = std::vector<SingleResult>(settings.number_of_particles);
-
-  *noisy_model_.motionError = settings.joints_std_error;
-  *noisy_model_.initialError = settings.initial_std_error;
-
-  // for every particle, sample initial noise, and then execute the trajectory with motion noise
-  for (std::size_t i = 0; i < settings.number_of_particles; ++i)
-  {
-    Vector current_config(initial_configuration.size());
-    noisy_model_.sampleInitialError(current_config);
-    current_config += initial_configuration;
-
-    auto& particle_result = result.particle_results->at(i);
-    particle_result.trajectory.push_back(current_config);
-
-    // current_error is used to store accumulated error. The target of the particle for a step
-    // is a trajectory configuration for that step plus the accumulated error
-    Vector current_error = current_config - result.no_noise_test_result.trajectory.front();
-
-    emit drawConfiguration(current_config);
-
-    // execute the steps of the trajectory
-    for (std::size_t j = 1; j < result.no_noise_test_result.trajectory.size(); ++j)
-    {
-      // target with the inclusion of accumulated error
-      Vector target_with_error = result.no_noise_test_result.trajectory[j] + current_error;
-      Vector noise(initial_configuration.size());
-      noisy_model_.sampleMotionError(noise);
-      // move the particle all the way to target_with_error applying noise
-      noisy_model_.interpolateNoisy(current_config, target_with_error, 1, noise, current_config);
-
-      particle_result.trajectory.push_back(current_config);
-      current_error += noise;
-
-      if (!noisy_model_.isValid(current_config))
-        particle_result.addSingleOutcome(
-            SingleResult::Outcome::JOINT_LIMIT,
-            SingleResult::OutcomeInformation::JointNumbers(getJointsOverLimits(*kinematics_, current_config)));
-
-      noisy_model_.setPosition(current_config);
-      noisy_model_.updateFrames();
-      noisy_model_.updateJacobian();
-      noisy_model_.updateJacobianInverse();
-      noisy_model_.isColliding();
-
-      if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
-        particle_result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
-
-      auto collision_constraints_check =
-          checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification);
-      std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
-                std::inserter(particle_result.outcomes, particle_result.outcomes.begin()));
-
-      // there was one or more failures, execution for this particle is finished
-      if (!particle_result.outcomes.empty())
-        break;
-
-      // a terminating collision was seen and all other constraints were obeyed
-      if (collision_constraints_check.success_termination)
-      {
-        particle_result.setSingleOutcome(SingleResult::Outcome::TERMINATING_COLLISION,
-                                         SingleResult::OutcomeInformation::CollisionInformation(
-                                             collision_constraints_check.seen_terminating_collisions));
-        break;
-      }
-    }
-
-    // have successfully executed the whole trajectory
-    // TODO unclear whether it should be reached: it can deviate pretty far from the target pose. It does not
-    // mean the same as REACHED in moveSingleParticle
-    particle_result.setSingleOutcome(SingleResult::Outcome::REACHED);
-  }
-
-  return result;
 }
 
 rl::math::Vector JacobianController::calculateQDot(const rl::math::Vector& configuration,
@@ -269,7 +184,8 @@ rl::math::Vector JacobianController::calculateQDot(const rl::math::Vector& confi
 }
 
 JacobianController::CollisionConstraintsCheck JacobianController::checkCollisionConstraints(
-    const rl::sg::CollisionMap& collision_map, const CollisionSpecification& collision_types)
+    const rl::sg::CollisionMap& collision_map, const CollisionSpecification& collision_types,
+    RequiredCollisionCounter& required_counter)
 {
   CollisionConstraintsCheck check;
 
@@ -277,21 +193,24 @@ JacobianController::CollisionConstraintsCheck JacobianController::checkCollision
   {
     auto collision_type = collision_types.getCollisionType(shapes_in_contact.first, shapes_in_contact.second);
 
-    switch (collision_type)
+    if (!collision_type.allowed)
+      check.failures[SingleResult::Outcome::PROHIBITED_COLLISION].collisions.push_back(shapes_in_contact);
+
+    if (collision_type.required)
+      required_counter.count(shapes_in_contact.first, shapes_in_contact.second);
+
+    if (collision_type.terminating)
     {
-      case CollisionType::PROHIBITED:
-        check.failures[SingleResult::Outcome::PROHIBITED_COLLISION].collisions.push_back(shapes_in_contact);
-        break;
-      case CollisionType::ALLOWED:
-        break;
-      case CollisionType::SENSORIZED_TERMINATING:
-        if (isSensorized(shapes_in_contact.first))
-          check.seen_terminating_collisions.push_back(shapes_in_contact);
-        else
-          check.failures[SingleResult::Outcome::UNSENSORIZED_COLLISION].collisions.push_back(shapes_in_contact);
-        break;
+      if (isSensorized(shapes_in_contact.first))
+        check.seen_terminating_collisions.push_back(shapes_in_contact);
+      else
+        check.failures[SingleResult::Outcome::UNSENSORIZED_COLLISION].collisions.push_back(shapes_in_contact);
     }
   }
+
+  if (!check.seen_terminating_collisions.empty() && !required_counter.allRequiredPresent())
+    check.failures[SingleResult::Outcome::MISSING_REQUIRED_COLLISIONS] =
+        SingleResult::OutcomeInformation::CollisionInformation(required_counter.missingRequiredCollisions());
 
   // there was a terminating collision and there were no failures
   if (!check.seen_terminating_collisions.empty() && check.failures.empty())
