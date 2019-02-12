@@ -74,6 +74,11 @@ std::string describeSingleResult(const JacobianController::SingleResult& result)
       case JacobianController::SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD:
         ss << "terminating collisions outside the goal manifold:";
         printCollisions();
+        break;
+      case JacobianController::SingleResult::Outcome::MISSING_REQUIRED_COLLISIONS:
+        ss << "missing required collisions:";
+        printCollisions();
+        break;
     }
   };
 
@@ -167,10 +172,14 @@ ServiceWorker::processQueryParameters(const tub_feasibility_check::CheckKinemati
   WorldPartsCollisions::PartToCollisionType part_to_type;
   for (auto& allowed_collision_msg : req.allowed_collisions)
   {
+    CollisionType type;
+    type.allowed = true;
+    type.terminating = allowed_collision_msg.terminating;
+    type.required = allowed_collision_msg.required;
+
     auto object_name = allowed_collision_msg.type == allowed_collision_msg.BOUNDING_BOX ?
                            getBoxName(allowed_collision_msg.box_id) :
                            allowed_collision_msg.constraint_name;
-    auto type = allowed_collision_msg.terminating ? CollisionType::SENSORIZED_TERMINATING : CollisionType::ALLOWED;
 
     part_to_type.insert({ object_name, type });
   }
@@ -258,7 +267,10 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   drawGoalManifold(parameters->goal_manifold_frame, req.min_position_deltas, req.max_position_deltas);
   emit drawNamedFrame(parameters->goal_manifold_frame, "goal manifold");
 
-  std::mt19937 generator(time(nullptr));
+  std::size_t seed = req.seed ? req.seed : time(nullptr);
+  ROS_INFO_STREAM("Random seed used: " << seed);
+  std::mt19937 generator(seed);
+
   std::uniform_real_distribution<double> random_01;
   auto sample_01 = [&generator, &random_01]() { return random_01(generator); };
 

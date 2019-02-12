@@ -3,10 +3,16 @@
 # and using Jacobian control in the scene with the IFCO container populated
 # with objects. Collisions with objects and environmental constraints
 # can be ignored, trigger a successful end of the check or trigger a
-# failure. If the desired goal pose is not feasible, the service will
-# try to sample a feasible pose from the manifold described by
-# minimum and maximum translations and rotations of the end effector
-# with respect to the goal pose.
+# failure. 
+
+# If the desired goal pose is not feasible, the service will
+# try to sample a feasible pose from the manifold, specified by the
+# parameters: goal_manifold_frame, goal_manifold_orientation, 
+# {min, max}_position_deltas, {min, max}_orientation_deltas.
+# The position and orientation of the sampled pose are decoupled.
+
+# Random seed, used for sampling functions. If 0, unix time will be used.
+uint32 seed
 
 # The initial joint configuration of the robot.
 float64[] initial_configuration
@@ -22,6 +28,8 @@ geometry_msgs/Pose ifco_pose
 # in this array.
 BoundingBoxWithPose[] bounding_boxes_with_poses
 
+# The goal manifold frame in terms of world frame. The goal manifold frame
+# is used for sampling the positional part.
 geometry_msgs/Pose goal_manifold_frame
 
 # Coordinate X, Y, Z will be sampled in the goal manifold frame from the range:
@@ -30,6 +38,8 @@ geometry_msgs/Pose goal_manifold_frame
 float64[3] min_position_deltas
 float64[3] max_position_deltas
 
+# The goal manifold orientation in terms of world frame. It is used for
+# sampling the orientational part.
 geometry_msgs/Quaternion goal_manifold_orientation
 
 # The sampled orientation is in XYZ Euler angles, applied on the top of

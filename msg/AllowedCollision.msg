@@ -29,3 +29,5 @@ string constraint_name
 # the robot will end the check. A collision with an unsensorized part
 # of the robot on the other hand will result in failure.
 bool terminating
+
+bool required
