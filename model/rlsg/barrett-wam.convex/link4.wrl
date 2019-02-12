@@ -3,7 +3,7 @@
 
 DEF link4 Transform {
   children 
-    Shape {
+    DEF link4 Shape {
       appearance 
       Appearance {
         material 

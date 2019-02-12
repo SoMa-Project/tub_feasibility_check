@@ -63,7 +63,7 @@ Transform {
 			translation 0 0 1.256
 			children [
 				Inline {
-                                        url "link7-rbohand2.wrl"
+					url "link7-rbohand2.wrl"
 				}
 			]
 		}

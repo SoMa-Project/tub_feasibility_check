@@ -9,7 +9,7 @@ DEF link4 Transform {
     rotation 0 0 -1 1.5707963
     translation -0.0575 0 0.1
     children
-    Shape
+    DEF CameraMount Shape
 	    {
 	    appearance Appearance
 	      {
@@ -30,7 +30,7 @@ DEF link4 Transform {
     rotation 0 0 -1 1.5707963
     translation -0.085 0 0.1
     children
-    Shape
+    DEF Camera Shape
 	    {
 	    appearance Appearance
 	      {
@@ -46,7 +46,7 @@ DEF link4 Transform {
 	      }
 	    }
 	}	
-    Shape {
+    DEF link4 Shape {
       appearance 
       Appearance {
         material 

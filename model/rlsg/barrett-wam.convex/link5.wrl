@@ -4,7 +4,7 @@
 DEF link5 Transform {
   rotation 1 0 0  1.5707999
   children 
-    Shape {
+    DEF link5 Shape {
       appearance 
       Appearance {
         material 
