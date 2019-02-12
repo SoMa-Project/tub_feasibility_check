@@ -267,7 +267,10 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   drawGoalManifold(parameters->goal_manifold_frame, req.min_position_deltas, req.max_position_deltas);
   emit drawNamedFrame(parameters->goal_manifold_frame, "goal manifold");
 
-  std::mt19937 generator(time(nullptr));
+  std::size_t seed = req.seed ? req.seed : time(nullptr);
+  ROS_INFO_STREAM("Random seed used: " << seed);
+  std::mt19937 generator(seed);
+
   std::uniform_real_distribution<double> random_01;
   auto sample_01 = [&generator, &random_01]() { return random_01(generator); };
 
