@@ -9,40 +9,51 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "check_kinematics_server");
     ros::NodeHandle n;
 
-    std::string scene_graph_file;
+    std::string ifco_scene_graph_file;
+    std::string tabletop_scene_graph_file;
     std::string kinematics_file;
     // TODO fix to run in QT and access ros pkg path  - if solved add to readme steps to fix it
     std::string default_root_dir = ros::package::getPath("tub_feasibility_check");
-    n.param("/feasibility_check/scene_graph_file", scene_graph_file, default_root_dir + "/model/rlsg/"
-                                                                                        "wam-rbohand2-ifco.convex.xml");
+    n.param("/feasibility_check/ifco_scene_graph_file", ifco_scene_graph_file, default_root_dir + "/model/rlsg/"
+                                                                                                  "wam-rbohand2-ifco."
+                                                                                                  "convex.xml");
+    n.param("/feasibility_check/tabletop_scene_graph_file", tabletop_scene_graph_file,
+            default_root_dir + "/model/rlsg/"
+                               "wam-rbohand2-with-camera-tabletop.convex.xml");
     n.param("/feasibility_check/kinematics_file", kinematics_file, default_root_dir + "/model/rlkin/"
                                                                                       "barrett-wam-rbohand2.xml");
 
-    auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(scene_graph_file, kinematics_file));
-    auto another_ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(scene_graph_file, kinematics_file));
+    auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(ifco_scene_graph_file, kinematics_file));
+    auto tabletop_scene = std::unique_ptr<TabletopScene>(new TabletopScene(tabletop_scene_graph_file, kinematics_file));
 
     QApplication application(argc, argv);
-    std::unique_ptr<MainWindow> main_window(new MainWindow);
+    MainWindow main_window(new MainWindow);
 
     bool hide_window;
     n.param("/feasibility_check/hide_window", hide_window, false);
     if (!hide_window)
     {
-      ifco_scene->connectToViewer(main_window->ifcoSceneViewer());
-      another_ifco_scene->connectToViewer(main_window->tabletopSceneViewer());
-      main_window->show();
+      ifco_scene->connectToViewer(main_window.ifcoSceneViewer());
+      tabletop_scene->connectToViewer(main_window.tabletopSceneViewer());
+      main_window.show();
     }
     else
-      main_window->hide();
+      main_window.hide();
 
-    ServiceWorker service_worker(std::move(ifco_scene));
+    ServiceWorker service_worker(std::move(ifco_scene), std::move(tabletop_scene));
     QThread worker_thread;
     service_worker.moveToThread(&worker_thread);
     QObject::connect(&application, SIGNAL(lastWindowClosed()), &application, SLOT(quit()));
     QObject::connect(&application, SIGNAL(lastWindowClosed()), &worker_thread, SLOT(quit()));
+    qRegisterMetaType<MainWindow::ViewerType>("MainWindow::ViewerType");
+    QObject::connect(&service_worker, SIGNAL(selectViewer(MainWindow::ViewerType)), &main_window,
+                     SLOT(selectViewer(MainWindow::ViewerType)));
 
-    ros::ServiceServer checkKinematicsService =
-        n.advertiseService("check_kinematics", &ServiceWorker::checkKinematicsQuery, &service_worker);
+    ros::ServiceServer checkKinematicsIfcoService =
+        n.advertiseService("check_kinematics", &ServiceWorker::checkKinematicsIfcoQuery, &service_worker);
+
+    ros::ServiceServer checkKinematicsTabletopService =
+        n.advertiseService("check_kinematics_tabletop", &ServiceWorker::checkKinematicsTabletopQuery, &service_worker);
 
     ros::ServiceServer visualizeTrajectoryService =
         n.advertiseService("visualize_trajectory", &ServiceWorker::visualizeTrajectoryQuery, &service_worker);

@@ -6,15 +6,15 @@
 IfcoScene::IfcoScene(const std::string& scene_graph_file, const std::string& kinematics_file) :
   UsecaseScene(scene_graph_file, kinematics_file)
 {
-  for (std::size_t i = 0; i < bullet_scene_->getNumModels(); ++i)
+  auto index = findModelIndexByName("ifco");
+  if (!index)
   {
-    auto model = bullet_scene_->getModel(i);
-    if (model->getName() == "ifco")
-    {
-      ifco_model_index_ = i;
-      break;
-    }
+    std::stringstream ss;
+    ss << "Ifco scene: ifco model not found in " << scene_graph_file;
+    throw std::runtime_error(ss.str());
   }
+
+  ifco_model_index_ = *index;
 }
 
 void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)

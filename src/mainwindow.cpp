@@ -25,3 +25,16 @@ Viewer *MainWindow::tabletopSceneViewer()
 {
   return ui->tabletop_scene_viewer;
 }
+
+void MainWindow::selectViewer(MainWindow::ViewerType type)
+{
+  switch (type)
+  {
+  case ViewerType::IfcoScene:
+    ui->stackedWidget->setCurrentWidget(ui->ifco_scene_viewer);
+    break;
+  case ViewerType::TabletopScene:
+    ui->stackedWidget->setCurrentWidget(ui->tabletop_scene_viewer);
+    break;
+  }
+}

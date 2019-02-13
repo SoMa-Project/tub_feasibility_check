@@ -35,7 +35,8 @@ public:
   }
 
 protected:
-  void createBoxesModel();
+  // TODO this might be available in coin somewhere
+  boost::optional<std::size_t> findModelIndexByName(const std::string& name) const;
 
   std::string scene_graph_file_;
   std::string kinematics_file_;

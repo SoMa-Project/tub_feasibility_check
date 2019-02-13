@@ -49,6 +49,7 @@ ${ROBLIB_INCLUDE_DIRS}
 add_service_files(
     FILES
     CheckKinematics.srv
+    CheckKinematicsTabletop.srv
     CerrtExample.srv
     VisualizeTrajectory.srv
 )
@@ -92,6 +93,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/workspace_checkers.cpp
         src/collision_specification.cpp
         src/usecase_scene.cpp
+        src/tabletop_scene.cpp
     )
 
 qt4_wrap_ui(UI_HEADERS src/mainwindow.ui)

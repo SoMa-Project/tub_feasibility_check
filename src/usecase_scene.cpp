@@ -86,8 +86,20 @@ void UsecaseScene::removeBoxes()
   current_color_ = colors_.begin();
 }
 
-UsecaseScene::UsecaseScene(const std::string& scene_graph_file, const std::string& kinematics_file) :
-  scene_graph_file_(scene_graph_file), kinematics_file_(kinematics_file)
+boost::optional<std::size_t> UsecaseScene::findModelIndexByName(const std::string& name) const
+{
+  for (std::size_t i = 0; i < bullet_scene_->getNumModels(); ++i)
+  {
+    auto model = bullet_scene_->getModel(i);
+    if (model->getName() == name)
+      return i;
+  }
+
+  return boost::none;
+}
+
+UsecaseScene::UsecaseScene(const std::string& scene_graph_file, const std::string& kinematics_file)
+  : scene_graph_file_(scene_graph_file), kinematics_file_(kinematics_file)
 {
   kinematics_.reset(rl::kin::Kinematics::create(kinematics_file));
   bullet_scene_.reset(new rl::sg::bullet::Scene);
