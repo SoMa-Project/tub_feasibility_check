@@ -1,5 +1,5 @@
 #include "service_worker.h"
-#include "MainWindow.h"
+#include "mainwindow.h"
 #include <ros/package.h>
 
 int main(int argc, char** argv)
@@ -18,16 +18,18 @@ int main(int argc, char** argv)
     n.param("/feasibility_check/kinematics_file", kinematics_file, default_root_dir + "/model/rlkin/"
                                                                                       "barrett-wam-rbohand2.xml");
 
+    auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(scene_graph_file, kinematics_file));
+    auto another_ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(scene_graph_file, kinematics_file));
+
     QApplication application(argc, argv);
     std::unique_ptr<MainWindow> main_window(new MainWindow);
-
-    std::unique_ptr<IfcoScene> ifco_scene(new IfcoScene(scene_graph_file, kinematics_file));
 
     bool hide_window;
     n.param("/feasibility_check/hide_window", hide_window, false);
     if (!hide_window)
     {
-      ifco_scene->connectToViewer(main_window->viewer);
+      ifco_scene->connectToViewer(main_window->ifcoSceneViewer());
+      another_ifco_scene->connectToViewer(main_window->tabletopSceneViewer());
       main_window->show();
     }
     else

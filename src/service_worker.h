@@ -21,7 +21,7 @@
 #include "tub_feasibility_check/CerrtExample.h"
 #include "tub_feasibility_check/VisualizeTrajectory.h"
 
-#include "MainWindow.h"
+#include "mainwindow.h"
 #include "bounding_box.h"
 #include "collision_specification.h"
 #include "workspace_checkers.h"

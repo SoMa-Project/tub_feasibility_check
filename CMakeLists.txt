@@ -27,6 +27,7 @@ find_package(Boost REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Qt4 COMPONENTS QtCore QtGui QtOpenGL)
 include(${QT_USE_FILE})
+include_directories(${CMAKE_BINARY_DIR})
 
 find_package(Bullet REQUIRED)
 find_package(SoQt REQUIRED)
@@ -81,7 +82,7 @@ target_link_libraries(workspace_checker_sampler_test
 
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
     set(SRCS
-        src/MainWindow.cpp
+        src/mainwindow.cpp
         src/kinematics_check.cpp
         src/Viewer.cpp
         src/ifco_scene.cpp
@@ -93,12 +94,15 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/usecase_scene.cpp
     )
 
+qt4_wrap_ui(UI_HEADERS src/mainwindow.ui)
+
     qt4_wrap_cpp(
         MOC_SRCS
         src/Viewer.h
         src/service_worker.h
         src/usecase_scene.h
         src/jacobian_controller.h
+        src/mainwindow.h
         OPTIONS
         -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
     )
@@ -107,6 +111,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         tub_feasibility_check
         ${SRCS}
         ${MOC_SRCS}
+        ${UI_HEADERS}
     )
 
     target_compile_definitions(
@@ -120,6 +125,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
     target_include_directories(
         tub_feasibility_check
         PUBLIC
+        src/
         ${Boost_INCLUDE_DIR}
         ${catkin_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
