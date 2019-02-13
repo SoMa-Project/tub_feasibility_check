@@ -16,61 +16,17 @@
 #include "Viewer.h"
 #include "utilities.h"
 #include "bounding_box.h"
+#include "usecase_scene.h"
 
-class IfcoScene : public QObject
+class IfcoScene : public UsecaseScene
 {
-  Q_OBJECT
 public:
-  ~IfcoScene();
-  static std::unique_ptr<IfcoScene> load(const std::string& scene_graph_file, const std::string& kinematics_file);
-
-  void connectToViewer(Viewer* new_viewer);
+  IfcoScene(const std::string& scene_graph_file_, const std::string& kinematics_file_);
 
   void moveIfco(const rl::math::Transform& ifco_pose);
-  void createBox(const std::string& name, const BoundingBox& box);
-  void removeBoxes();
-
-  std::shared_ptr<rl::kin::Kinematics> getKinematics() { return kinematics; }
-  std::shared_ptr<rl::sg::bullet::Scene> getBulletScene() { return bullet_scene; }
-  boost::optional<Viewer*> getViewer() { return viewer_; }
-
-  std::size_t dof() const
-  {
-    return kinematics->getDof();
-  }
 
 private:
-  IfcoScene() : QObject(nullptr)
-  {
-    qRegisterMetaType<rl::math::Vector>("rl::math::Vector");
-
-    // WARNING! the mistake in the typename string is intentional, this is the typename string that Qt 4.8.6 expects
-    qRegisterMetaType<std::function<void(rl::sg::Scene&)>>("std::function<void(rl::sg::Scene&");
-  }
-
-  /* Rotating colors used to visualize boxes in viewer. */
-  std::vector<std::array<float, 3>> colors = { { 0, 1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } };
-
-  /* Current color to visualize box in viewer. */
-  std::vector<std::array<float, 3>>::const_iterator current_color = colors.begin();
-
-  /* The transparency of the box in viewer. */
-  double box_transparency_ = 0.1;
-
-  std::string scene_graph_file;
-  std::string kinematics_file;
-
-  std::shared_ptr<rl::kin::Kinematics> kinematics;
-  std::shared_ptr<rl::sg::bullet::Scene> bullet_scene;
-
-  std::size_t ifco_model_index;
-
-  boost::optional<Viewer*> viewer_;
-
-signals:
-  void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);
-  void reset();
-  void drawConfiguration(const rl::math::Vector& config);
+  std::size_t ifco_model_index_;
 };
 
 #endif  // IFCO_SCENE_H

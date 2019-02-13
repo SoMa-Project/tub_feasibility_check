@@ -253,7 +253,6 @@ bool ServiceWorker::checkKinematicsQuery(tub_feasibility_check::CheckKinematics:
   {
     ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
     // when jacobian controller is successful, there is only one outcome in outcomes
-    auto outcome = result.outcomes.begin()->first;
 
     res.status = res.REACHED_INITIAL;
     res.final_configuration = utilities::eigenToStd(result.trajectory.back());

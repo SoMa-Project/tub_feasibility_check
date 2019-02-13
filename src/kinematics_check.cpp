@@ -18,10 +18,10 @@ int main(int argc, char** argv)
     n.param("/feasibility_check/kinematics_file", kinematics_file, default_root_dir + "/model/rlkin/"
                                                                                       "barrett-wam-rbohand2.xml");
 
-    auto ifco_scene = IfcoScene::load(scene_graph_file, kinematics_file);
-
     QApplication application(argc, argv);
     std::unique_ptr<MainWindow> main_window(new MainWindow);
+
+    std::unique_ptr<IfcoScene> ifco_scene(new IfcoScene(scene_graph_file, kinematics_file));
 
     bool hide_window;
     n.param("/feasibility_check/hide_window", hide_window, false);

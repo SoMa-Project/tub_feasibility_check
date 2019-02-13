@@ -90,13 +90,14 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/workspace_samplers.cpp
         src/workspace_checkers.cpp
         src/collision_specification.cpp
+        src/usecase_scene.cpp
     )
 
     qt4_wrap_cpp(
         MOC_SRCS
         src/Viewer.h
         src/service_worker.h
-        src/ifco_scene.h
+        src/usecase_scene.h
         src/jacobian_controller.h
         OPTIONS
         -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
