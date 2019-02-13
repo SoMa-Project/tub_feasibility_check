@@ -16,7 +16,12 @@ MainWindow::~MainWindow()
   delete ui;
 }
 
-Viewer *MainWindow::viewer()
+Viewer *MainWindow::ifcoSceneViewer()
 {
-  return ui->viewer;
+  return ui->ifco_scene_viewer;
+}
+
+Viewer *MainWindow::tabletopSceneViewer()
+{
+  return ui->tabletop_scene_viewer;
 }

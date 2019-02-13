@@ -19,6 +19,7 @@ int main(int argc, char** argv)
                                                                                       "barrett-wam-rbohand2.xml");
 
     auto ifco_scene = IfcoScene::load(scene_graph_file, kinematics_file);
+    auto another_ifco_scene = IfcoScene::load(scene_graph_file, kinematics_file);
 
     QApplication application(argc, argv);
     std::unique_ptr<MainWindow> main_window(new MainWindow);
@@ -27,7 +28,8 @@ int main(int argc, char** argv)
     n.param("/feasibility_check/hide_window", hide_window, false);
     if (!hide_window)
     {
-      ifco_scene->connectToViewer(main_window->viewer());
+      ifco_scene->connectToViewer(main_window->ifcoSceneViewer());
+      another_ifco_scene->connectToViewer(main_window->tabletopSceneViewer());
       main_window->show();
     }
     else

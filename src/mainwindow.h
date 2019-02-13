@@ -16,7 +16,8 @@ public:
   explicit MainWindow(QWidget *parent = 0);
   ~MainWindow();
 
-  Viewer* viewer();
+  Viewer* ifcoSceneViewer();
+  Viewer* tabletopSceneViewer();
 
 private:
   Ui::MainWindow *ui;

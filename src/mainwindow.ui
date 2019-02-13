@@ -16,13 +16,18 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="Viewer" name="viewer" native="true">
+     <widget class="QStackedWidget" name="stackedWidget">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="Viewer" name="ifco_scene_viewer"/>
+      <widget class="Viewer" name="tabletop_scene_viewer"/>
      </widget>
     </item>
    </layout>
