@@ -35,6 +35,7 @@
 			<ignore/>
 			<ignore idref="link1"/>
 		</link>
+		
 		<revolute id="joint0">
 			<frame>
 				<a idref="link0"/>
@@ -46,83 +47,88 @@
 				<a>0</a>
 				<alpha>0</alpha>
 			</dh>
-			<max>169.88199</max>
-			<min>-169.88199</min>
+			<max>169</max>
+			<min>-169</min>
 		</revolute>
 		<link id="link1">
 			<ignore idref="link0"/>
 			<ignore idref="link2"/>
 			<ignore idref="link3"/>
 		</link>
+		
 		<revolute id="joint1">
 			<frame>
 				<a idref="link1"/>
 				<b idref="link2"/>
 			</frame>
 			<dh>
-				<d>0</d>
+				<d>0.1505</d>
 				<theta>0</theta>
-				<a>0.1505</a>
-				<alpha>90</alpha>
+				<a>0</a>
+				<alpha>-90</alpha>
 			</dh>
-			<max>109.9506</max>
-			<min>-109.9506</min>
+			<max>109</max>
+			<min>-109</min>
 		</revolute>
 		<link id="link2">
 			<ignore idref="link1"/>
 			<ignore idref="link3"/>
 		</link>
+		
 		<revolute id="joint2">
 			<frame>
 				<a idref="link2"/>
 				<b idref="link3"/>
 			</frame>
 			<dh>
-				<d>0.290</d>
-				<theta>0</theta>
-				<a>0.0</a>
+				<d>0.</d>
+				<theta>-90</theta>
+				<a>0.29</a>
 				<alpha>0</alpha>
 			</dh>
-			<max>114.592</max>
-			<min>-114.592</min>
+			<max>114</max>
+			<min>-114</min>
 		</revolute>
+		
 		<link id="link3">
 			<ignore idref="link1"/>
 			<ignore idref="link2"/>
 			<ignore idref="link4"/>
 		</link>
+		
 		<revolute id="joint3">
 			<frame>
 				<a idref="link3"/>
 				<b idref="link4"/>
 			</frame>
 			<dh>
-				<d>0.1645</d>
-				<theta>0</theta>
+				<d>0</d>
+				<theta>90</theta>
 				<a>0</a>
 				<alpha>90</alpha>
 			</dh>
-			<max>169.88199</max>
-			<min>-169.88199</min>
+			<max>169</max>
+			<min>-169</min>
 		</revolute>
 		<link id="link4">
 			<ignore idref="link3"/>
 			<ignore idref="link5"/>
 			<ignore idref="link6"/>
 		</link>
+		
 		<revolute id="joint4">
 			<frame>
 				<a idref="link4"/>
 				<b idref="link5"/>
 			</frame>
 			<dh>
-				<d>0.0</d>
+				<d>0.31</d>
 				<theta>0</theta>
-				<a>0.1455</a>
-				<alpha>90</alpha>
+				<a>0</a>
+				<alpha>-90</alpha>
 			</dh>
-			<max>114.592</max>
-			<min>-114.592</min>
+			<max>114</max>
+			<min>-114</min>
 		</revolute>
 		<link id="link5">
 			<ignore idref="link4"/>
@@ -134,13 +140,13 @@
 				<b idref="link6"/>
 			</frame>
 			<dh>
-				<d>0.129</d>
+				<d>0</d>
 				<theta>0</theta>
 				<a>0</a>
 				<alpha>90</alpha>
 			</dh>
-			<max>169.88199</max>
-			<min>-169.88199</min>
+			<max>169</max>
+			<min>-169</min>
 		</revolute>
 		<link id="link6">
 			<ignore idref="link5"/>			
@@ -153,12 +159,12 @@
 			<rotation>
 				<x>0</x>
 				<y>0</y>
-                <z>-180</z>
+        <z>0</z>
 			</rotation>
 			<translation>
-                <x>0.03</x>
-                <y>0</y>
-                <z>0.096</z>
+        <x>0</x>
+        <y>0</y>
+        <z>0</z>
 			</translation>
 		</transform>
 		<frame id="tcp"/>
