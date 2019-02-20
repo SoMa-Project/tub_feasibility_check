@@ -63,10 +63,10 @@
 				<b idref="link2"/>
 			</frame>
 			<dh>
-				<d>0.0</d>
-				<theta>90</theta>
-				<a>0</a>
-				<alpha>-90</alpha>
+				<d>0</d>
+				<theta>0</theta>
+				<a>0.1505</a>
+				<alpha>90</alpha>
 			</dh>
 			<max>109</max>
 			<min>-109</min>
@@ -83,9 +83,9 @@
 				<b idref="link3"/>
 			</frame>
 			<dh>
-				<d>0.</d>
-				<theta>90</theta>
-				<a>0.1505</a>
+				<d>0.29</d>
+				<theta>0</theta>
+				<a>0</a>
 				<alpha>0</alpha>
 			</dh>
 			<max>114</max>
@@ -104,7 +104,7 @@
 				<b idref="link4"/>
 			</frame>
 			<dh>
-				<d>0.4545</d>
+				<d>0.1645</d>
 				<theta>0</theta>
 				<a>0</a>
 				<alpha>90</alpha>
@@ -126,8 +126,8 @@
 			<dh>
 				<d>0.0</d>
 				<theta>0</theta>
-				<a>0</a>
-				<alpha>-90</alpha>
+				<a>0.1455</a>
+				<alpha>90</alpha>
 			</dh>
 			<max>114</max>
 			<min>-114</min>
@@ -142,7 +142,7 @@
 				<b idref="link6"/>
 			</frame>
 			<dh>
-				<d>0.1455</d>
+				<d>0.129</d>
 				<theta>0</theta>
 				<a>0</a>
 				<alpha>90</alpha>
@@ -166,7 +166,7 @@
 			<translation>
         <x>0</x>
         <y>0</y>
-        <z>0.0</z>
+        <z>0</z>
 			</translation>
 		</transform>
 		<frame id="tcp"/>
