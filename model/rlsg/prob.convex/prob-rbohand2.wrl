@@ -19,8 +19,8 @@ Transform {
 		}
 		
 		DEF link2 Transform {
-  		rotation 1 0 0 -1.570796    		
-			translation 0.0 0 0.6525			
+		  rotation 1 0 0 1.570796 
+			translation 0.0 0 0.3625			
 			children [
 				Inline {
 					url "link2.wrl"
