@@ -161,13 +161,13 @@
 			<rotation>
 				<x>0</x>
 				<y>0</y>
-        <z>0</z>
+				<z>-180</z>			
 			</rotation>
 			<translation>
-        <x>0</x>
+        <x>0.03</x>
         <y>0</y>
-        <z>0.0</z>
-			</translation>
+        <z>0.13</z>
+                        </translation>
 		</transform>
 		<frame id="tcp"/>
 	</kinematics>

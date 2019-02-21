@@ -4,7 +4,7 @@ Transform
 {
 translation 0.0 0 -0.0
 children 
-Shape
+DEF tabletop Shape
   {
   appearance Appearance
     {
