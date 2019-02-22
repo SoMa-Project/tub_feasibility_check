@@ -9,6 +9,7 @@
 #include "workspace_samplers.h"
 #include "workspace_checkers.h"
 #include "collision_specification.h"
+#include "process_table.h"
 
 typedef std::pair<std::string, geometry_msgs::Pose> ContainerNameAndPose;
 
@@ -192,6 +193,25 @@ boost::optional<CheckKinematicsParameters> processQueryParameters(const Request&
   result.collision_specification = WorldPartsCollisions(part_to_type);
 
   return result;
+}
+
+std::vector<Edge> createEdgesFromFrames(const tub_feasibility_check::CheckKinematicsTabletopRequest& request)
+{
+  std::vector<Eigen::Affine3d> edge_frames(request.edge_frames.size());
+  for (std::size_t i = 0; i < request.edge_frames.size(); ++i)
+    tf::poseMsgToEigen(request.edge_frames[i], edge_frames[i]);
+
+  auto lines = convertEdgeFramesToLines(edge_frames);
+  std::vector<std::vector<LineIntersection>> line_intersections(lines.size());
+  for (std::size_t i = 0; i < lines.size(); ++i)
+    for (std::size_t j = 0; j < lines.size(); ++j)
+      if (i != j)
+        line_intersections[i].push_back(findLineIntersection(lines[i], lines[j]));
+
+  auto edges = createEdgesFromIntersections(line_intersections, lines);
+  auto loose_points = findLoosePoints(edges);
+  Eigen::Vector3d table_center_in_edges_plane = projectIntoEdgesPlane(request.table_pose.position, edges, lines);
+  bool center_inside = isCenterInside(table_center_in_edges_plane, edges, *loose_points);
 }
 
 #endif  // CHECK_KINEMATICS_PARAMETER_CHECK_H
