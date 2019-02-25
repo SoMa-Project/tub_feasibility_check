@@ -248,14 +248,23 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   emit drawNamedFrame(parameters->goal_pose, "goal");
   emit drawNamedFrame(parameters->container_pose, "table");
 
-  ROS_INFO("Setting ifco pose and creating bounding boxes");
-  tabletop_scene->moveTable(parameters->container_pose);
+  ROS_INFO("Creating bounding boxes");
   tabletop_scene->removeBoxes();
   for (auto name_and_box : parameters->name_to_object_bounding_box)
   {
     tabletop_scene->createBox(name_and_box.first, name_and_box.second);
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
   }
+
+  auto table_description = createTableFromFrames(req);
+  if (!table_description)
+  {
+    ROS_ERROR("Not enough edges to construct a table! Aborting");
+    return false;
+  }
+
+  ROS_INFO("Constructing a table");
+  tabletop_scene->createTable(*table_description);
 
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(tabletop_scene->getKinematics(), tabletop_scene->getBulletScene(), delta,

@@ -14,7 +14,7 @@ LineIntersection findLineIntersection(const Line& line1, const Line& line2)
   }
 
   Eigen::Vector3d b = line2.base - line1.base;
-  Eigen::Vector2d ts = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+  Eigen::Vector2d ts = A.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV).solve(b);
 
   LineIntersection intersection;
   intersection.distances_along_lines[0] = ts(0);
@@ -76,8 +76,6 @@ boost::optional<LoosePoints> findLoosePoints(const std::vector<Edge>& edges)
 {
   std::list<Eigen::Vector3d> points;
   auto removeOrAdd = [&points](const Eigen::Vector3d& point) {
-    bool something_removed = false;
-
     for (auto it = points.begin(); it != points.end(); ++it)
     {
       if (it->isApprox(point))
@@ -117,7 +115,7 @@ Eigen::Vector3d projectIntoEdgesPlane(const Eigen::Vector3d& point, const std::v
   }
 
   Eigen::Vector3d b = point - lines[0].base;
-  Eigen::Vector2d ts = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+  Eigen::Vector2d ts = A.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV).solve(b);
 
   return lines[0].base + ts(0) * lines[0].direction + ts(1) * lines[1].direction;
 }

@@ -20,9 +20,10 @@ float64[] initial_configuration
 # The goal pose of the end effector in the robot base frame.
 geometry_msgs/Pose goal_pose
 
-# The pose of the IFCO container in the robot base frame.
+# The pose of the table in the robot base frame.
 geometry_msgs/Pose table_pose
 
+# EdgeGrasp frames that are used to construct a table
 geometry_msgs/Pose[] edge_frames
 
 # An array of bounding boxes with poses. Check BoundingBoxWithPose.msg

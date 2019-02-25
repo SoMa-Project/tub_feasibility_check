@@ -23,6 +23,12 @@ struct LineIntersection
   std::array<double, 2> distances_along_lines;
 };
 
+struct TableDescription
+{
+  std::vector<Eigen::Vector3d> points;
+  Eigen::Vector3d normal;
+};
+
 typedef std::pair<Eigen::Vector3d, Eigen::Vector3d> LoosePoints;
 
 std::vector<Line> convertEdgeFramesToLines(const std::vector<Eigen::Affine3d>& edge_frames);

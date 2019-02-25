@@ -1,7 +1,9 @@
 #ifndef CHECK_KINEMATICS_PARAMETER_CHECK_H
 #define CHECK_KINEMATICS_PARAMETER_CHECK_H
 
+#include <ros/ros.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <list>
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
 
@@ -195,7 +197,8 @@ boost::optional<CheckKinematicsParameters> processQueryParameters(const Request&
   return result;
 }
 
-std::vector<Edge> createEdgesFromFrames(const tub_feasibility_check::CheckKinematicsTabletopRequest& request)
+boost::optional<TableDescription>
+createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopRequest& request)
 {
   std::vector<Eigen::Affine3d> edge_frames(request.edge_frames.size());
   for (std::size_t i = 0; i < request.edge_frames.size(); ++i)
@@ -210,8 +213,58 @@ std::vector<Edge> createEdgesFromFrames(const tub_feasibility_check::CheckKinema
 
   auto edges = createEdgesFromIntersections(line_intersections, lines);
   auto loose_points = findLoosePoints(edges);
-  Eigen::Vector3d table_center_in_edges_plane = projectIntoEdgesPlane(request.table_pose.position, edges, lines);
+
+  if (!edges.size())
+    return boost::none;
+
+  auto convertEdgesToTableDescription = [edge_frames, edges]() {
+    TableDescription table_description;
+    Eigen::Vector3d current = edges.front().start;
+    std::list<Edge> edge_list(edges.begin(), edges.end());
+
+    while(!edge_list.empty())
+    {
+      table_description.points.push_back(current);
+      for (auto it = edge_list.begin(); it != edge_list.end(); ++it)
+      {
+        auto edge = *it;
+
+        if (edge.start.isApprox(current))
+        {
+          current = edge.end;
+          edge_list.erase(it);
+          break;
+        }
+        else if (edge.end.isApprox(current))
+        {
+          current = edge.start;
+          edge_list.erase(it);
+          break;
+        }
+      }
+    }
+
+    table_description.normal = edge_frames.front() * Eigen::Vector3d::UnitZ();
+    return table_description;
+  };
+
+  if (!loose_points)
+    return convertEdgesToTableDescription();
+
+  Eigen::Vector3d table_pose_position;
+  tf::pointMsgToEigen(request.table_pose.position, table_pose_position);
+  Eigen::Vector3d table_center_in_edges_plane = projectIntoEdgesPlane(table_pose_position, edges, lines);
   bool center_inside = isCenterInside(table_center_in_edges_plane, edges, *loose_points);
+
+  if (center_inside)
+    edges.emplace_back(Edge{ loose_points->first, loose_points->second });
+  else
+  {
+    edges.emplace_back(Edge{ loose_points->first, table_center_in_edges_plane });
+    edges.emplace_back(Edge{ table_center_in_edges_plane, loose_points->second });
+  }
+
+  return convertEdgesToTableDescription();
 }
 
 #endif  // CHECK_KINEMATICS_PARAMETER_CHECK_H
