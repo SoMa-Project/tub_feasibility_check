@@ -75,31 +75,33 @@ std::vector<Edge> createEdgesFromIntersections(const std::vector<std::vector<Lin
 boost::optional<LoosePoints> findLoosePoints(const std::vector<Edge>& edges)
 {
   std::list<Eigen::Vector3d> points;
-  auto removeOrAdd = [&points](const Eigen::Vector3d& point) {
-    for (auto it = points.begin(); it != points.end(); ++it)
-    {
-      if (it->isApprox(point))
-      {
-        it = points.erase(it);
-        return;
-      }
-
-      points.push_back(point);
-    }
-  };
 
   for (auto& edge : edges)
-  {
-    removeOrAdd(edge.start);
-    removeOrAdd(edge.end);
-  }
+    for (auto point : { edge.start, edge.end })
+    {
+      bool duplicate_removed = false;
+
+      for (auto it = points.begin(); it != points.end(); ++it)
+      {
+        if (it->isApprox(point))
+        {
+          it = points.erase(it);
+          duplicate_removed = true;
+          break;
+        }
+      }
+
+      if (!duplicate_removed)
+        points.push_back(point);
+    }
 
   if (points.empty())
     return boost::none;
 
   assert(points.size() == 2);
 
-  return std::make_pair(points.front(), *(std::next(points.begin())));
+  auto pair = std::make_pair(points.front(), points.back());
+  return pair;
 }
 
 Eigen::Vector3d projectIntoEdgesPlane(const Eigen::Vector3d& point, const std::vector<Edge>& edges,

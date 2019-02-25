@@ -38,17 +38,43 @@ void TabletopScene::createFixedTable(const rl::math::Transform& table_pose)
 
 void TabletopScene::createTableFromEdges(const TableDescription& table_description)
 {
-  std::vector<SbVec3f> points(table_description.points.size());
-  std::vector<int32_t> indices(points.size() + 2);
+  std::vector<SbVec3f> points(table_description.points.size() * 2);
+  std::vector<int32_t> indices(table_description.points.size() * 8 + 4);
 
-  for (std::size_t i = 0; i < points.size(); ++i)
+  for (std::size_t i = 0; i < table_description.points.size(); ++i)
+  {
     points[i].setValue(table_description.points[i].x(), table_description.points[i].y(),
                        table_description.points[i].z());
+    Eigen::Vector3d downward_point = table_description.points[i] - table_description.normal.normalized() * TableHeight;
+    points[table_description.points.size() + i].setValue(downward_point.x(), downward_point.y(), downward_point.z());
+  }
 
-  for (std::size_t i = 0; i < points.size(); ++i)
+  // upper face
+  for (std::size_t i = 0; i < table_description.points.size(); ++i)
     indices[i] = i;
-  indices[points.size()] = 0;
-  indices[points.size() + 1] = -1;
+  indices[table_description.points.size()] = 0;
+  indices[table_description.points.size() + 1] = -1;
+  const std::size_t bottom_face_start = table_description.points.size() + 2;
+
+  // bottom face
+  for (std::size_t i = 0; i < table_description.points.size(); ++i)
+    indices[bottom_face_start + i] = 2 * table_description.points.size() - i - 1;
+
+  indices[bottom_face_start + table_description.points.size()] = table_description.points.size();
+  indices[bottom_face_start + table_description.points.size() + 1] = -1;
+
+  std::size_t current_position_in_indices = bottom_face_start + table_description.points.size() + 2;
+  // side faces
+  for (std::size_t i = 0; i < table_description.points.size(); ++i)
+  {
+    indices[current_position_in_indices++] = i;
+    indices[current_position_in_indices++] = i + table_description.points.size();
+    indices[current_position_in_indices++] =
+        (i + 1) % table_description.points.size() + table_description.points.size();
+    indices[current_position_in_indices++] = (i + 1) % table_description.points.size();
+    indices[current_position_in_indices++] = i;
+    indices[current_position_in_indices++] = -1;
+  }
 
   auto createTablePolygon = [this, table_description, points, indices](rl::sg::Scene& scene) {
     auto tabletop_model = scene.getModel(table_model_index_);

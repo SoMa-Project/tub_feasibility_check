@@ -217,7 +217,7 @@ createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopReques
   if (!edges.size())
     return boost::none;
 
-  auto convertEdgesToTableDescription = [edge_frames, edges]() {
+  auto convertEdgesToTableDescription = [&edge_frames, &edges]() {
     TableDescription table_description;
     Eigen::Vector3d current = edges.front().start;
     std::list<Edge> edge_list(edges.begin(), edges.end());

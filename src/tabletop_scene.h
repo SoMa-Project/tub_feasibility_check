@@ -15,6 +15,8 @@ public:
   void createTableFromEdges(const TableDescription& table_description);
 
 private:
+  const double TableHeight = 0.02;
+
   std::size_t table_model_index_;
   SoVRMLGroup* table_vrml_group_;
 };
