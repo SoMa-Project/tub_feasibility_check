@@ -256,15 +256,23 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
   }
 
-  auto table_description = createTableFromFrames(req);
-  if (!table_description)
+  if (req.table_from_edges)
   {
-    ROS_ERROR("Not enough edges to construct a table! Aborting");
-    return false;
-  }
+    auto table_description = createTableFromFrames(req);
+    if (!table_description)
+    {
+      ROS_ERROR("Not enough edges to construct a table! Aborting");
+      return false;
+    }
 
-  ROS_INFO("Constructing a table");
-  tabletop_scene->createTable(*table_description);
+    ROS_INFO("Constructing a table from edges");
+    tabletop_scene->createTableFromEdges(*table_description);
+  }
+  else
+  {
+    ROS_INFO("Construction a fixed table");
+    tabletop_scene->createFixedTable(parameters->container_pose);
+  }
 
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(tabletop_scene->getKinematics(), tabletop_scene->getBulletScene(), delta,

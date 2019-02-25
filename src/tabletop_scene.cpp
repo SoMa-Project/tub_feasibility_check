@@ -2,31 +2,41 @@
 #include <Inventor/VRMLnodes/SoVRMLCoordinate.h>
 #include "tabletop_scene.h"
 
-TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::string& kinematics_file)
+TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::string& fixed_table_file,
+                             const std::string& kinematics_file)
   : UsecaseScene(scene_graph_file, kinematics_file)
 {
-  auto index = findModelIndexByName("tabletop");
-  if (!index)
-  {
-    std::stringstream ss;
-    ss << "Tabletop scene: no tabletop found in " << scene_graph_file;
-    throw std::runtime_error(ss.str());
-  }
+  SoInput in;
+  if (!in.openFile(fixed_table_file.c_str()))
+    throw std::runtime_error("Error reading fixed table");
 
-  table_model_index_ = *index;
+  table_vrml_group_ = SoDB::readAllVRML(&in);
+
+  auto model_index = findModelIndexByName("tabletop");
+  if (!model_index)
+    throw std::runtime_error("Failed to find tabletop model");
+
+  table_model_index_ = *model_index;
 }
 
-void TabletopScene::moveTable(const rl::math::Transform& table_pose)
+void TabletopScene::createFixedTable(const rl::math::Transform& table_pose)
 {
   auto findAndMoveIfco = [this, table_pose](rl::sg::Scene& scene) {
-    scene.getModel(table_model_index_)->getBody(0)->setFrame(table_pose);
+    auto tabletop_model = scene.getModel(table_model_index_);
+    for (std::size_t i = 0; i < tabletop_model->getNumBodies(); ++i)
+      tabletop_model->remove(tabletop_model->getBody(i));
+
+    auto sg_body = tabletop_model->create();
+    auto sg_shape = sg_body->create(dynamic_cast<SoVRMLShape*>(table_vrml_group_->getChild(0)));
+    sg_shape->setName("fixed_tabletop");
+    sg_shape->setTransform(table_pose);
   };
 
   findAndMoveIfco(*bullet_scene_);
   emit applyFunctionToScene(findAndMoveIfco);
 }
 
-void TabletopScene::createTable(const TableDescription& table_description)
+void TabletopScene::createTableFromEdges(const TableDescription& table_description)
 {
   std::vector<SbVec3f> points(table_description.points.size());
   std::vector<int32_t> indices(points.size() + 2);
@@ -41,14 +51,18 @@ void TabletopScene::createTable(const TableDescription& table_description)
   indices[points.size() + 1] = -1;
 
   auto createTablePolygon = [this, table_description, points, indices](rl::sg::Scene& scene) {
-    auto body = scene.getModel(table_model_index_)->create();
+    auto tabletop_model = scene.getModel(table_model_index_);
+    for (std::size_t i = 0; i < tabletop_model->getNumBodies(); ++i)
+      tabletop_model->remove(tabletop_model->getBody(i));
+
+    auto body = tabletop_model->create();
     auto shape = new SoVRMLShape;
     auto face_set = new SoVRMLIndexedFaceSet;
     auto appearance = new SoVRMLAppearance;
     auto material = new SoVRMLMaterial;
     auto coordinate = new SoVRMLCoordinate;
 
-    material->diffuseColor.setValue(1, 0, 0);
+    material->diffuseColor.setValue(0, 1, 0);
     appearance->material.setValue(material);
 
     coordinate->point.setValues(0, points.size(), points.data());

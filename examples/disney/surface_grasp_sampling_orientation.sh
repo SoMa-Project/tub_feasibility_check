@@ -17,6 +17,7 @@ goal_pose:
 table_pose:
   position: {x: 0.18, y: 0.6, z: 0.146}
   orientation: {x: 0.0, y: 0.0, z: 0.7071068, w: 0.7071068}
+table_from_edges: false
 edge_frames:
 - position:
     x: -0.362667769194

@@ -23,6 +23,9 @@ geometry_msgs/Pose goal_pose
 # The pose of the table in the robot base frame.
 geometry_msgs/Pose table_pose
 
+# Whether to use predefined table model or construct table from edge_frames
+bool table_from_edges
+
 # EdgeGrasp frames that are used to construct a table
 geometry_msgs/Pose[] edge_frames
 

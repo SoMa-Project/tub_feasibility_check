@@ -24,7 +24,8 @@ int main(int argc, char** argv)
                                                                                       "barrett-wam-rbohand2.xml");
 
     auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(ifco_scene_graph_file, kinematics_file));
-    auto tabletop_scene = std::unique_ptr<TabletopScene>(new TabletopScene(tabletop_scene_graph_file, kinematics_file));
+    auto tabletop_scene = std::unique_ptr<TabletopScene>(
+        new TabletopScene(tabletop_scene_graph_file, default_root_dir + "/model/rlsg/tabletop.wrl", kinematics_file));
 
     QApplication application(argc, argv);
     MainWindow main_window(new MainWindow);
