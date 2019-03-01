@@ -13,9 +13,10 @@ public:
 
   void createFixedTable(const rl::math::Transform& table_pose);
   void createTableFromEdges(const TableDescription& table_description);
+  void setFromEdgesTableHeight(double table_height);
 
 private:
-  const double TableHeight = 0.02;
+  double from_edges_table_height_ = 0.02;
 
   std::size_t table_model_index_;
   SoVRMLGroup* table_vrml_group_;

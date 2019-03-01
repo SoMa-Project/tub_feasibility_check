@@ -21,7 +21,7 @@ float64[] initial_configuration
 geometry_msgs/Pose goal_pose
 
 # The pose of the table in the robot base frame.
-geometry_msgs/Pose table_pose
+geometry_msgs/Pose table_surface_pose
 
 # Whether to use predefined table model or construct table from edge_frames
 bool table_from_edges

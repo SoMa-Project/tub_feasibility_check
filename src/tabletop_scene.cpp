@@ -21,7 +21,7 @@ TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::str
 
 void TabletopScene::createFixedTable(const rl::math::Transform& table_pose)
 {
-  auto findAndMoveIfco = [this, table_pose](rl::sg::Scene& scene) {
+  auto createTableBox = [this, table_pose](rl::sg::Scene& scene) {
     auto tabletop_model = scene.getModel(table_model_index_);
     for (std::size_t i = 0; i < tabletop_model->getNumBodies(); ++i)
       tabletop_model->remove(tabletop_model->getBody(i));
@@ -32,8 +32,8 @@ void TabletopScene::createFixedTable(const rl::math::Transform& table_pose)
     sg_shape->setTransform(table_pose);
   };
 
-  findAndMoveIfco(*bullet_scene_);
-  emit applyFunctionToScene(findAndMoveIfco);
+  createTableBox(*bullet_scene_);
+  emit applyFunctionToScene(createTableBox);
 }
 
 void TabletopScene::createTableFromEdges(const TableDescription& table_description)
@@ -45,7 +45,7 @@ void TabletopScene::createTableFromEdges(const TableDescription& table_descripti
   {
     points[i].setValue(table_description.points[i].x(), table_description.points[i].y(),
                        table_description.points[i].z());
-    Eigen::Vector3d downward_point = table_description.points[i] - table_description.normal.normalized() * TableHeight;
+    Eigen::Vector3d downward_point = table_description.points[i] - table_description.normal.normalized() * from_edges_table_height_;
     points[table_description.points.size() + i].setValue(downward_point.x(), downward_point.y(), downward_point.z());
   }
 
@@ -105,4 +105,9 @@ void TabletopScene::createTableFromEdges(const TableDescription& table_descripti
 
   createTablePolygon(*bullet_scene_);
   emit applyFunctionToScene(createTablePolygon);
+}
+
+void TabletopScene::setFromEdgesTableHeight(double table_height)
+{
+  from_edges_table_height_ = table_height;
 }
