@@ -251,9 +251,9 @@ createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopReques
   if (!loose_points)
     return convertEdgesToTableDescription();
 
-  Eigen::Vector3d table_pose_position;
-  tf::pointMsgToEigen(request.table_pose.position, table_pose_position);
-  Eigen::Vector3d table_center_in_edges_plane = projectIntoEdgesPlane(table_pose_position, edges, lines);
+  Eigen::Vector3d table_surface_pose_position;
+  tf::pointMsgToEigen(request.table_surface_pose.position, table_surface_pose_position);
+  Eigen::Vector3d table_center_in_edges_plane = projectIntoEdgesPlane(table_surface_pose_position, edges, lines);
   bool center_inside = isCenterInside(table_center_in_edges_plane, edges, *loose_points);
 
   if (center_inside)

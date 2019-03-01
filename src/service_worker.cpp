@@ -236,7 +236,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"table_pose", req.table_pose}, tabletop_scene->dof());
+  auto parameters = processQueryParameters(req, {"table_pose", req.table_surface_pose}, tabletop_scene->dof());
   if (!parameters)
     return false;
 

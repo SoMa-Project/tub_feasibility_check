@@ -8,15 +8,14 @@
 class TabletopScene : public UsecaseScene
 {
 public:
-  TabletopScene(const std::string& scene_graph_file, const std::string& fixed_table_file,
-                const std::string& kinematics_file);
+  TabletopScene(const std::string& scene_graph_file, const std::string& kinematics_file,
+                std::array<double, 3> fixed_table_dimensions);
 
   void createFixedTable(const rl::math::Transform& table_pose);
   void createTableFromEdges(const TableDescription& table_description);
-  void setFromEdgesTableHeight(double table_height);
 
 private:
-  double from_edges_table_height_ = 0.02;
+  std::array<double, 3> fixed_table_dimensions_;
 
   std::size_t table_model_index_;
   SoVRMLGroup* table_vrml_group_;

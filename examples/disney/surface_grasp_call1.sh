@@ -14,7 +14,7 @@ initial_configuration: [1.44862328, 0.40142573, 0.75049158, 0, 1.43116999, 0]
 goal_pose:
   position: {x: 0, y: 0.52, z: 0.190}
   orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
-table_pose:
+table_surface_pose:
   position:
     x: -0.029503589496
     y: 0.0248198062181

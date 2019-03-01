@@ -1,17 +1,12 @@
 #include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
+#include <Inventor/VRMLnodes/SoVRMLBox.h>
 #include <Inventor/VRMLnodes/SoVRMLCoordinate.h>
 #include "tabletop_scene.h"
 
-TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::string& fixed_table_file,
-                             const std::string& kinematics_file)
-  : UsecaseScene(scene_graph_file, kinematics_file)
+TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::string& kinematics_file,
+                             std::array<double, 3> fixed_table_dimensions)
+  : UsecaseScene(scene_graph_file, kinematics_file), fixed_table_dimensions_(fixed_table_dimensions)
 {
-  SoInput in;
-  if (!in.openFile(fixed_table_file.c_str()))
-    throw std::runtime_error("Error reading fixed table");
-
-  table_vrml_group_ = SoDB::readAllVRML(&in);
-
   auto model_index = findModelIndexByName("tabletop");
   if (!model_index)
     throw std::runtime_error("Failed to find tabletop model");
@@ -19,17 +14,31 @@ TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::str
   table_model_index_ = *model_index;
 }
 
-void TabletopScene::createFixedTable(const rl::math::Transform& table_pose)
+void TabletopScene::createFixedTable(const rl::math::Transform& table_surface_pose)
 {
-  auto createTableBox = [this, table_pose](rl::sg::Scene& scene) {
+  auto createTableBox = [this, table_surface_pose](rl::sg::Scene& scene) {
     auto tabletop_model = scene.getModel(table_model_index_);
     for (std::size_t i = 0; i < tabletop_model->getNumBodies(); ++i)
       tabletop_model->remove(tabletop_model->getBody(i));
 
-    auto sg_body = tabletop_model->create();
-    auto sg_shape = sg_body->create(dynamic_cast<SoVRMLShape*>(table_vrml_group_->getChild(0)));
-    sg_shape->setName("fixed_tabletop");
-    sg_shape->setTransform(table_pose);
+    auto body = tabletop_model->create();
+    auto vrml_shape = new SoVRMLShape;
+    auto appearance = new SoVRMLAppearance;
+    auto material = new SoVRMLMaterial;
+    auto vrml_box = new SoVRMLBox;
+    material->diffuseColor.setValue(0, 1, 0);
+    material->transparency.setValue(0);
+    appearance->material.setValue(material);
+    vrml_shape->appearance.setValue(appearance);
+
+    vrml_box->size.setValue(fixed_table_dimensions_[0], fixed_table_dimensions_[1], fixed_table_dimensions_[2]);
+    vrml_shape->geometry.setValue(vrml_box);
+
+    auto sg_shape = body->create(vrml_shape);
+    auto table_center_pose(table_surface_pose);
+    table_center_pose.translate(-Eigen::Vector3d::UnitZ() * fixed_table_dimensions_[2] / 2);
+    sg_shape->setTransform(table_center_pose);
+    sg_shape->setName("tabletop");
   };
 
   createTableBox(*bullet_scene_);
@@ -45,7 +54,8 @@ void TabletopScene::createTableFromEdges(const TableDescription& table_descripti
   {
     points[i].setValue(table_description.points[i].x(), table_description.points[i].y(),
                        table_description.points[i].z());
-    Eigen::Vector3d downward_point = table_description.points[i] - table_description.normal.normalized() * from_edges_table_height_;
+    Eigen::Vector3d downward_point =
+        table_description.points[i] - table_description.normal.normalized() * fixed_table_dimensions_[2];
     points[table_description.points.size() + i].setValue(downward_point.x(), downward_point.y(), downward_point.z());
   }
 
@@ -105,9 +115,4 @@ void TabletopScene::createTableFromEdges(const TableDescription& table_descripti
 
   createTablePolygon(*bullet_scene_);
   emit applyFunctionToScene(createTablePolygon);
-}
-
-void TabletopScene::setFromEdgesTableHeight(double table_height)
-{
-  from_edges_table_height_ = table_height;
 }
