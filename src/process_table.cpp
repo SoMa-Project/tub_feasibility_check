@@ -164,3 +164,21 @@ std::vector<Line> convertEdgeFramesToLines(const std::vector<Eigen::Affine3d>& e
 
   return lines;
 }
+
+Eigen::Vector3d correctNormal(const Eigen::Vector3d& almost_normal, const Line& line1, const Line& line2)
+{
+  Eigen::Matrix<double, 3, 3> vectors_matrix;
+  for (std::size_t i = 0; i < 3; ++i)
+  {
+    vectors_matrix(0, i) = line1.direction(i);
+    vectors_matrix(1, i) = line2.direction(i);
+    vectors_matrix(2, i) = 1;
+  }
+
+  auto b = Eigen::Vector3d(0, 0, 1);
+  Eigen::Vector3d common_normal =
+      vectors_matrix.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV).solve(b).normalized();
+
+  // pick the direction so it is the same with almost_normal
+  return common_normal.dot(almost_normal) > 0 ? common_normal : Eigen::Vector3d(-common_normal);
+}

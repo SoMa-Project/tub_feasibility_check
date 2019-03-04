@@ -214,10 +214,10 @@ createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopReques
   auto edges = createEdgesFromIntersections(line_intersections, lines);
   auto loose_points = findLoosePoints(edges);
 
-  if (!edges.size())
+  if (edges.size() < 2)
     return boost::none;
 
-  auto convertEdgesToTableDescription = [&edge_frames, &edges]() {
+  auto convertEdgesToTableDescription = [&edge_frames, &edges, &lines]() {
     TableDescription table_description;
     Eigen::Vector3d current = edges.front().start;
     std::list<Edge> edge_list(edges.begin(), edges.end());
@@ -244,7 +244,7 @@ createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopReques
       }
     }
 
-    table_description.normal = edge_frames.front() * Eigen::Vector3d::UnitZ();
+    table_description.normal = correctNormal(edge_frames.front() * Eigen::Vector3d::UnitZ(), lines[0], lines[1]);
     return table_description;
   };
 
