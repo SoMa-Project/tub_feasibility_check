@@ -1,5 +1,6 @@
 #include <Eigen/Dense>
 #include <list>
+#include <eigen_conversions/eigen_msg.h>
 #include "process_table.h"
 
 typedef Eigen::Matrix<double, 3, 2> IntersectionMatrix;
@@ -181,4 +182,74 @@ Eigen::Vector3d correctNormal(const Eigen::Vector3d& almost_normal, const Line& 
 
   // pick the direction so it is the same with almost_normal
   return common_normal.dot(almost_normal) > 0 ? common_normal : Eigen::Vector3d(-common_normal);
+}
+
+boost::optional<TableDescription>
+createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopRequest& request)
+{
+  std::vector<Eigen::Affine3d> edge_frames(request.edge_frames.size());
+  for (std::size_t i = 0; i < request.edge_frames.size(); ++i)
+    tf::poseMsgToEigen(request.edge_frames[i], edge_frames[i]);
+
+  auto lines = convertEdgeFramesToLines(edge_frames);
+  std::vector<std::vector<LineIntersection>> line_intersections(lines.size());
+  for (std::size_t i = 0; i < lines.size(); ++i)
+    for (std::size_t j = 0; j < lines.size(); ++j)
+      if (i != j)
+        line_intersections[i].push_back(findLineIntersection(lines[i], lines[j]));
+
+  auto edges = createEdgesFromIntersections(line_intersections, lines);
+  auto loose_points = findLoosePoints(edges);
+
+  if (edges.size() < 2)
+    return boost::none;
+
+  auto convertEdgesToTableDescription = [&edge_frames, &edges, &lines]() {
+    TableDescription table_description;
+    Eigen::Vector3d current = edges.front().start;
+    std::list<Edge> edge_list(edges.begin(), edges.end());
+
+    while(!edge_list.empty())
+    {
+      table_description.points.push_back(current);
+      for (auto it = edge_list.begin(); it != edge_list.end(); ++it)
+      {
+        auto edge = *it;
+
+        if (edge.start.isApprox(current))
+        {
+          current = edge.end;
+          edge_list.erase(it);
+          break;
+        }
+        else if (edge.end.isApprox(current))
+        {
+          current = edge.start;
+          edge_list.erase(it);
+          break;
+        }
+      }
+    }
+
+    table_description.normal = correctNormal(edge_frames.front() * Eigen::Vector3d::UnitZ(), lines[0], lines[1]);
+    return table_description;
+  };
+
+  if (!loose_points)
+    return convertEdgesToTableDescription();
+
+  Eigen::Vector3d table_surface_pose_position;
+  tf::pointMsgToEigen(request.table_surface_pose.position, table_surface_pose_position);
+  Eigen::Vector3d table_center_in_edges_plane = projectIntoEdgesPlane(table_surface_pose_position, edges, lines);
+  bool center_inside = isCenterInside(table_center_in_edges_plane, edges, *loose_points);
+
+  if (center_inside)
+    edges.emplace_back(Edge{ loose_points->first, loose_points->second });
+  else
+  {
+    edges.emplace_back(Edge{ loose_points->first, table_center_in_edges_plane });
+    edges.emplace_back(Edge{ table_center_in_edges_plane, loose_points->second });
+  }
+
+  return convertEdgesToTableDescription();
 }

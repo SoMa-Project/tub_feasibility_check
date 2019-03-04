@@ -3,6 +3,7 @@
 
 #include <Eigen/Core>
 #include <boost/optional.hpp>
+#include "tub_feasibility_check/CheckKinematicsTabletopRequest.h"
 
 struct Line
 {
@@ -40,5 +41,8 @@ Eigen::Vector3d projectIntoEdgesPlane(const Eigen::Vector3d& point, const std::v
                                       const std::vector<Line>& lines);
 bool isCenterInside(const Eigen::Vector3d& center, const std::vector<Edge>& edges, const LoosePoints& loose_points);
 Eigen::Vector3d correctNormal(const Eigen::Vector3d& almost_normal, const Line& line1, const Line& line2);
+
+boost::optional<TableDescription>
+createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopRequest& request);
 
 #endif  // PROCESS_TABLE_H
