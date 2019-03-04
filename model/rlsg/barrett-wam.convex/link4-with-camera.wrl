@@ -2,7 +2,50 @@
 
 
 DEF link4 Transform {
-  children 
+  children
+  [
+  Transform
+  {
+    rotation 0 0 -1 1.5707963
+    translation -0.0575 0 0.1
+    children
+    DEF CameraMount Shape
+	    {
+	    appearance Appearance
+	      {
+	      material Material
+	        {
+	        diffuseColor 1 0 0
+	        transparency 0
+	        }
+	      }
+	    geometry Box
+	      {
+	      size 0.044 0.03 0.025 
+	      }
+	    }
+	}
+  Transform
+  {
+    rotation 0 0 -1 1.5707963
+    translation -0.085 0 0.1
+    children
+    DEF Camera Shape
+	    {
+	    appearance Appearance
+	      {
+	      material Material
+	        {
+	        diffuseColor 0 0 0
+	        transparency 0
+	        }
+	      }
+	    geometry Box
+	      {
+	      size 0.18 0.025 0.037
+	      }
+	    }
+	}	
     DEF link4 Shape {
       appearance 
       Appearance {
@@ -751,5 +794,5 @@ DEF link4 Transform {
       }
 
     }
-
+]
 }

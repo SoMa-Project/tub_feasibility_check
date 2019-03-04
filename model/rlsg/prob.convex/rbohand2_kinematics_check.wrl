@@ -42,12 +42,12 @@ Transform
 	    size 2.18000002e-2 5.44000007e-2 9.31999981e-2
 	    }
 	  }
-        Transform
+        DEF Finger1 Transform
 	  {
 	  rotation -0.99603402 -1.28259547e-2 -8.80441963e-2 3.24267220
 	  translation -7.72042572e-3 -7.17090293e-2 3.82037460e-2
 	  children 
-            DEF sensor_Finger_Pinky Shape
+            DEF sensor_Finger1 Shape
 	      {
 	      appearance Appearance
 		{
@@ -63,12 +63,12 @@ Transform
 		}
 	      }
 	  }
-        Transform
+        DEF Finger2 Transform
 	  {
 	  rotation -0.99996191 2.27708849e-4 -8.72653536e-3 3.19376659
 	  translation -6.76405429e-3 -7.41978660e-2 1.29660712e-2
 	  children 
-            DEF sensor_Finger_Ring Shape
+            DEF sensor_Finger2 Shape
 	      {
 	      appearance Appearance
 		{
@@ -84,12 +84,12 @@ Transform
 		}
 	      }
 	  }
-        Transform
+        DEF Finger3 Transform
 	  {
 	  rotation -0.99756240 1.83306180e-3 6.97563514e-2 3.08917665
 	  translation -8.81301239e-3 -7.41511583e-2 -1.45649630e-2
 	  children 
-            DEF sensor_Finger_Middle Shape
+            DEF sensor_Finger3 Shape
 	      {
 	      appearance Appearance
 		{
@@ -105,12 +105,12 @@ Transform
 		}
 	      }
 	  }
-        Transform
+        DEF Finger4 Transform
 	  {
 	  rotation -0.98762911 1.09527800e-2 0.15642507 3.00350618
 	  translation -1.32024642e-2 -6.92324712e-2 -4.11055050e-2
 	  children 
-            DEF sensor_Finger_Index Shape
+            DEF sensor_Finger4 Shape
 	      {
 	      appearance Appearance
 		{

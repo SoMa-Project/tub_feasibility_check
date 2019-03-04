@@ -5,12 +5,36 @@
 #include <unordered_set>
 #include <memory>
 #include <vector>
+#include "pair_hash.h"
 
-enum class CollisionType
+typedef std::pair<std::string, std::string> RobotWorldPair;
+const std::string ANY_ROBOT_PART = "ANY";
+
+struct CollisionType
 {
-  PROHIBITED,
-  ALLOWED,
-  SENSORIZED_TERMINATING
+  bool allowed;
+  bool terminating;
+  bool required;
+
+  static CollisionType Prohibited()
+  {
+    return { false, false, false };
+  }
+
+  static CollisionType Allowed()
+  {
+    return { true, false, false };
+  }
+};
+
+/* An interface for counting required collisions. */
+class RequiredCollisionCounter
+{
+public:
+  virtual void count(const std::string& robot_part, const std::string& world_part) = 0;
+  virtual bool allRequiredPresent() const = 0;
+  virtual std::vector<RobotWorldPair> missingRequiredCollisions() const = 0;
+  virtual ~RequiredCollisionCounter();
 };
 
 /* An interface for specifying collision constraints and requirements. */
@@ -23,6 +47,8 @@ public:
    * CollisionSpecification.
    */
   virtual CollisionType getCollisionType(const std::string& robot_part, const std::string& world_part) const = 0;
+  virtual std::unique_ptr<RequiredCollisionCounter> makeRequiredCollisionChecker() const = 0;
+  virtual ~CollisionSpecification();
 };
 
 /* A specification of collisions constraints/requirements based on world parts, not explicitly listed world parts
@@ -37,6 +63,8 @@ public:
 
   CollisionType getCollisionType(const std::string&, const std::string& world_part) const override;
 
+  std::unique_ptr<RequiredCollisionCounter> makeRequiredCollisionChecker() const override;
+
 private:
   PartToCollisionType world_part_to_collision_type_;
 };
@@ -46,6 +74,8 @@ class AllowAllCollisions final : public CollisionSpecification
 {
 public:
   CollisionType getCollisionType(const std::string&, const std::string&) const override;
+
+  std::unique_ptr<RequiredCollisionCounter> makeRequiredCollisionChecker() const override;
 };
 
 #endif

@@ -18,25 +18,30 @@
 #include <ros/package.h>
 #include <eigen_conversions/eigen_msg.h>
 #include "tub_feasibility_check/CheckKinematics.h"
+#include "tub_feasibility_check/CheckKinematicsTabletop.h"
 #include "tub_feasibility_check/CerrtExample.h"
 #include "tub_feasibility_check/VisualizeTrajectory.h"
 
-#include "MainWindow.h"
+#include "mainwindow.h"
 #include "bounding_box.h"
 #include "collision_specification.h"
 #include "workspace_checkers.h"
 #include "workspace_samplers.h"
 #include "ifco_scene.h"
+#include "tabletop_scene.h"
 
 class ServiceWorker : public QObject
 {
   Q_OBJECT
 
 public:
-  ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene);
+  ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_ptr<TabletopScene> tabletop_scene);
 
-  bool checkKinematicsQuery(tub_feasibility_check::CheckKinematics::Request& req,
+  bool checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinematics::Request& req,
                             tub_feasibility_check::CheckKinematics::Response& res);
+
+  bool checkKinematicsTabletopQuery(tub_feasibility_check::CheckKinematicsTabletop::Request& req,
+                            tub_feasibility_check::CheckKinematicsTabletop::Response& res);
 
   bool visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTrajectory::Request& req,
                                 tub_feasibility_check::VisualizeTrajectory::Response& res);
@@ -59,29 +64,9 @@ signals:
   void resetLines();
   void toggleWorkFrames(bool on);
 
+  void selectViewer(MainWindow::ViewerType type);
+
 private:
-  struct CheckKinematicsParameters
-  {
-    Eigen::Affine3d ifco_pose;
-    Eigen::Affine3d goal_pose;
-    Eigen::Affine3d goal_manifold_frame;
-
-    std::unordered_map<std::string, BoundingBox> name_to_object_bounding_box;
-
-    boost::optional<WorkspaceChecker> goal_manifold_checker;
-    boost::optional<WorkspaceSampler> goal_manifold_sampler;
-    boost::optional<WorldPartsCollisions> collision_specification;
-
-    rl::math::Vector initial_configuration;
-  };
-
-  boost::optional<CheckKinematicsParameters>
-  processQueryParameters(const tub_feasibility_check::CheckKinematics::Request& req) const;
-
-  std::string getBoxName(std::size_t box_id) const;
-  std::string getBoxShapeName(std::size_t box_id) const;
-  std::size_t getBoxId(const std::string& box_name) const;
-
   /* Visualize the position part of the goal manifold in the viewer. The manifold is specified by
    * the goal pose, and the minimum and maximum deviations from the goal pose in each coordinate.
    *
@@ -92,16 +77,12 @@ private:
   void drawGoalManifold(rl::math::Transform pose, const boost::array<double, 3>& min_position_deltas,
                         const boost::array<double, 3>& max_position_deltas, double zero_dimension_correction = 0.01);
 
-  bool checkDimensionsAndBounds(const tub_feasibility_check::CheckKinematics::Request& req) const;
-
   std::unique_ptr<IfcoScene> ifco_scene;
+  std::unique_ptr<TabletopScene> tabletop_scene;
   QTimer loop_timer;
 
   QMutex keep_running_mutex;
   bool keep_running = true;
-
-  std::array<double, 3> min_allowed_XYZ_angles{ { -M_PI, -M_PI / 2, -M_PI } };
-  std::array<double, 3> max_allowed_XYZ_angles{ { M_PI, M_PI / 2, M_PI } };
 };
 
 #endif  // KINEMATICS_CHECK_H

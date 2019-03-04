@@ -33,6 +33,7 @@ public:
       SINGULARITY,
       JOINT_LIMIT,
       STEPS_LIMIT,
+      MISSING_REQUIRED_COLLISIONS,
       TERMINATED_OUTSIDE_GOAL_MANIFOLD
     };
 
@@ -162,7 +163,8 @@ private:
    */
   // TODO remove "hidden" usage of required_counter, could be misleading.
   CollisionConstraintsCheck checkCollisionConstraints(const rl::sg::CollisionMap& collision_map,
-                                                      const CollisionSpecification& collision_types);
+                                                      const CollisionSpecification& collision_types,
+                                                      RequiredCollisionCounter& required_counter);
 
   rl::math::Vector calculateQDot(const rl::math::Vector& configuration, const rl::math::Transform& goal_pose,
                                  double delta);

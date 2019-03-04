@@ -81,6 +81,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
   using namespace rl::math;
 
   SingleResult result;
+  auto required_counter = collision_specification.makeRequiredCollisionChecker();
 
   Vector current_config = initial_configuration;
 
@@ -94,7 +95,14 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
 
     // arrived at the target pose
     if (q_dot.isZero())
-      return result.setSingleOutcome(SingleResult::Outcome::REACHED);
+    {
+      if (required_counter->allRequiredPresent())
+        return result.setSingleOutcome(SingleResult::Outcome::REACHED);
+      else
+        return result.setSingleOutcome(
+            SingleResult::Outcome::MISSING_REQUIRED_COLLISIONS,
+            SingleResult::OutcomeInformation::CollisionInformation(required_counter->missingRequiredCollisions()));
+    }
 
     current_config += q_dot;
 
@@ -116,7 +124,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
       result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
     auto collision_constraints_check =
-        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification);
+        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification, *required_counter);
     // if the collision constraints were violated, failures are not empty
     std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
               std::inserter(result.outcomes, result.outcomes.begin()));
@@ -272,7 +280,8 @@ rl::math::Vector JacobianController::calculateQDot(const rl::math::Vector& confi
 }
 
 JacobianController::CollisionConstraintsCheck JacobianController::checkCollisionConstraints(
-    const rl::sg::CollisionMap& collision_map, const CollisionSpecification& collision_types)
+    const rl::sg::CollisionMap& collision_map, const CollisionSpecification& collision_types,
+    RequiredCollisionCounter& required_counter)
 {
   CollisionConstraintsCheck check;
 
@@ -280,21 +289,24 @@ JacobianController::CollisionConstraintsCheck JacobianController::checkCollision
   {
     auto collision_type = collision_types.getCollisionType(shapes_in_contact.first, shapes_in_contact.second);
 
-    switch (collision_type)
+    if (!collision_type.allowed)
+      check.failures[SingleResult::Outcome::PROHIBITED_COLLISION].collisions.push_back(shapes_in_contact);
+
+    if (collision_type.required)
+      required_counter.count(shapes_in_contact.first, shapes_in_contact.second);
+
+    if (collision_type.terminating)
     {
-      case CollisionType::PROHIBITED:
-        check.failures[SingleResult::Outcome::PROHIBITED_COLLISION].collisions.push_back(shapes_in_contact);
-        break;
-      case CollisionType::ALLOWED:
-        break;
-      case CollisionType::SENSORIZED_TERMINATING:
-        if (isSensorized(shapes_in_contact.first))
-          check.seen_terminating_collisions.push_back(shapes_in_contact);
-        else
-          check.failures[SingleResult::Outcome::UNSENSORIZED_COLLISION].collisions.push_back(shapes_in_contact);
-        break;
+      if (isSensorized(shapes_in_contact.first))
+        check.seen_terminating_collisions.push_back(shapes_in_contact);
+      else
+        check.failures[SingleResult::Outcome::UNSENSORIZED_COLLISION].collisions.push_back(shapes_in_contact);
     }
   }
+
+  if (!check.seen_terminating_collisions.empty() && !required_counter.allRequiredPresent())
+    check.failures[SingleResult::Outcome::MISSING_REQUIRED_COLLISIONS] =
+        SingleResult::OutcomeInformation::CollisionInformation(required_counter.missingRequiredCollisions());
 
   // there was a terminating collision and there were no failures
   if (!check.seen_terminating_collisions.empty() && check.failures.empty())
@@ -356,18 +368,4 @@ JacobianController::SingleResult::OutcomeInformation::JointNumbers(std::vector<u
   JacobianController::SingleResult::OutcomeInformation outcome_information;
   outcome_information.joint_indices = joint_indices;
   return outcome_information;
-}
-
-boost::optional<rl::plan::BeliefState> JacobianController::BeliefResult::belief(rl::plan::DistanceModel& model) const
-{
-  using namespace rl::plan;
-
-  if (!particle_results)
-    return boost::none;
-
-  std::vector<Particle> particles(particle_results->size());
-  for (std::size_t i = 0; i < particle_results->size(); ++i)
-    particles[i].config = particle_results->at(i).trajectory.back();
-
-  return BeliefState(particles, &model);
 }

@@ -57,28 +57,4 @@ private:
   SampleOrientation sample_orientation_;
 };
 
-// TODO this is not usable anymore due to the number of parameters
-// maybe it is easier just to write this code explicitly in Concerrt though!
-template <class RandomEngine>
-boost::optional<rl::math::Vector> sampleWithJacobianControl(JacobianController& jacobian_controller,
-                                                            const rl::math::Vector& initial_configuration,
-                                                            const CollisionSpecification& collision_types,
-                                                            WorkspaceSampler& sampler, RandomEngine& random_engine,
-                                                            unsigned maximum_attempts, double delta)
-{
-  std::uniform_real_distribution<double> random_01;
-  auto sample_01 = [&random_engine, &random_01]() { return random_01(random_engine); };
-
-  for (unsigned i = 0; i < maximum_attempts; ++i)
-  {
-    auto sampled_pose = sampler.generate(sample_01);
-
-    auto result = jacobian_controller.moveSingleParticle(initial_configuration, sampled_pose, collision_types);
-    if (result)
-      return result.trajectory.back();
-  }
-
-  return boost::none;
-}
-
 #endif

@@ -1,0 +1,21 @@
+#VRML V2.0 utf8
+
+Transform
+{
+translation 0.0 0 -0.0
+children 
+DEF tabletop Shape
+  {
+  appearance Appearance
+    {
+    material Material 
+      {
+      diffuseColor 0 1 0.50000000
+      }
+    }
+  geometry Box
+    {
+    size 0.6 0.8 9.99999977e-3
+    }
+  }
+}

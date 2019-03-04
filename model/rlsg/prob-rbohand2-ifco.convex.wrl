@@ -1,0 +1,16 @@
+#VRML V2.0 utf8
+Transform {
+	children [
+		DEF prob Transform {
+			children [
+				Inline {
+                                        url "prob.convex/prob-rbohand2.wrl"
+				}
+			]
+		}
+		DEF ifco Inline {
+			url "ifco.wrl"
+		}
+	]
+}
+

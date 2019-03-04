@@ -41,7 +41,7 @@
 #include <rl/sg/so/Model.h>
 #include <rl/sg/so/Shape.h>
 
-#include "MainWindow.h"
+#include "mainwindow.h"
 #include "Viewer.h"
 
 Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
