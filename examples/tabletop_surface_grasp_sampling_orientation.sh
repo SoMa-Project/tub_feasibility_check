@@ -13,9 +13,9 @@ initial_configuration: [0, 0.1, 0, 2.3, 0, 0.5, 0]
 goal_pose:
   position: {x: 0.4, y: -0.02, z: -0.096}
   orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
-table_pose:
+table_surface_pose:
   position: {x: 0.48, y: 0, z: -0.146}
-  orientation: {x: 0.0, y: 0.0, z: 0, w: 1}
+  orientation: {x: 1.0, y: 0.0, z: 0, w: 0}
 goal_manifold_frame:
   position: {x: 0.4, y: -0.02, z: -0.096}
   orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
