@@ -36,7 +36,8 @@ void TabletopScene::createFixedTable(const rl::math::Transform& table_surface_po
 
     auto sg_shape = body->create(vrml_shape);
     auto table_center_pose(table_surface_pose);
-    table_center_pose.translate(-Eigen::Vector3d::UnitZ() * fixed_table_dimensions_[2] / 2);
+    double translate_multiplier = normal_points_downwards_ ? 1 : -1;
+    table_center_pose.translate(translate_multiplier * Eigen::Vector3d::UnitZ() * fixed_table_dimensions_[2] / 2);
     sg_shape->setTransform(table_center_pose);
     sg_shape->setName("tabletop");
   };
@@ -49,13 +50,15 @@ void TabletopScene::createTableFromEdges(const TableDescription& table_descripti
 {
   std::vector<SbVec3f> points(table_description.points.size() * 2);
   std::vector<int32_t> indices(table_description.points.size() * 8 + 4);
+  double direction_multiplier = normal_points_downwards_ ? 1 : -1;
 
   for (std::size_t i = 0; i < table_description.points.size(); ++i)
   {
     points[i].setValue(table_description.points[i].x(), table_description.points[i].y(),
                        table_description.points[i].z());
     Eigen::Vector3d downward_point =
-        table_description.points[i] - table_description.normal.normalized() * fixed_table_dimensions_[2];
+        table_description.points[i] +
+        direction_multiplier * table_description.normal.normalized() * fixed_table_dimensions_[2];
     points[table_description.points.size() + i].setValue(downward_point.x(), downward_point.y(), downward_point.z());
   }
 
@@ -104,6 +107,7 @@ void TabletopScene::createTableFromEdges(const TableDescription& table_descripti
     coordinate->point.setValues(0, points.size(), points.data());
     face_set->coordIndex.setValues(0, indices.size(), indices.data());
     face_set->coord.setValue(coordinate);
+    face_set->ccw = !normal_points_downwards_;
 
     shape->appearance.setValue(appearance);
     shape->geometry.setValue(face_set);

@@ -16,6 +16,7 @@ public:
 
 private:
   std::array<double, 3> fixed_table_dimensions_;
+  const bool normal_points_downwards_ = true;
 
   std::size_t table_model_index_;
   SoVRMLGroup* table_vrml_group_;
