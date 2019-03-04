@@ -107,7 +107,8 @@ void TabletopScene::createTableFromEdges(const TableDescription& table_descripti
     coordinate->point.setValues(0, points.size(), points.data());
     face_set->coordIndex.setValues(0, indices.size(), indices.data());
     face_set->coord.setValue(coordinate);
-    face_set->ccw = !normal_points_downwards_;
+    // disable backface culling
+    face_set->solid = false;
 
     shape->appearance.setValue(appearance);
     shape->geometry.setValue(face_set);
