@@ -98,6 +98,16 @@ std::string describeSingleResult(const JacobianController::SingleResult& result)
   return ss.str();
 }
 
+void describeBeliefResult(const JacobianController::BeliefResult& belief_result)
+{
+  ROS_INFO_STREAM("No noise test result: " << describeSingleResult(belief_result.no_noise_test_result));
+  if (!belief_result.particle_results)
+    return;
+
+  for (std::size_t i = 0; i < belief_result.particle_results->size(); ++i)
+    ROS_INFO_STREAM("Particle " << i << " result: " << describeSingleResult(belief_result.particle_results->at(i)));
+}
+
 void ServiceWorker::spinOnce()
 {
   ros::spinOnce();
@@ -144,7 +154,7 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"ifco_pose", req.ifco_pose}, ifco_scene->dof());
+  auto parameters = processQueryParameters(req, { "ifco_pose", req.ifco_pose }, ifco_scene->dof());
   if (!parameters)
     return false;
 
@@ -168,24 +178,42 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
                                          maximum_steps, ifco_scene->getViewer());
+  JacobianController::MoveBeliefSettings move_belief_settings;
+  move_belief_settings.number_of_particles = 1;
+  move_belief_settings.joints_std_error = rl::math::Vector::Zero(ifco_scene->dof());
+  rl::plan::Particle start_particle(parameters->initial_configuration);
+
+  rl::plan::NoisyModel model;
+  model.kin = ifco_scene->getKinematics().get();
+  model.scene = ifco_scene->getBulletScene().get();
+  model.model = ifco_scene->getBulletScene()->getModel(0);
+
+  rl::plan::BeliefState initial_belief({ start_particle }, &model);
+
   auto result =
-      jacobian_controller.moveSingleParticle(parameters->initial_configuration, parameters->goal_pose,
-                                             *parameters->collision_specification, *parameters->goal_manifold_checker);
+      jacobian_controller.moveBelief(initial_belief, parameters->goal_pose, *parameters->collision_specification,
+                                     *parameters->goal_manifold_checker, move_belief_settings);
+  describeBeliefResult(result);
 
   if (result)
   {
-    ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
-    // when jacobian controller is successful, there is only one outcome in outcomes
+    ROS_INFO("Initial goal success!");
+
+    for (std::size_t i = 0; i < result.no_noise_test_result.trajectory.size(); ++i)
+      if (!result.no_noise_test_result.trajectory[i].isApprox(result.particle_results->front().trajectory[i]))
+        ROS_INFO_STREAM("Difference in trajectory point "
+                        << i << "! No noise test: " << result.no_noise_test_result.trajectory[i].transpose()
+                        << ", particle 0: " << result.particle_results->front().trajectory[i].transpose());
 
     res.status = res.REACHED_INITIAL;
-    res.final_configuration = utilities::eigenToStd(result.trajectory.back());
-    res.trajectory = utilities::concatanateEigneToStd(result.trajectory, result.trajectory.front().size());
+    res.final_configuration = utilities::eigenToStd(result.no_noise_test_result.trajectory.back());
+    res.trajectory = utilities::concatanateEigneToStd(result.no_noise_test_result.trajectory,
+                                                      result.no_noise_test_result.trajectory.front().size());
     ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
     return true;
   }
 
-  ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
-
+  ROS_INFO("Initial goal failure!");
   drawGoalManifold(parameters->goal_manifold_frame, req.min_position_deltas, req.max_position_deltas);
   emit drawNamedFrame(parameters->goal_manifold_frame, "goal manifold");
 
@@ -208,20 +236,30 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
 
     ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
     emit resetPoints();
-    auto result = jacobian_controller.moveSingleParticle(parameters->initial_configuration, sampled_transform,
-                                                         *parameters->collision_specification,
-                                                         *parameters->goal_manifold_checker);
+    auto result =
+        jacobian_controller.moveBelief(initial_belief, sampled_transform, *parameters->collision_specification,
+                                       *parameters->goal_manifold_checker, move_belief_settings);
+
+    describeBeliefResult(result);
 
     if (result)
     {
-      ROS_INFO_STREAM("Success: " << describeSingleResult(result));
+      ROS_INFO("Success!");
+
+      for (std::size_t i = 0; i < result.no_noise_test_result.trajectory.size(); ++i)
+        if (!result.no_noise_test_result.trajectory[i].isApprox(result.particle_results->front().trajectory[i]))
+          ROS_INFO_STREAM("Difference in trajectory point "
+                          << i << "! No noise test: " << result.no_noise_test_result.trajectory[i].transpose()
+                          << ", particle 0: " << result.particle_results->front().trajectory[i]);
+
       res.status = res.REACHED_SAMPLED;
-      res.final_configuration = utilities::eigenToStd(result.trajectory.back());
-      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
+      res.final_configuration = utilities::eigenToStd(result.no_noise_test_result.trajectory.back());
+      res.trajectory =
+          utilities::concatanateEigneToStd(result.no_noise_test_result.trajectory, res.final_configuration.size());
       return true;
     }
     else
-      ROS_INFO_STREAM("Failure: " << describeSingleResult(result));
+      ROS_INFO("Failure!");
   }
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
@@ -236,7 +274,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"table_pose", req.table_pose}, tabletop_scene->dof());
+  auto parameters = processQueryParameters(req, { "table_pose", req.table_pose }, tabletop_scene->dof());
   if (!parameters)
     return false;
 
@@ -368,4 +406,3 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
 
   emit drawBox(size, pose);
 }
-

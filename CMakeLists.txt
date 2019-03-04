@@ -72,7 +72,7 @@ generate_messages(
 
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
   set(SRCS
-      src/MainWindow.cpp
+      src/mainwindow.cpp
       src/kinematics_check.cpp
       src/Viewer.cpp
       src/ifco_scene.cpp
@@ -80,7 +80,9 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)
       src/jacobian_controller.cpp
       src/workspace_samplers.cpp
       src/workspace_checkers.cpp
-      src/collision_specification.cpp)
+      src/collision_specification.cpp
+      src/usecase_scene.cpp
+      src/tabletop_scene.cpp)
 
   catkin_add_gtest(workspace_checker_sampler_test
                    test/test_workspace_checker_and_sampler.cpp

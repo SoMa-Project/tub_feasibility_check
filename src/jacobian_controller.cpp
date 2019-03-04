@@ -162,7 +162,8 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
 
   BeliefResult result;
   // phase one: move a single particle without noise from the mean of the belief to find out the joint trajectory
-  result.no_noise_test_result = moveSingleParticle(initial_belief.configMean(), to_pose, collision_specification);
+  result.no_noise_test_result = moveSingleParticle(initial_belief.configMean(), to_pose, collision_specification,
+                                                   goal_manifold_checker);
 
   if (!result.no_noise_test_result)
     return result;
@@ -175,9 +176,12 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
   for (std::size_t i = 0; i < settings.number_of_particles; ++i)
   {
     auto current_config = initial_belief.getParticles()[i].config;
+    noisy_model_.setPosition(current_config);
 
     auto& particle_result = result.particle_results->at(i);
     particle_result.trajectory.push_back(current_config);
+
+    auto required_counter = collision_specification.makeRequiredCollisionChecker();
 
     emit drawConfiguration(current_config);
 
@@ -208,8 +212,8 @@ JacobianController::BeliefResult JacobianController::moveBelief(const rl::plan::
       if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
         particle_result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
-      auto collision_constraints_check =
-          checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification);
+      auto collision_constraints_check = checkCollisionConstraints(noisy_model_.scene->getLastCollisions(),
+                                                                   collision_specification, *required_counter);
       std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
                 std::inserter(particle_result.outcomes, particle_result.outcomes.begin()));
 
