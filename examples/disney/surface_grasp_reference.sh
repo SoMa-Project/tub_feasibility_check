@@ -14,8 +14,8 @@ goal_pose:
   position: [0.498, 0.129, 0.164]
   orientation: {x: 0.685114499881, y: 0.663267754151, z: 0.217253436334, w: -0.208554435956}
 table_surface_pose:
+  orientation: [0.0, 0.986, 0.16700000000000007, 0.0]
   position: [0.498, 0.129, 0.134]
-  orientation: [0.000, 0.000, -0.167, 0.986]
 bounding_boxes_with_poses:
 - box: 
     type: 1
