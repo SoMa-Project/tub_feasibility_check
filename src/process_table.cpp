@@ -105,22 +105,19 @@ boost::optional<LoosePoints> findLoosePoints(const std::vector<Edge>& edges)
   return pair;
 }
 
-Eigen::Vector3d projectIntoEdgesPlane(const Eigen::Vector3d& point, const std::vector<Edge>& edges,
-                                      const std::vector<Line>& lines)
+Eigen::Vector3d projectIntoLinesPlane(const Eigen::Vector3d& point, const Line& line1, const Line& line2)
 {
-  assert(edges.size() > 1);
-
   IntersectionMatrix A;
   for (unsigned i = 0; i < 3; ++i)
   {
-    A(i, 0) = lines[0].direction(i);
-    A(i, 1) = lines[1].direction(i);
+    A(i, 0) = line1.direction(i);
+    A(i, 1) = line2.direction(i);
   }
 
-  Eigen::Vector3d b = point - lines[0].base;
+  Eigen::Vector3d b = point - line1.base;
   Eigen::Vector2d ts = A.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV).solve(b);
 
-  return lines[0].base + ts(0) * lines[0].direction + ts(1) * lines[1].direction;
+  return line1.base + ts(0) * line1.direction + ts(1) * line2.direction;
 }
 
 bool isCenterInside(const Eigen::Vector3d& center, const std::vector<Edge>& edges, const LoosePoints& loose_points)
@@ -240,7 +237,7 @@ createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopReques
 
   Eigen::Vector3d table_surface_pose_position;
   tf::pointMsgToEigen(request.table_surface_pose.position, table_surface_pose_position);
-  Eigen::Vector3d table_center_in_edges_plane = projectIntoEdgesPlane(table_surface_pose_position, edges, lines);
+  Eigen::Vector3d table_center_in_edges_plane = projectIntoLinesPlane(table_surface_pose_position, lines[0], lines[1]);
   bool center_inside = isCenterInside(table_center_in_edges_plane, edges, *loose_points);
 
   if (center_inside)
