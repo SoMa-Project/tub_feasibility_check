@@ -1,28 +1,49 @@
 #VRML V2.0 utf8
 
+DEF link6 Transform
+  {
+  children 
+    [
+    Transform
+      {
+      children 
+	[
+	Inline
+	  {
+	  url "link6.wrl"
+	  }
+	Transform
+	  {
+	  rotation -1 0 0 1.57079637
+	  translation 0 0 0.08
+	  children 
+	    Shape
+	      {
+	      appearance Appearance
+		{
+		material Material
+		  {
+		  }
+		}
+	      geometry Cylinder
+		{
+		height 5.90000003e-2
+		radius 0.05
+		}
+	      }
+	  }
+	]
+      }
+    Transform
+      {
+      rotation -0.70710808 -2.60000001e-6 0.70710551 3.14159774
+      translation 0 0 0.11
+      children 
+	Inline
+	  {
+	  url "rbohand2_kinematics_check.wrl"
+	  }
+      }
+    ]
+  }
 
-DEF link6 Transform {
-  children [
-
-Transform {
-	children [
-		Inline {
-                        url "link6.wrl"
-		}    
-	] 
-}
-
-
-Transform {
-	translation 0 0 0.06
-	rotation   -0.7071081 -0.0000026 0.7071055  3.1415978 
-	children [
-		Inline {
-                        url "rbohand2_kinematics_check.wrl"
-		}    
-	] 
-}
-
-]
-
-}
