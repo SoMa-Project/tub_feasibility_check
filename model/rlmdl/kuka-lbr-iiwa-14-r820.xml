@@ -313,9 +313,9 @@
 				<z>-180</z>
 			</rotation>
 			<translation>
-				<x>0.03</x>
-				<y>0</y>
-				<z>0.068</z>
+				<x>0</x>
+				<y>-0.03</y>
+				<z>0.05</z>
 			</translation>
 		</fixed>
 		<home>
