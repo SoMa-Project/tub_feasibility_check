@@ -12,19 +12,16 @@ int main(int argc, char** argv)
     std::string ifco_scene_graph_file;
     std::string tabletop_scene_graph_file;
     std::string kinematics_file;
-    // TODO fix to run in QT and access ros pkg path  - if solved add to readme steps to fix it
-    std::string default_root_dir = ros::package::getPath("tub_feasibility_check");
-    n.param("/feasibility_check/ifco_scene_graph_file", ifco_scene_graph_file, default_root_dir + "/model/rlsg/"
-                                                                                                  "wam-rbohand2-ifco."
-                                                                                                  "convex.xml");
-    n.param("/feasibility_check/tabletop_scene_graph_file", tabletop_scene_graph_file,
-            default_root_dir + "/model/rlsg/"
-                               "wam-rbohand2-with-camera-tabletop.convex.xml");
-    n.param("/feasibility_check/kinematics_file", kinematics_file, default_root_dir + "/model/rlkin/"
-                                                                                      "barrett-wam-rbohand2.xml");
+    bool mdl;
 
-    auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(ifco_scene_graph_file, kinematics_file));
-    auto tabletop_scene = std::unique_ptr<TabletopScene>(new TabletopScene(tabletop_scene_graph_file, kinematics_file));
+    n.param("/feasibility_check/ifco_scene_graph_file", ifco_scene_graph_file, std::string());
+    n.param("/feasibility_check/tabletop_scene_graph_file", tabletop_scene_graph_file, std::string());
+    n.param("/feasibility_check/kinematics_file", kinematics_file, std::string());
+    n.param("/feasibility_check/mdl", mdl, false);
+
+    auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(ifco_scene_graph_file, kinematics_file, mdl));
+    auto tabletop_scene =
+        std::unique_ptr<TabletopScene>(new TabletopScene(tabletop_scene_graph_file, kinematics_file, mdl));
 
     QApplication application(argc, argv);
     MainWindow main_window(new MainWindow);

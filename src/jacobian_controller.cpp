@@ -4,14 +4,31 @@
 #include "jacobian_controller.h"
 #include "utilities.h"
 
-std::vector<unsigned> getJointsOverLimits(const rl::kin::Kinematics& kinematics, const rl::math::Vector& config)
+std::vector<unsigned> getJointsOverLimits(const rl::plan::DistanceModel* model, const rl::math::Vector& config)
 {
-  assert(kinematics.getDof() == config.size());
+  assert(model->getDof() == config.size());
 
   std::vector<unsigned> joints_over_limits;
-  for (std::size_t i = 0; i < config.size(); ++i)
-    if (config(i) < kinematics.getMinimum(i) || config(i) > kinematics.getMaximum(i))
-      joints_over_limits.push_back(i);
+
+  if (model->kin)
+  {
+    for (std::size_t i = 0; i < config.size(); ++i)
+      if (config(i) < model->kin->getMinimum(i) || config(i) > model->kin->getMaximum(i))
+        joints_over_limits.push_back(i);
+  }
+  else
+  {
+    assert(model->mdl);
+
+    rl::math::Vector min(model->getDof());
+    rl::math::Vector max(model->getDof());
+    model->mdl->getMinimum(min);
+    model->mdl->getMaximum(max);
+
+    for (std::size_t i = 0; i < config.size(); ++i)
+      if (config(i) < min(i) || config(i) > max(i))
+        joints_over_limits.push_back(i);
+  }
 
   return joints_over_limits;
 }
@@ -48,20 +65,10 @@ JacobianController::SingleResult& JacobianController::SingleResult::addSingleOut
   return *this;
 }
 
-JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                                       std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta,
-                                       unsigned maximum_steps, boost::optional<Viewer*> viewer)
-  : kinematics_(kinematics), bullet_scene_(bullet_scene), delta_(delta), maximum_steps_(maximum_steps)
+JacobianController::JacobianController(rl::plan::NoisyModel* noisy_model, double delta, unsigned maximum_steps,
+                                       boost::optional<Viewer*> viewer)
+  : noisy_model_(noisy_model), delta_(delta), maximum_steps_(maximum_steps)
 {
-  noisy_model_.kin = kinematics_.get();
-  noisy_model_.model = bullet_scene_->getModel(0);
-  noisy_model_.scene = bullet_scene_.get();
-
-  // motionError and initialError are allocated here, but their values are set at the beginning of each
-  // moveBelief call
-  noisy_model_.motionError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
-  noisy_model_.initialError = new rl::math::Vector(static_cast<int>(kinematics->getDof()));
-
   random_engine_.seed(time(nullptr));
 
   if (viewer)
@@ -109,22 +116,22 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
     result.trajectory.push_back(current_config);
     emit drawConfiguration(current_config);
 
-    if (!noisy_model_.isValid(current_config))
+    if (!noisy_model_->isValid(current_config))
       result.addSingleOutcome(
           SingleResult::Outcome::JOINT_LIMIT,
-          SingleResult::OutcomeInformation::JointNumbers(getJointsOverLimits(*kinematics_, current_config)));
+          SingleResult::OutcomeInformation::JointNumbers(getJointsOverLimits(noisy_model_, current_config)));
 
-    noisy_model_.setPosition(current_config);
-    noisy_model_.updateFrames();
-    noisy_model_.updateJacobian();
-    noisy_model_.updateJacobianInverse();
-    noisy_model_.isColliding();
+    noisy_model_->setPosition(current_config);
+    noisy_model_->updateFrames();
+    noisy_model_->updateJacobian();
+    noisy_model_->updateJacobianInverse();
+    noisy_model_->isColliding();
 
-    if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
+    if (noisy_model_->getDof() > 3 && noisy_model_->getManipulabilityMeasure() < 1.0e-3)
       result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);
 
     auto collision_constraints_check =
-        checkCollisionConstraints(noisy_model_.scene->getLastCollisions(), collision_specification, *required_counter);
+        checkCollisionConstraints(noisy_model_->scene->getLastCollisions(), collision_specification, *required_counter);
     // if the collision constraints were violated, failures are not empty
     std::copy(collision_constraints_check.failures.begin(), collision_constraints_check.failures.end(),
               std::inserter(result.outcomes, result.outcomes.begin()));
@@ -139,7 +146,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
       auto collisions = SingleResult::OutcomeInformation::CollisionInformation(
           collision_constraints_check.seen_terminating_collisions);
 
-      if (goal_manifold_checker && !goal_manifold_checker->contains(noisy_model_.forwardPosition()))
+      if (goal_manifold_checker && !goal_manifold_checker->contains(noisy_model_->forwardPosition()))
         return result.setSingleOutcome(SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD, collisions);
 
       return result.setSingleOutcome(SingleResult::Outcome::TERMINATING_COLLISION, collisions);
@@ -156,20 +163,20 @@ rl::math::Vector JacobianController::calculateQDot(const rl::math::Vector& confi
   using rl::math::transform::toDelta;
 
   // Update the model
-  noisy_model_.setPosition(configuration);
-  noisy_model_.updateFrames();
-  noisy_model_.updateJacobian();
-  noisy_model_.updateJacobianInverse();
+  noisy_model_->setPosition(configuration);
+  noisy_model_->updateFrames();
+  noisy_model_->updateJacobian();
+  noisy_model_->updateJacobianInverse();
 
   // Compute the jacobian
-  Transform ee_world = noisy_model_.forwardPosition();
+  Transform ee_world = noisy_model_->forwardPosition();
   emit drawNamedFrame(ee_world, "jacobian controller goal");
   Vector6 tdot;
   transform::toDelta(ee_world, goal_pose, tdot);
 
   // Compute the velocity
-  Vector qdot = Vector::Zero(kinematics_->getDof());
-  noisy_model_.inverseVelocity(tdot, qdot);
+  Vector qdot = Vector::Zero(noisy_model_->getDof());
+  noisy_model_->inverseVelocity(tdot, qdot);
 
   // clip the velocity to zero if we are within delta units of goal
   if (qdot.norm() < delta)

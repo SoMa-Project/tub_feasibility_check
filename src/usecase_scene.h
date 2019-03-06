@@ -7,9 +7,13 @@
 #include <memory>
 #include <functional>
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
 #include <rl/kin/Kinematics.h>
+#include <rl/mdl/XmlFactory.h>
+#include <rl/mdl/Dynamic.h>
 #include <rl/sg/bullet/Scene.h>
+#include <rl/plan/NoisyModel.h>
 
 #include "Viewer.h"
 #include "bounding_box.h"
@@ -18,20 +22,26 @@ class UsecaseScene : public QObject
 {
   Q_OBJECT
 public:
-  UsecaseScene(const std::string& scene_graph_file_, const std::string& kinematics_file_);
+  UsecaseScene(const std::string& scene_graph_file_, const std::string& kinematics_file_, bool mdl_formt);
 
   void connectToViewer(Viewer* new_viewer);
 
   void createBox(const std::string& name, const BoundingBox& box);
   void removeBoxes();
 
-  std::shared_ptr<rl::kin::Kinematics> getKinematics() { return kinematics_; }
-  std::shared_ptr<rl::sg::bullet::Scene> getBulletScene() { return bullet_scene_; }
-  boost::optional<Viewer*> getViewer() { return viewer_; }
+  rl::plan::NoisyModel* getModel()
+  {
+    return scene_and_model_.second;
+  };
+
+  boost::optional<Viewer*> getViewer()
+  {
+    return viewer_;
+  }
 
   std::size_t dof() const
   {
-    return kinematics_->getDof();
+    return scene_and_model_.second->getDof();
   }
 
 protected:
@@ -40,9 +50,9 @@ protected:
 
   std::string scene_graph_file_;
   std::string kinematics_file_;
+  bool mdl_format_;
 
-  std::shared_ptr<rl::kin::Kinematics> kinematics_;
-  std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
+  std::pair<rl::sg::bullet::Scene*, rl::plan::NoisyModel*> scene_and_model_;
 
   std::size_t boxes_model_index_;
 
@@ -57,10 +67,35 @@ private:
   /* The transparency of the box in viewer. */
   double box_transparency_ = 0.1;
 
+  template <typename Scene, typename Model>
+  std::pair<Scene*, Model*> createSceneAndModel() const
+  {
+    auto model = new Model;
+
+    if (mdl_format_)
+    {
+      rl::mdl::XmlFactory xml_factory;
+      auto mdl = new rl::mdl::Dynamic;
+      xml_factory.load(kinematics_file_, mdl);
+
+      model->mdl = mdl;
+    }
+    else
+      model->kin = rl::kin::Kinematics::create(kinematics_file_);
+
+    auto scene = new Scene;
+    scene->load(scene_graph_file_);
+
+    model->model = scene->getModel(0);
+    model->scene = scene;
+
+    return std::make_pair(scene, model);
+  }
+
 signals:
   void applyFunctionToScene(std::function<void(rl::sg::Scene&)> function);
   void reset();
   void drawConfiguration(const rl::math::Vector& config);
 };
 
-#endif // USECASE_SCENE_H
+#endif  // USECASE_SCENE_H

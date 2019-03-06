@@ -144,7 +144,7 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"ifco_pose", req.ifco_pose}, ifco_scene->dof());
+  auto parameters = processQueryParameters(req, { "ifco_pose", req.ifco_pose }, ifco_scene->dof());
   if (!parameters)
     return false;
 
@@ -166,8 +166,7 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
-                                         maximum_steps, ifco_scene->getViewer());
+  JacobianController jacobian_controller(ifco_scene->getModel(), delta, maximum_steps, ifco_scene->getViewer());
   auto result =
       jacobian_controller.moveSingleParticle(parameters->initial_configuration, parameters->goal_pose,
                                              *parameters->collision_specification, *parameters->goal_manifold_checker);
@@ -236,7 +235,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"table_pose", req.table_pose}, tabletop_scene->dof());
+  auto parameters = processQueryParameters(req, { "table_pose", req.table_pose }, tabletop_scene->dof());
   if (!parameters)
     return false;
 
@@ -258,8 +257,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(tabletop_scene->getKinematics(), tabletop_scene->getBulletScene(), delta,
-                                         maximum_steps, tabletop_scene->getViewer());
+  JacobianController jacobian_controller(tabletop_scene->getModel(), delta, maximum_steps, tabletop_scene->getViewer());
   auto result =
       jacobian_controller.moveSingleParticle(parameters->initial_configuration, parameters->goal_pose,
                                              *parameters->collision_specification, *parameters->goal_manifold_checker);
@@ -368,4 +366,3 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
 
   emit drawBox(size, pose);
 }
-

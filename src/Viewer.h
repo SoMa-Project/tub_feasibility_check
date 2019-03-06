@@ -58,8 +58,6 @@ public:
 	
 	rl::math::Real delta;
 
-  std::unique_ptr<rl::kin::Kinematics> kinematics;
-
   std::unique_ptr<rl::sg::so::Scene> scene_graph;
 	
   std::unique_ptr<rl::plan::Model> model;

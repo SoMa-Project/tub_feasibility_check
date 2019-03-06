@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check" output="screen">
+        <param name="ifco_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/iiwa14-rbohand2-ifco.convex.xml" />
+        <param name="tabletop_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/iiwa14-rbohand2-tabletop.convex.xml" />
+        <param name="kinematics_file" value="$(find tub_feasibility_check)/model/rlmdl/kuka-lbr-iiwa-14-r820.xml"/>
+        <param name="mdl" value="true" />
+        <param name="hide_window" type="bool" value="false" /> 
+        <param name="sample_count" value="20" /> 
+    </node>
+</launch>
+
