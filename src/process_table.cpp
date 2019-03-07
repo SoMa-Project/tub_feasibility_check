@@ -75,34 +75,36 @@ std::vector<Edge> createEdgesFromIntersections(const std::vector<std::vector<Lin
 
 boost::optional<LoosePoints> findLoosePoints(const std::vector<Edge>& edges)
 {
-  std::list<Eigen::Vector3d> points;
+  std::list<LoosePoint> points_with_directions;
 
   for (auto& edge : edges)
     for (auto point : { edge.start, edge.end })
     {
       bool duplicate_removed = false;
 
-      for (auto it = points.begin(); it != points.end(); ++it)
+      for (auto it = points_with_directions.begin(); it != points_with_directions.end(); ++it)
       {
-        if (it->isApprox(point))
+        if (it->point.isApprox(point))
         {
-          it = points.erase(it);
+          it = points_with_directions.erase(it);
           duplicate_removed = true;
           break;
         }
       }
 
       if (!duplicate_removed)
-        points.push_back(point);
+      {
+        Eigen::Vector3d direction = point - (point == edge.start ? edge.end : edge.start);
+        points_with_directions.push_back({ point, direction });
+      }
     }
 
-  if (points.empty())
+  if (points_with_directions.empty())
     return boost::none;
 
-  assert(points.size() == 2);
+  assert(points_with_directions.size() == 2);
 
-  auto pair = std::make_pair(points.front(), points.back());
-  return pair;
+  return std::make_pair(points_with_directions.front(), points_with_directions.back());
 }
 
 Eigen::Vector3d projectIntoLinesPlane(const Eigen::Vector3d& point, const Line& line1, const Line& line2)
@@ -118,35 +120,6 @@ Eigen::Vector3d projectIntoLinesPlane(const Eigen::Vector3d& point, const Line& 
   Eigen::Vector2d ts = A.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV).solve(b);
 
   return line1.base + ts(0) * line1.direction + ts(1) * line2.direction;
-}
-
-bool isCenterInside(const Eigen::Vector3d& center, const std::vector<Edge>& edges, const LoosePoints& loose_points)
-{
-  Line loose_points_connection;
-  loose_points_connection.base = loose_points.first;
-  loose_points_connection.direction = (loose_points.second - loose_points.first).normalized();
-
-  Line forward;
-
-  for (auto& edge : edges)
-  {
-    if (edge.start.isApprox(loose_points.first))
-    {
-      forward.base = edge.end;
-      forward.direction = (center - forward.base).normalized();
-      break;
-    }
-
-    if (edge.end.isApprox(loose_points.second))
-    {
-      forward.base = edge.start;
-      forward.direction = (center - forward.base).normalized();
-      break;
-    }
-  }
-
-  auto intersection = findLineIntersection(forward, loose_points_connection);
-  return intersection.distances_along_lines[0] > (center - forward.base).norm();
 }
 
 std::vector<Line> convertEdgeFramesToLines(const std::vector<Eigen::Affine3d>& edge_frames)
@@ -181,8 +154,8 @@ Eigen::Vector3d correctNormal(const Eigen::Vector3d& almost_normal, const Line& 
   return common_normal.dot(almost_normal) > 0 ? common_normal : Eigen::Vector3d(-common_normal);
 }
 
-boost::optional<TableDescription>
-createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopRequest& request)
+boost::optional<TableDescription> createTableFromFrames(
+    const tub_feasibility_check::CheckKinematicsTabletopRequest& request, double extend_loose_ends_distance)
 {
   std::vector<Eigen::Affine3d> edge_frames(request.edge_frames.size());
   for (std::size_t i = 0; i < request.edge_frames.size(); ++i)
@@ -206,7 +179,7 @@ createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopReques
     Eigen::Vector3d current = edges.front().start;
     std::list<Edge> edge_list(edges.begin(), edges.end());
 
-    while(!edge_list.empty())
+    while (!edge_list.empty())
     {
       table_description.points.push_back(current);
       for (auto it = edge_list.begin(); it != edge_list.end(); ++it)
@@ -235,18 +208,14 @@ createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopReques
   if (!loose_points)
     return convertEdgesToTableDescription();
 
-  Eigen::Vector3d table_surface_pose_position;
-  tf::pointMsgToEigen(request.table_surface_pose.position, table_surface_pose_position);
-  Eigen::Vector3d table_center_in_edges_plane = projectIntoLinesPlane(table_surface_pose_position, lines[0], lines[1]);
-  bool center_inside = isCenterInside(table_center_in_edges_plane, edges, *loose_points);
+  Eigen::Vector3d first_extended =
+      loose_points->first.point + loose_points->first.outward_direction.normalized() * extend_loose_ends_distance;
+  Eigen::Vector3d second_extended =
+      loose_points->second.point + loose_points->second.outward_direction.normalized() * extend_loose_ends_distance;
 
-  if (center_inside)
-    edges.emplace_back(Edge{ loose_points->first, loose_points->second });
-  else
-  {
-    edges.emplace_back(Edge{ loose_points->first, table_center_in_edges_plane });
-    edges.emplace_back(Edge{ table_center_in_edges_plane, loose_points->second });
-  }
+  edges.emplace_back(Edge{ loose_points->first.point, first_extended });
+  edges.emplace_back(Edge{ loose_points->second.point, second_extended });
+  edges.emplace_back(Edge{ first_extended, second_extended });
 
   return convertEdgesToTableDescription();
 }

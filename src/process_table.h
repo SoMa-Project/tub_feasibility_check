@@ -49,10 +49,16 @@ struct TableDescription
   Eigen::Vector3d normal;
 };
 
+struct LoosePoint
+{
+  Eigen::Vector3d point;
+  Eigen::Vector3d outward_direction;
+};
+
 /* A pair of loose points - the points on the table polygon that are part of only one edge.
  * Such points exists when not all edge grasp frames were visible in the scene.
  */
-typedef std::pair<Eigen::Vector3d, Eigen::Vector3d> LoosePoints;
+typedef std::pair<LoosePoint, LoosePoint> LoosePoints;
 
 /* Create a parameteric description of the line for every edge frame X axis. */
 std::vector<Line> convertEdgeFramesToLines(const std::vector<Eigen::Affine3d>& edge_frames);
@@ -84,26 +90,18 @@ boost::optional<LoosePoints> findLoosePoints(const std::vector<Edge>& edges);
  */
 Eigen::Vector3d projectIntoLinesPlane(const Eigen::Vector3d& point, const Line& line1, const Line& line2);
 
-/* Compute whether a point lies inside or outside of the polygon defined by edges with an addition of an edge
- * that connects loose_points.
- *
- * @param center The point to be tested.
- * @param edges Combined with an edge that connects loose points, these edges should define a convex polygon.
- * @param loose_points Two unconnected points from edges.
- * @return true if center lies within the convex polygon, defined by edges with the addition of an edge that connects
- * loose_points and false otherwise.
- */
-bool isCenterInside(const Eigen::Vector3d& center, const std::vector<Edge>& edges, const LoosePoints& loose_points);
-
 /* Find the common normal between line1 and line2 that goes in the same direction as almost_normal. */
 Eigen::Vector3d correctNormal(const Eigen::Vector3d& almost_normal, const Line& line1, const Line& line2);
 
 /* Create a table description using edge frames and table surface position from the request.
  *
  * @return A table description, if it is possible to build a table from the edge frames supplied by request, and
- * boost::none otherwise. It is not possible to build a table when there are less than two edges.
+ * boost::none otherwise. It is not possible to build a table when there are less than two edges. If there
+ * are loose ends in the supplied edges, they will be connected with an extension.
+ *
+ * @param extend_loose_ends_distance Extend loose ends so far in the outwards direction.
  */
-boost::optional<TableDescription>
-createTableFromFrames(const tub_feasibility_check::CheckKinematicsTabletopRequest& request);
+boost::optional<TableDescription> createTableFromFrames(
+    const tub_feasibility_check::CheckKinematicsTabletopRequest& request, double extend_loose_ends_distance = 0.5);
 
 #endif  // PROCESS_TABLE_H

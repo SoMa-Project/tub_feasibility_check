@@ -134,7 +134,6 @@ boost::optional<CheckKinematicsParameters> processQueryParameters(const Request&
   };
   std::vector<std::pair<std::string, const geometry_msgs::Quaternion*>> orientations_to_check = {
     { "goal_pose", &req.goal_pose.orientation },
-    { container_name_and_pose.first, &container_name_and_pose.second.orientation },
     { "goal_manifold_frame", &req.goal_manifold_frame.orientation },
     { "goal_manifold_orientation", &req.goal_manifold_orientation }
   };
