@@ -236,7 +236,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"table_pose", req.table_pose}, tabletop_scene->dof());
+  auto parameters = processQueryParameters(req, {"table_pose", req.table_surface_pose}, tabletop_scene->dof());
   if (!parameters)
     return false;
 
@@ -248,13 +248,30 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   emit drawNamedFrame(parameters->goal_pose, "goal");
   emit drawNamedFrame(parameters->container_pose, "table");
 
-  ROS_INFO("Setting ifco pose and creating bounding boxes");
-  tabletop_scene->moveTable(parameters->container_pose);
+  ROS_INFO("Creating bounding boxes");
   tabletop_scene->removeBoxes();
   for (auto name_and_box : parameters->name_to_object_bounding_box)
   {
     tabletop_scene->createBox(name_and_box.first, name_and_box.second);
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
+  }
+
+  if (req.table_from_edges)
+  {
+    auto table_description = createTableFromFrames(req);
+    if (!table_description)
+    {
+      ROS_ERROR("Not enough edges to construct a table! Aborting");
+      return false;
+    }
+
+    ROS_INFO("Constructing a table from edges");
+    tabletop_scene->createTableFromEdges(*table_description);
+  }
+  else
+  {
+    ROS_INFO("Construction a fixed table");
+    tabletop_scene->createFixedTable(parameters->container_pose);
   }
 
   ROS_INFO("Trying to plan to the goal frame");

@@ -1,7 +1,9 @@
 #ifndef CHECK_KINEMATICS_PARAMETER_CHECK_H
 #define CHECK_KINEMATICS_PARAMETER_CHECK_H
 
+#include <ros/ros.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <list>
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
 
@@ -9,6 +11,7 @@
 #include "workspace_samplers.h"
 #include "workspace_checkers.h"
 #include "collision_specification.h"
+#include "process_table.h"
 
 typedef std::pair<std::string, geometry_msgs::Pose> ContainerNameAndPose;
 

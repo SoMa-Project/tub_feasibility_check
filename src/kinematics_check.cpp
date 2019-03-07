@@ -23,8 +23,18 @@ int main(int argc, char** argv)
     n.param("/feasibility_check/kinematics_file", kinematics_file, default_root_dir + "/model/rlkin/"
                                                                                       "barrett-wam-rbohand2.xml");
 
+    std::vector<double> table_dimensions;
+    n.param("/feasibility_check/table_dimensions", table_dimensions, { 0.8, 0.6, 0.03 });
+
+    if (table_dimensions.size() != 3)
+      throw std::runtime_error("Table dimensions must be 3 numbers");
+
+    if (table_dimensions[0] < 0 || table_dimensions[1] < 0 || table_dimensions[2] < 0)
+      throw std::runtime_error("All table dimensions must be positive");
+
     auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(ifco_scene_graph_file, kinematics_file));
-    auto tabletop_scene = std::unique_ptr<TabletopScene>(new TabletopScene(tabletop_scene_graph_file, kinematics_file));
+    auto tabletop_scene = std::unique_ptr<TabletopScene>(new TabletopScene(
+        tabletop_scene_graph_file, kinematics_file, { table_dimensions[0], table_dimensions[1], table_dimensions[2] }));
 
     QApplication application(argc, argv);
     MainWindow main_window(new MainWindow);

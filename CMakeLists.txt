@@ -94,6 +94,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/collision_specification.cpp
         src/usecase_scene.cpp
         src/tabletop_scene.cpp
+        src/process_table.cpp
     )
 
 qt4_wrap_ui(UI_HEADERS src/mainwindow.ui)
