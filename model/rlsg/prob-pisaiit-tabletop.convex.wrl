@@ -4,7 +4,7 @@ Transform {
 		DEF prob Transform {
 			children [
 				Inline {
-                                        url "prob.convex/prob-pisaiit.wrl"
+                                        url "prob.convex/prob-pisa_iit.wrl"
 				}
 			]
 		}
