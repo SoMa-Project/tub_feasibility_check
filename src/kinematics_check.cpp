@@ -26,6 +26,7 @@ int main(int argc, char** argv)
     std::vector<double> table_dimensions;
     n.param("/feasibility_check/table_dimensions", table_dimensions, { 0.8, 0.6, 0.03 });
 
+
     if (table_dimensions.size() != 3)
       throw std::runtime_error("Table dimensions must be 3 numbers");
 
