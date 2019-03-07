@@ -39,7 +39,7 @@ void TabletopScene::createFixedTable(const rl::math::Transform& table_surface_po
     double translate_multiplier = normal_points_downwards_ ? 1 : -1;
     table_center_pose.translate(translate_multiplier * Eigen::Vector3d::UnitZ() * fixed_table_dimensions_[2] / 2);
     sg_shape->setTransform(table_center_pose);
-    sg_shape->setName("tabletop");
+    sg_shape->setName("table");
   };
 
   createTableBox(*bullet_scene_);
