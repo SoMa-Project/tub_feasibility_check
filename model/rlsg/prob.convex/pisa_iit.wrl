@@ -1,7 +1,7 @@
 #VRML V2.0 utf8
 Transform {
 children [
-Shape {
+DEF sensor0 Shape {
 appearance Appearance {
 material Material {
 ambientIntensity 1.000000
@@ -117,7 +117,7 @@ normalPerVertex TRUE
 }
 Transform {
 children [
-Shape {
+DEF sensor2 Shape {
 appearance Appearance {
 material Material {
 ambientIntensity 1.000000
@@ -170,7 +170,7 @@ normalPerVertex TRUE
 }
 Transform {
 children [
-Shape {
+DEF sensor3 Shape {
 appearance Appearance {
 material Material {
 ambientIntensity 1.000000
@@ -223,7 +223,7 @@ normalPerVertex TRUE
 }
 Transform {
 children [
-Shape {
+DEF sensor4 Shape {
 appearance Appearance {
 material Material {
 ambientIntensity 1.000000
@@ -276,7 +276,7 @@ normalPerVertex TRUE
 }
 Transform {
 children [
-Shape {
+DEF sensor5 Shape {
 appearance Appearance {
 material Material {
 ambientIntensity 1.000000
