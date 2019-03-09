@@ -29,6 +29,7 @@
 #include "workspace_samplers.h"
 #include "ifco_scene.h"
 #include "tabletop_scene.h"
+#include "check_kinematics_parameters.h"
 
 class ServiceWorker : public QObject
 {
@@ -38,10 +39,10 @@ public:
   ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_ptr<TabletopScene> tabletop_scene);
 
   bool checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinematics::Request& req,
-                            tub_feasibility_check::CheckKinematics::Response& res);
+                                tub_feasibility_check::CheckKinematics::Response& res);
 
   bool checkKinematicsTabletopQuery(tub_feasibility_check::CheckKinematicsTabletop::Request& req,
-                            tub_feasibility_check::CheckKinematicsTabletop::Response& res);
+                                    tub_feasibility_check::CheckKinematicsTabletop::Response& res);
 
   bool checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGrasp::Request& req,
                               tub_feasibility_check::CheckSurfaceGrasp::Response& res);
@@ -67,6 +68,18 @@ signals:
   void selectViewer(MainWindow::ViewerType type);
 
 private:
+  struct SurfaceGraspResult
+  {
+    JacobianController::SingleResult pregrasp_result;
+    boost::optional<JacobianController::SingleResult> go_down_result;
+
+    operator bool() const;
+    std::vector<rl::math::Vector> combinedTrajectory() const;
+  };
+
+  SurfaceGraspResult tryInitialSurfaceGrasp(JacobianController& controller, const SharedParameters& shared_parameters,
+                                            const CheckSurfaceGraspParameters& specific_parameters);
+
   /* Visualize the position part of the goal manifold in the viewer. The manifold is specified by
    * the goal pose, and the minimum and maximum deviations from the goal pose in each coordinate.
    *

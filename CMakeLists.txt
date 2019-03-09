@@ -96,6 +96,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/usecase_scene.cpp
         src/tabletop_scene.cpp
         src/surface_grasp_pregrasp_manifold.cpp
+        src/check_kinematics_parameters.cpp
     )
 
 qt4_wrap_ui(UI_HEADERS src/mainwindow.ui)

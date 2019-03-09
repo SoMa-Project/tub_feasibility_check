@@ -13,17 +13,17 @@ SurfaceGraspPregraspManifold::SurfaceGraspPregraspManifold(SurfaceGraspPregraspM
 {
 }
 
-const WorkspaceChecker& SurfaceGraspPregraspManifold::checker()
+const WorkspaceChecker& SurfaceGraspPregraspManifold::checker() const
 {
   return checker_;
 }
 
-const WorkspaceSampler& SurfaceGraspPregraspManifold::sampler()
+const WorkspaceSampler& SurfaceGraspPregraspManifold::sampler() const
 {
   return sampler_;
 }
 
-const SurfaceGraspPregraspManifold::Description& SurfaceGraspPregraspManifold::description()
+const SurfaceGraspPregraspManifold::Description& SurfaceGraspPregraspManifold::description() const
 {
   return description_;
 }

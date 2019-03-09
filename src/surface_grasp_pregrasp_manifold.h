@@ -22,9 +22,9 @@ public:
 
   SurfaceGraspPregraspManifold(Description description);
 
-  const WorkspaceChecker& checker();
-  const WorkspaceSampler& sampler();
-  const Description& description();
+  const WorkspaceChecker& checker() const;
+  const WorkspaceSampler& sampler() const;
+  const Description& description() const;
 
 private:
   Description description_;
