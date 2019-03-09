@@ -37,7 +37,7 @@ WorkspaceSampler::WorkspaceSampler(WorkspaceSampler::SamplePosition sample_posit
 {
 }
 
-rl::math::Transform WorkspaceSampler::generate(WorkspaceSampler::SampleRandom01 sample_random_01)
+rl::math::Transform WorkspaceSampler::generate(WorkspaceSampler::SampleRandom01 sample_random_01) const
 {
   rl::math::Transform result;
   result.translation() = sample_position_(sample_random_01);

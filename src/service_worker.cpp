@@ -144,22 +144,26 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"ifco_pose", req.ifco_pose}, ifco_scene->dof());
-  if (!parameters)
+  auto shared_parameters = processSharedQueryParameters(
+      req, { { "ifco", req.ifco_pose }, { "goal", req.goal_pose }, { "goal_manifold", req.goal_manifold_frame } },
+      { { "goal_manifold", req.goal_manifold_orientation } }, ifco_scene->dof());
+  if (!shared_parameters)
     return false;
+
+  auto specific_parameters = processCheckKinematicsParameters(req, *shared_parameters);
 
   emit selectViewer(MainWindow::ViewerType::IfcoScene);
 
   emit resetBoxes();
   emit resetPoints();
   emit toggleWorkFrames(true);
-  emit drawNamedFrame(parameters->goal_pose, "goal");
-  emit drawNamedFrame(parameters->container_pose, "ifco");
+  emit drawNamedFrame(shared_parameters->poses["goal"], "goal");
+  emit drawNamedFrame(shared_parameters->poses["ifco"], "ifco");
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
-  ifco_scene->moveIfco(parameters->container_pose);
+  ifco_scene->moveIfco(shared_parameters->poses["ifco"]);
   ifco_scene->removeBoxes();
-  for (auto name_and_box : parameters->name_to_object_bounding_box)
+  for (auto name_and_box : shared_parameters->name_to_object_bounding_box)
   {
     ifco_scene->createBox(name_and_box.first, name_and_box.second);
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
@@ -168,9 +172,9 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
                                          maximum_steps, ifco_scene->getViewer());
-  auto result =
-      jacobian_controller.moveSingleParticle(parameters->initial_configuration, parameters->goal_pose,
-                                             *parameters->collision_specification, *parameters->goal_manifold_checker);
+  auto result = jacobian_controller.moveSingleParticle(
+      shared_parameters->initial_configuration, shared_parameters->poses["goal"],
+      *specific_parameters->collision_specification, *specific_parameters->goal_manifold_checker);
 
   if (result)
   {
@@ -186,8 +190,8 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
 
   ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
-  drawGoalManifold(parameters->goal_manifold_frame, req.min_position_deltas, req.max_position_deltas);
-  emit drawNamedFrame(parameters->goal_manifold_frame, "goal manifold");
+  drawGoalManifold(shared_parameters->poses["goal_manifold"], req.min_position_deltas, req.max_position_deltas);
+  emit drawNamedFrame(shared_parameters->poses["goal_manifold"], "goal manifold");
 
   std::size_t seed = req.seed ? req.seed : time(nullptr);
   ROS_INFO_STREAM("Random seed used: " << seed);
@@ -203,14 +207,117 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_transform = parameters->goal_manifold_sampler->generate(sample_01);
+    rl::math::Transform sampled_transform = specific_parameters->goal_manifold_sampler->generate(sample_01);
     emit drawNamedFrame(sampled_transform, "sampled goal");
 
     ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
     emit resetPoints();
-    auto result = jacobian_controller.moveSingleParticle(parameters->initial_configuration, sampled_transform,
-                                                         *parameters->collision_specification,
-                                                         *parameters->goal_manifold_checker);
+    auto result = jacobian_controller.moveSingleParticle(shared_parameters->initial_configuration, sampled_transform,
+                                                         *specific_parameters->collision_specification,
+                                                         *specific_parameters->goal_manifold_checker);
+
+    if (result)
+    {
+      ROS_INFO_STREAM("Success: " << describeSingleResult(result));
+      res.status = res.REACHED_SAMPLED;
+      res.final_configuration = utilities::eigenToStd(result.trajectory.back());
+      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
+      return true;
+    }
+    else
+      ROS_INFO_STREAM("Failure: " << describeSingleResult(result));
+  }
+
+  ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
+  res.status = res.FAILED;
+  return true;
+}
+
+bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGrasp::Request& req,
+                                           tub_feasibility_check::CheckSurfaceGrasp::Response& res)
+{
+  const double delta = 0.017;
+  const unsigned maximum_steps = 1000;
+
+  ROS_INFO("Receiving query");
+  auto shared_parameters =
+      processSharedQueryParameters(req, { { "ifco", req.ifco_pose },
+                                          { "pregrasp_goal", req.pregrasp_goal_pose },
+                                          { "go_down_goal", req.go_down_goal_pose },
+                                          { "go_down_allowed_position_frame", req.go_down_allowed_position_frame } },
+                                   {}, ifco_scene->dof());
+
+  if (!shared_parameters)
+    return false;
+
+  auto specific_parameters = processCheckSurfaceGraspParameters(req, *shared_parameters);
+
+  emit selectViewer(MainWindow::ViewerType::IfcoScene);
+
+  emit resetBoxes();
+  emit resetPoints();
+  emit toggleWorkFrames(true);
+  emit drawNamedFrame(shared_parameters->poses["goal"], "goal");
+  emit drawNamedFrame(shared_parameters->poses["ifco"], "ifco");
+
+  ROS_INFO("Setting ifco pose and creating bounding boxes");
+  ifco_scene->moveIfco(shared_parameters->poses["ifco"]);
+  ifco_scene->removeBoxes();
+  for (auto name_and_box : shared_parameters->name_to_object_bounding_box)
+  {
+    ifco_scene->createBox(name_and_box.first, name_and_box.second);
+    emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
+  }
+
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
+                                         maximum_steps, ifco_scene->getViewer());
+
+  ROS_INFO("Going to initial pregrasp pose");
+  auto prohibit_all_collisions = WorldPartsCollisions({});
+  auto result = jacobian_controller.moveSingleParticle(
+      shared_parameters->initial_configuration, shared_parameters->poses.at("pregrasp_goal"), prohibit_all_collisions,
+      specific_parameters->pregrasp_manifold->checker());
+
+  if (result)
+  {
+    ROS_INFO_STREAM("Goal frame success: " << describeSingleResult(result));
+
+    res.status = res.REACHED_INITIAL;
+    res.final_configuration = utilities::eigenToStd(result.trajectory.back());
+    res.trajectory = utilities::concatanateEigneToStd(result.trajectory, result.trajectory.front().size());
+    ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
+    return true;
+  }
+
+  ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
+
+  auto& pregrasp_manifold_description = specific_parameters->pregrasp_manifold->description();
+  drawGoalManifold(pregrasp_manifold_description.position_frame, pregrasp_manifold_description.min_position_deltas,
+                   pregrasp_manifold_description.max_position_deltas);
+  emit drawNamedFrame(pregrasp_manifold_description.position_frame, "goal manifold");
+
+  std::size_t seed = req.seed ? req.seed : time(nullptr);
+  ROS_INFO_STREAM("Random seed used: " << seed);
+  std::mt19937 generator(seed);
+
+  std::uniform_real_distribution<double> random_01;
+  auto sample_01 = [&generator, &random_01]() { return random_01(generator); };
+
+  int sample_count;
+  ros::NodeHandle n;
+  n.param("/feasibility_check/sample_count", sample_count, 20);
+
+  ROS_INFO("Beginning to sample from the goal manifold");
+  for (unsigned i = 0; i < sample_count; ++i)
+  {
+    rl::math::Transform sampled_transform = specific_parameters->pregrasp_manifold->sampler().generate(sample_01);
+    emit drawNamedFrame(sampled_transform, "sampled goal");
+
+    ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
+    emit resetPoints();
+    auto result = jacobian_controller.moveSingleParticle(shared_parameters->initial_configuration, sampled_transform,
+                                                         *specific_parameters->go_down_collision_specification,
+                                                         specific_parameters->pregrasp_manifold->checker());
 
     if (result)
     {
@@ -236,22 +343,26 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   const unsigned maximum_steps = 1000;
 
   ROS_INFO("Receiving query");
-  auto parameters = processQueryParameters(req, {"table_pose", req.table_pose}, tabletop_scene->dof());
-  if (!parameters)
+  auto shared_parameters = processSharedQueryParameters(
+      req, { { "table", req.table_pose }, { "goal", req.goal_pose }, { "goal_manifold", req.goal_manifold_frame } },
+      { { "goal_manifold", req.goal_manifold_orientation } }, tabletop_scene->dof());
+  if (!shared_parameters)
     return false;
+
+  auto specific_parameters = processCheckKinematicsParameters(req, *shared_parameters);
 
   emit selectViewer(MainWindow::ViewerType::TabletopScene);
 
   emit resetBoxes();
   emit resetPoints();
   emit toggleWorkFrames(true);
-  emit drawNamedFrame(parameters->goal_pose, "goal");
-  emit drawNamedFrame(parameters->container_pose, "table");
+  emit drawNamedFrame(shared_parameters->poses["goal"], "goal");
+  emit drawNamedFrame(shared_parameters->poses["table"], "table");
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
-  tabletop_scene->moveTable(parameters->container_pose);
+  tabletop_scene->moveTable(shared_parameters->poses["table"]);
   tabletop_scene->removeBoxes();
-  for (auto name_and_box : parameters->name_to_object_bounding_box)
+  for (auto name_and_box : shared_parameters->name_to_object_bounding_box)
   {
     tabletop_scene->createBox(name_and_box.first, name_and_box.second);
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
@@ -260,9 +371,9 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   ROS_INFO("Trying to plan to the goal frame");
   JacobianController jacobian_controller(tabletop_scene->getKinematics(), tabletop_scene->getBulletScene(), delta,
                                          maximum_steps, tabletop_scene->getViewer());
-  auto result =
-      jacobian_controller.moveSingleParticle(parameters->initial_configuration, parameters->goal_pose,
-                                             *parameters->collision_specification, *parameters->goal_manifold_checker);
+  auto result = jacobian_controller.moveSingleParticle(
+      shared_parameters->initial_configuration, shared_parameters->poses["goal"],
+      *specific_parameters->collision_specification, *specific_parameters->goal_manifold_checker);
 
   if (result)
   {
@@ -278,8 +389,8 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
 
   ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
-  drawGoalManifold(parameters->goal_manifold_frame, req.min_position_deltas, req.max_position_deltas);
-  emit drawNamedFrame(parameters->goal_manifold_frame, "goal manifold");
+  drawGoalManifold(shared_parameters->poses["goal_manifold"], req.min_position_deltas, req.max_position_deltas);
+  emit drawNamedFrame(shared_parameters->poses["goal_manifold"], "goal manifold");
 
   std::size_t seed = req.seed ? req.seed : time(nullptr);
   ROS_INFO_STREAM("Random seed used: " << seed);
@@ -295,14 +406,14 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_transform = parameters->goal_manifold_sampler->generate(sample_01);
+    rl::math::Transform sampled_transform = specific_parameters->goal_manifold_sampler->generate(sample_01);
     emit drawNamedFrame(sampled_transform, "sampled goal");
 
     ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
     emit resetPoints();
-    auto result = jacobian_controller.moveSingleParticle(parameters->initial_configuration, sampled_transform,
-                                                         *parameters->collision_specification,
-                                                         *parameters->goal_manifold_checker);
+    auto result = jacobian_controller.moveSingleParticle(shared_parameters->initial_configuration, sampled_transform,
+                                                         *specific_parameters->collision_specification,
+                                                         *specific_parameters->goal_manifold_checker);
 
     if (result)
     {
@@ -368,4 +479,3 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
 
   emit drawBox(size, pose);
 }
-

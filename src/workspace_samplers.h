@@ -50,7 +50,7 @@ public:
 
   WorkspaceSampler(SamplePosition sample_position, SampleOrientation sample_orientation);
 
-  rl::math::Transform generate(SampleRandom01 sample_random_01);
+  rl::math::Transform generate(SampleRandom01 sample_random_01) const;
 
 private:
   SamplePosition sample_position_;

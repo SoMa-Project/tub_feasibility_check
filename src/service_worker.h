@@ -19,7 +19,7 @@
 #include <eigen_conversions/eigen_msg.h>
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
-#include "tub_feasibility_check/CerrtExample.h"
+#include "tub_feasibility_check/CheckSurfaceGrasp.h"
 #include "tub_feasibility_check/VisualizeTrajectory.h"
 
 #include "mainwindow.h"
@@ -43,11 +43,11 @@ public:
   bool checkKinematicsTabletopQuery(tub_feasibility_check::CheckKinematicsTabletop::Request& req,
                             tub_feasibility_check::CheckKinematicsTabletop::Response& res);
 
+  bool checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGrasp::Request& req,
+                              tub_feasibility_check::CheckSurfaceGrasp::Response& res);
+
   bool visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTrajectory::Request& req,
                                 tub_feasibility_check::VisualizeTrajectory::Response& res);
-
-  bool cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
-                         tub_feasibility_check::CerrtExample::Response& res);
 
   void start(unsigned rate);
 
