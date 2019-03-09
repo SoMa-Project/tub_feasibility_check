@@ -77,8 +77,9 @@ private:
     std::vector<rl::math::Vector> combinedTrajectory() const;
   };
 
-  SurfaceGraspResult tryInitialSurfaceGrasp(JacobianController& controller, const SharedParameters& shared_parameters,
-                                            const CheckSurfaceGraspParameters& specific_parameters);
+  SurfaceGraspResult trySurfaceGrasp(JacobianController& controller, const SharedParameters& shared_parameters,
+                                     const CheckSurfaceGraspParameters& specific_parameters,
+                                     const Eigen::Affine3d& pregrasp_goal, const Eigen::Affine3d& go_down_goal);
 
   /* Visualize the position part of the goal manifold in the viewer. The manifold is specified by
    * the goal pose, and the minimum and maximum deviations from the goal pose in each coordinate.

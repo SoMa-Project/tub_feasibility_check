@@ -251,34 +251,36 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   return true;
 }
 
-ServiceWorker::SurfaceGraspResult ServiceWorker::tryInitialSurfaceGrasp(
-    JacobianController& jacobian_controller, const SharedParameters& shared_parameters,
-    const CheckSurfaceGraspParameters& specific_parameters)
+ServiceWorker::SurfaceGraspResult ServiceWorker::trySurfaceGrasp(JacobianController& jacobian_controller,
+                                                                 const SharedParameters& shared_parameters,
+                                                                 const CheckSurfaceGraspParameters& specific_parameters,
+                                                                 const Eigen::Affine3d& pregrasp_goal,
+                                                                 const Eigen::Affine3d& go_down_goal)
 {
   ServiceWorker::SurfaceGraspResult surface_grasp_result;
 
   ROS_INFO("Going to initial pregrasp pose");
   auto prohibit_all_collisions = WorldPartsCollisions({});
-  surface_grasp_result.pregrasp_result = jacobian_controller.moveSingleParticle(
-      shared_parameters.initial_configuration, shared_parameters.poses.at("pregrasp_goal"), prohibit_all_collisions,
-      specific_parameters.pregrasp_manifold->checker());
+  surface_grasp_result.pregrasp_result =
+      jacobian_controller.moveSingleParticle(shared_parameters.initial_configuration, pregrasp_goal,
+                                             prohibit_all_collisions, specific_parameters.pregrasp_manifold->checker());
 
   if (!surface_grasp_result.pregrasp_result)
   {
-    ROS_INFO_STREAM("Initial pregrasp pose failure:" << describeSingleResult(surface_grasp_result.pregrasp_result));
+    ROS_INFO_STREAM("Pregrasp failure:" << describeSingleResult(surface_grasp_result.pregrasp_result));
     return surface_grasp_result;
   }
 
-  ROS_INFO_STREAM("Initial pregrasp pose success: " << describeSingleResult(surface_grasp_result.pregrasp_result));
+  ROS_INFO_STREAM("Pregrasp success: " << describeSingleResult(surface_grasp_result.pregrasp_result));
 
   surface_grasp_result.go_down_result = jacobian_controller.moveSingleParticle(
-      surface_grasp_result.pregrasp_result.trajectory.back(), shared_parameters.poses.at("go_down_goal"),
+      surface_grasp_result.pregrasp_result.trajectory.back(), go_down_goal,
       *specific_parameters.go_down_collision_specification, *specific_parameters.go_down_position_checker);
 
   if (!*surface_grasp_result.go_down_result)
-    ROS_INFO_STREAM("Initial go down failure: " << describeSingleResult(*surface_grasp_result.go_down_result));
+    ROS_INFO_STREAM("Go down failure: " << describeSingleResult(*surface_grasp_result.go_down_result));
   else
-    ROS_INFO_STREAM("Initial go down success: " << describeSingleResult(*surface_grasp_result.go_down_result));
+    ROS_INFO_STREAM("Go down success: " << describeSingleResult(*surface_grasp_result.go_down_result));
 
   return surface_grasp_result;
 }
@@ -326,8 +328,10 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
                    req.go_down_allowed_position_min_deltas, req.go_down_allowed_position_max_deltas);
   emit drawNamedFrame(shared_parameters->poses.at("go_down_allowed_position_frame"), "go down manifold");
 
+  ROS_INFO("Trying initial grasp");
   auto initial_surface_grasp_result =
-      tryInitialSurfaceGrasp(jacobian_controller, *shared_parameters, *specific_parameters);
+      trySurfaceGrasp(jacobian_controller, *shared_parameters, *specific_parameters,
+                      shared_parameters->poses.at("pregrasp_goal"), shared_parameters->poses.at("go_down_goal"));
   if (initial_surface_grasp_result)
   {
     res.status = res.REACHED_INITIAL;
@@ -338,9 +342,7 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     return true;
   }
 
-  return false;
-
-  ROS_INFO("Beginning to sample trajectories");
+  ROS_INFO("Beginning to sample grasps");
 
   auto& pregrasp_manifold_description = specific_parameters->pregrasp_manifold->description();
   drawGoalManifold(pregrasp_manifold_description.position_frame, pregrasp_manifold_description.min_position_deltas,
@@ -361,25 +363,27 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_transform = specific_parameters->pregrasp_manifold->sampler().generate(sample_01);
-    emit drawNamedFrame(sampled_transform, "sampled goal");
+    rl::math::Transform sampled_pregrasp_pose = specific_parameters->pregrasp_manifold->sampler().generate(sample_01);
+    emit drawNamedFrame(sampled_pregrasp_pose, "sampled pregrasp pose");
 
-    ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
+    // TODO: translation should also be derived from the sampled pregrasp pose
+    rl::math::Transform sampled_go_down_pose = sampled_pregrasp_pose;
+    sampled_go_down_pose.translation() = shared_parameters->poses.at("go_down_goal").translation();
+
+    ROS_INFO_STREAM("Trying sampled grasp number " << i);
     emit resetPoints();
-    auto result = jacobian_controller.moveSingleParticle(shared_parameters->initial_configuration, sampled_transform,
-                                                         *specific_parameters->go_down_collision_specification,
-                                                         specific_parameters->pregrasp_manifold->checker());
+    auto sampled_surface_grasp_result = trySurfaceGrasp(jacobian_controller, *shared_parameters, *specific_parameters,
+                                                        sampled_pregrasp_pose, sampled_go_down_pose);
 
-    if (result)
+    if (sampled_surface_grasp_result)
     {
-      ROS_INFO_STREAM("Success: " << describeSingleResult(result));
       res.status = res.REACHED_SAMPLED;
-      res.final_configuration = utilities::eigenToStd(result.trajectory.back());
-      res.trajectory = utilities::concatanateEigneToStd(result.trajectory, res.final_configuration.size());
+      res.final_configuration = utilities::eigenToStd(sampled_surface_grasp_result.go_down_result->trajectory.back());
+      auto combined_trajectory = sampled_surface_grasp_result.combinedTrajectory();
+      res.trajectory = utilities::concatanateEigneToStd(combined_trajectory, res.final_configuration.size());
+      ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
       return true;
     }
-    else
-      ROS_INFO_STREAM("Failure: " << describeSingleResult(result));
   }
 
   ROS_INFO_STREAM("All " << sample_count << " attempts failed.");

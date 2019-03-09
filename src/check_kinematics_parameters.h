@@ -141,10 +141,12 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
 
   Eigen::Affine3d go_down_allowed_position_frame;
   tf::poseMsgToEigen(req.go_down_allowed_position_frame, go_down_allowed_position_frame);
+
+  // does not check for orientation - the orientation is not changed in the go down movement
   params.go_down_position_checker = WorkspaceChecker(
       BoxPositionChecker(go_down_allowed_position_frame, req.go_down_allowed_position_min_deltas,
                          req.go_down_allowed_position_max_deltas),
-      AroundTargetOrientationChecker(shared_parameters.poses.at("go_down_goal").linear(), { 0, 0, 0 }, { 0, 0, 0 }));
+        [](const rl::math::Rotation&) {return true; });
 
   params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
 
