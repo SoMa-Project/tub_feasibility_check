@@ -75,6 +75,8 @@ public slots:
 
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
 
+  void drawCylinder(const rl::math::Transform& transform, double radius, double height);
+
 	void drawConfiguration(const rl::math::Vector& q);
 	
 	void drawConfigurationEdge(const rl::math::Vector& u, const rl::math::Vector& v, const bool& free = true);
@@ -106,6 +108,8 @@ public slots:
 	void reset();
 
   void resetBoxes();
+
+  void resetCylinders();
 	
 	void resetEdges();
 	
@@ -149,6 +153,16 @@ private:
   SoVRMLGroup* boxesGroup;
 
   SoVRMLMaterial* boxesMaterial;
+
+  SoVRMLSwitch* cylinders;
+
+  SoDrawStyle* cylindersDrawStyle;
+
+  SoVRMLAppearance* cylindersAppearance;
+
+  SoVRMLGroup* cylindersGroup;
+
+  SoVRMLMaterial* cylindersMaterial;
 
   SoVRMLSwitch* edges;
 	

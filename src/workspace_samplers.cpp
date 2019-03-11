@@ -31,13 +31,13 @@ rl::math::Vector3 UniformPositionInAsymmetricBox::operator()(std::function<doubl
   return box_pose_ * point;
 }
 
-WorkspaceSampler::WorkspaceSampler(WorkspaceSampler::SamplePosition sample_position,
-                                   WorkspaceSampler::SampleOrientation sample_orientation)
+WorkspaceSeparateSampler::WorkspaceSeparateSampler(WorkspaceSeparateSampler::SamplePosition sample_position,
+                                   WorkspaceSeparateSampler::SampleOrientation sample_orientation)
   : sample_position_(sample_position), sample_orientation_(sample_orientation)
 {
 }
 
-rl::math::Transform WorkspaceSampler::generate(WorkspaceSampler::SampleRandom01 sample_random_01) const
+rl::math::Transform WorkspaceSeparateSampler::generate(WorkspaceSeparateSampler::SampleRandom01 sample_random_01) const
 {
   rl::math::Transform result;
   result.translation() = sample_position_(sample_random_01);
@@ -63,4 +63,9 @@ rl::math::Quaternion DeltaXYZOrientation::operator()(std::function<double()> sam
       rl::math::AngleAxis(angles[0], rl::math::Vector3::UnitX());
 
   return sampled_diff * initial_orientation_;
+}
+
+WorkspaceSampler::~WorkspaceSampler()
+{
+
 }

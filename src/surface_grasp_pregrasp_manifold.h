@@ -11,13 +11,8 @@ class SurfaceGraspPregraspManifold
 public:
   struct Description
   {
-    Eigen::Affine3d position_frame;
-    Eigen::Quaternion<double> orientation;
-
-    boost::array<double, 3> min_position_deltas;
-    boost::array<double, 3> max_position_deltas;
-    boost::array<double, 3> min_orientation_deltas;
-    boost::array<double, 3> max_orientation_deltas;
+    Eigen::Affine3d initial_frame;
+    double radius;
   };
 
   SurfaceGraspPregraspManifold(Description description);
@@ -27,9 +22,31 @@ public:
   const Description& description() const;
 
 private:
+  struct ManifoldSampler final : public WorkspaceSampler
+  {
+    ManifoldSampler(Description description) : description_(description)
+    {
+    }
+
+    rl::math::Transform generate(SampleRandom01 sample_random_01) const override;
+
+    Description description_;
+  };
+
+  struct ManifoldChecker final : public WorkspaceChecker
+  {
+    ManifoldChecker(Description description) : description_(description)
+    {
+    }
+
+    bool contains(const rl::math::Transform& transform_to_check) const override;
+
+    Description description_;
+  };
+
   Description description_;
-  WorkspaceChecker checker_;
-  WorkspaceSampler sampler_;
+  std::shared_ptr<WorkspaceChecker> checker_;
+  std::shared_ptr<WorkspaceSampler> sampler_;
 };
 
 #endif  // SURFACE_GRASP_PREGRASP_MANIFOLD_H

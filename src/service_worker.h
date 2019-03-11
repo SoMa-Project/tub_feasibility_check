@@ -59,10 +59,13 @@ public slots:
 signals:
   void drawConfiguration(const rl::math::Vector& size);
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
+  void drawCylinder(const rl::math::Transform& transform, double radius, double height);
   void drawNamedFrame(const rl::math::Transform& transform, const std::string& name);
   void resetBoxes();
+  void resetCylinders();
   void resetPoints();
   void resetLines();
+  void resetFrames();
   void toggleWorkFrames(bool on);
 
   void selectViewer(MainWindow::ViewerType type);
@@ -77,6 +80,8 @@ private:
     std::vector<rl::math::Vector> combinedTrajectory() const;
   };
 
+  void clearViewerScene();
+
   SurfaceGraspResult trySurfaceGrasp(JacobianController& controller, const SharedParameters& shared_parameters,
                                      const CheckSurfaceGraspParameters& specific_parameters,
                                      const Eigen::Affine3d& pregrasp_goal, const Eigen::Affine3d& go_down_goal);
@@ -90,6 +95,8 @@ private:
    */
   void drawGoalManifold(rl::math::Transform pose, const boost::array<double, 3>& min_position_deltas,
                         const boost::array<double, 3>& max_position_deltas, double zero_dimension_correction = 0.01);
+
+  void drawPregraspManifold(const SurfaceGraspPregraspManifold::Description& description);
 
   std::unique_ptr<IfcoScene> ifco_scene;
   std::unique_ptr<TabletopScene> tabletop_scene;

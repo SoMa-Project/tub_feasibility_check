@@ -30,6 +30,7 @@
 #include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
 #include <Inventor/VRMLnodes/SoVRMLSphere.h>
 #include <Inventor/VRMLnodes/SoVRMLBox.h>
+#include <Inventor/VRMLnodes/SoVRMLCylinder.h>
 #include <Inventor/VRMLnodes/SoVRMLText.h>
 #include <Inventor/VRMLnodes/SoVRMLFontStyle.h>
 #include <Inventor/nodes/SoCamera.h>
@@ -54,6 +55,11 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
   boxesDrawStyle(new SoDrawStyle()),
   boxesGroup(new SoVRMLGroup()),
   boxesMaterial(new SoVRMLMaterial()),
+  cylinders(new SoVRMLSwitch()),
+  cylindersDrawStyle(new SoDrawStyle()),
+  cylindersAppearance(new SoVRMLAppearance()),
+  cylindersGroup(new SoVRMLGroup()),
+  cylindersMaterial(new SoVRMLMaterial()),
   edges(new SoVRMLSwitch()),
 	edgesColliding(new SoVRMLSwitch()),
 	edgesCollidingAppearance(new SoVRMLAppearance()),
@@ -156,6 +162,16 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
   boxes->addChild(this->boxesGroup);
 
   root->addChild(this->boxes);
+
+  cylinders->setName("cylinders");
+  cylinders->whichChoice = SO_SWITCH_ALL;
+  cylinders->addChild(cylindersDrawStyle);
+  cylindersMaterial->diffuseColor.setValue(0.2f, 0.2f, 0.2f);
+  cylindersMaterial->transparency.setValue(0.75f);
+  cylindersAppearance->material = cylindersMaterial;
+  cylindersAppearance->ref();
+  cylinders->addChild(cylindersGroup);
+  root->addChild(cylinders);
 
 	// edgesColliding
 	
@@ -438,6 +454,27 @@ void Viewer::drawBox(const rl::math::Vector& size, const rl::math::Transform& tr
 
   vrml_transform->addChild(shape);
   boxesGroup->addChild(vrml_transform);
+}
+
+void Viewer::drawCylinder(const rl::math::Transform& transform, double radius, double height)
+{
+  auto vrml_transform = new SoVRMLTransform();
+  rl::math::Vector translation = transform.translation();
+  rl::math::Quaternion rotation(transform.rotation());
+  vrml_transform->translation.setValue(translation(0), translation(1), translation(2));
+  vrml_transform->rotation.setValue(rotation.x(), rotation.y(), rotation.z(), rotation.w());
+
+  auto shape = new SoVRMLShape();
+  shape->appearance = cylindersAppearance;
+
+  auto cylinder = new SoVRMLCylinder();
+  cylinder->radius.setValue(radius);
+  cylinder->height.setValue(height);
+
+  shape->geometry = cylinder;
+
+  vrml_transform->addChild(shape);
+  cylindersGroup->addChild(vrml_transform);
 }
 
 // =============================================================================================
@@ -957,6 +994,11 @@ void Viewer::resetBoxes()
   boxesGroup->removeAllChildren();
 }
 
+void Viewer::resetCylinders()
+{
+  cylindersGroup->removeAllChildren();
+}
+
 void
 Viewer::resetEdges()
 {
@@ -996,6 +1038,7 @@ Viewer::resetVertices()
 
 void Viewer::resetFrames()
 {
+  name_to_frame_.clear();
   work->removeAllChildren();
 }
 

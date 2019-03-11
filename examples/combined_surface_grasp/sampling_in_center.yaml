@@ -1,25 +1,21 @@
 initial_configuration: [0, 0.1, 0, 2.3, 0, 0.5, 0]
 pregrasp_goal_pose:
-  position: {x: 0.4, y: -0.02, z: 0.1}
-  orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
+  position: {x: 0.49, y: -0.02, z: 0.1}
+  orientation: {x: 0, y: 0.997551, z: 0, w: 0.0699428}
 go_down_goal_pose:
-  position: {x: 0.4, y: -0.02, z: -0.056}
-  orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
+  position: {x: 0.49, y: -0.02, z: -0.056}
+  orientation: {x: 0, y: 0.997551, z: 0, w: 0.0699428}
 ifco_pose:
   position: {x: 0.48, y: 0, z: -0.146}
   orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
 pregrasp_manifold:
-  position_frame:
-    position: {x: 0.4, y: -0.02, z: 0.1}
-    orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
-  min_position_deltas: [-0.05, -0.05, 0]
-  max_position_deltas: [0.05, 0.05, 0]
-  orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
-  min_orientation_deltas: [0, 0, -1.5]
-  max_orientation_deltas: [0, 0, 1.5]
+  initial_frame:
+    position: {x: 0.49, y: -0.02, z: 0.1}
+    orientation: {x: 0, y: 0.997551, z: 0, w: 0.0699428}
+  radius: 0.2
 go_down_allowed_position_frame:
-  position: {x: 0.4, y: -0.02, z: -0.056}
-  orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
+  position: {x: 0.49, y: -0.02, z: -0.056}
+  orientation: {x: 0, y: 0.997551, z: 0, w: 0.0699428}
 go_down_allowed_position_min_deltas: [-0.05, -0.05, -0.05]
 go_down_allowed_position_max_deltas: [0.05, 0.05, 0]
 bounding_boxes_with_poses:
@@ -27,13 +23,13 @@ bounding_boxes_with_poses:
     type: 0
     dimensions: [0.08, 0.08, 0.08]
   pose:
-    position: {x: 0.4, y: -0.02, z: -0.096}
+    position: {x: 0.49, y: -0.02, z: -0.096}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
 - box:
     type: 0
-    dimensions: [0.08, 0.08, 0.05]
+    dimensions: [0.08, 0.08, 0.15]
   pose:
-    position: {x: 0.52, y: -0.01, z: -0.111}
+    position: {x: 0.61, y: -0.01, z: -0.061}
     orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
 - box:
     type: 0

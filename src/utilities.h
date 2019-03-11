@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <rl/math/Vector.h>
+#include <rl/math/Transform.h>
 #include <iostream>
 
 namespace utilities

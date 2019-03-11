@@ -25,6 +25,7 @@
 //
 
 #include <QMutexLocker>
+#include <fstream>
 #include "service_worker.h"
 #include "jacobian_controller.h"
 #include "workspace_samplers.h"
@@ -146,9 +147,13 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_
                        SLOT(drawConfiguration(rl::math::Vector)));
       QObject::connect(this, SIGNAL(drawBox(rl::math::Vector, rl::math::Transform)), *viewer,
                        SLOT(drawBox(rl::math::Vector, rl::math::Transform)));
+      QObject::connect(this, SIGNAL(drawCylinder(rl::math::Transform, double, double)), *viewer,
+                       SLOT(drawCylinder(rl::math::Transform, double, double)));
       QObject::connect(this, SIGNAL(resetBoxes()), *viewer, SLOT(resetBoxes()));
+      QObject::connect(this, SIGNAL(resetCylinders()), *viewer, SLOT(resetCylinders()));
       QObject::connect(this, SIGNAL(resetPoints()), *viewer, SLOT(resetPoints()));
       QObject::connect(this, SIGNAL(resetLines()), *viewer, SLOT(resetLines()));
+      QObject::connect(this, SIGNAL(resetFrames()), *viewer, SLOT(resetFrames()));
       QObject::connect(this, SIGNAL(toggleWorkFrames(bool)), *viewer, SLOT(toggleWorkFrames(bool)));
       QObject::connect(this, SIGNAL(drawNamedFrame(rl::math::Transform, std::string)), *viewer,
                        SLOT(drawNamedFrame(rl::math::Transform, std::string)));
@@ -171,10 +176,7 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   auto specific_parameters = processCheckKinematicsParameters(req, *shared_parameters);
 
   emit selectViewer(MainWindow::ViewerType::IfcoScene);
-
-  emit resetBoxes();
-  emit resetPoints();
-  emit toggleWorkFrames(true);
+  clearViewerScene();
   emit drawNamedFrame(shared_parameters->poses["goal"], "goal");
   emit drawNamedFrame(shared_parameters->poses["ifco"], "ifco");
 
@@ -305,15 +307,13 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   auto specific_parameters = processCheckSurfaceGraspParameters(req, *shared_parameters);
 
   emit selectViewer(MainWindow::ViewerType::IfcoScene);
-
-  emit resetBoxes();
-  emit resetPoints();
-  emit toggleWorkFrames(true);
-  emit drawNamedFrame(shared_parameters->poses["goal"], "goal");
-  emit drawNamedFrame(shared_parameters->poses["ifco"], "ifco");
+  clearViewerScene();
+  emit drawNamedFrame(shared_parameters->poses.at("pregrasp_goal"), "pregrasp_goal");
+  emit drawNamedFrame(shared_parameters->poses.at("go_down_goal"), "go_down_goal");
+  emit drawNamedFrame(shared_parameters->poses.at("ifco"), "ifco");
 
   ROS_INFO("Setting ifco pose and creating bounding boxes");
-  ifco_scene->moveIfco(shared_parameters->poses["ifco"]);
+  ifco_scene->moveIfco(shared_parameters->poses.at("ifco"));
   ifco_scene->removeBoxes();
   for (auto name_and_box : shared_parameters->name_to_object_bounding_box)
   {
@@ -345,9 +345,8 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   ROS_INFO("Beginning to sample grasps");
 
   auto& pregrasp_manifold_description = specific_parameters->pregrasp_manifold->description();
-  drawGoalManifold(pregrasp_manifold_description.position_frame, pregrasp_manifold_description.min_position_deltas,
-                   pregrasp_manifold_description.max_position_deltas);
-  emit drawNamedFrame(pregrasp_manifold_description.position_frame, "pregrasp manifold");
+  drawPregraspManifold(pregrasp_manifold_description);
+  emit drawNamedFrame(pregrasp_manifold_description.initial_frame, "pregrasp manifold");
 
   std::size_t seed = req.seed ? req.seed : time(nullptr);
   ROS_INFO_STREAM("Random seed used: " << seed);
@@ -408,9 +407,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
 
   emit selectViewer(MainWindow::ViewerType::TabletopScene);
 
-  emit resetBoxes();
-  emit resetPoints();
-  emit toggleWorkFrames(true);
+  clearViewerScene();
   emit drawNamedFrame(shared_parameters->poses["goal"], "goal");
   emit drawNamedFrame(shared_parameters->poses["table"], "table");
 
@@ -503,6 +500,15 @@ bool ServiceWorker::visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTra
   return true;
 }
 
+void ServiceWorker::clearViewerScene()
+{
+  emit resetBoxes();
+  emit resetPoints();
+  emit resetCylinders();
+  emit resetFrames();
+  emit toggleWorkFrames(true);
+}
+
 void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::array<double, 3>& min_position_deltas,
                                      const boost::array<double, 3>& max_position_deltas,
                                      double zero_dimension_correction)
@@ -533,4 +539,13 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
   pose.translate(center_correction);
 
   emit drawBox(size, pose);
+}
+
+void ServiceWorker::drawPregraspManifold(const SurfaceGraspPregraspManifold::Description& description)
+{
+  using namespace rl::math;
+
+  rl::math::Transform corrected_frame(description.initial_frame);
+  corrected_frame.rotate(rl::math::AngleAxis(M_PI / 2, Vector3::UnitX()));
+  emit drawCylinder(corrected_frame, description.radius, 0.01);
 }

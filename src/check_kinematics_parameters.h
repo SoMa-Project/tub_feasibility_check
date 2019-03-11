@@ -23,15 +23,15 @@ struct SharedParameters
 
 struct CheckKinematicsParameters
 {
-  boost::optional<WorkspaceChecker> goal_manifold_checker;
-  boost::optional<WorkspaceSampler> goal_manifold_sampler;
+  std::shared_ptr<WorkspaceChecker> goal_manifold_checker;
+  std::shared_ptr<WorkspaceSampler> goal_manifold_sampler;
   boost::optional<WorldPartsCollisions> collision_specification;
 };
 
 struct CheckSurfaceGraspParameters
 {
   boost::optional<SurfaceGraspPregraspManifold> pregrasp_manifold;
-  boost::optional<WorkspaceChecker> go_down_position_checker;
+  std::shared_ptr<WorkspaceChecker> go_down_position_checker;
   boost::optional<WorldPartsCollisions> go_down_collision_specification;
 };
 
@@ -107,16 +107,16 @@ boost::optional<CheckKinematicsParameters> processCheckKinematicsParameters(cons
 
   CheckKinematicsParameters params;
 
-  params.goal_manifold_checker = WorkspaceChecker(
+  params.goal_manifold_checker = std::make_shared<WorkspaceSeparateChecker>(
       BoxPositionChecker(shared_parameters.poses.at("goal_manifold"), req.min_position_deltas, req.max_position_deltas),
       AroundTargetOrientationChecker(rl::math::Rotation(shared_parameters.orientations.at("goal_manifold")),
                                      req.min_orientation_deltas, req.max_orientation_deltas));
 
-  params.goal_manifold_sampler =
-      WorkspaceSampler(UniformPositionInAsymmetricBox(shared_parameters.poses.at("goal_manifold"),
-                                                      req.min_position_deltas, req.max_position_deltas),
-                       DeltaXYZOrientation(shared_parameters.orientations.at("goal_manifold"),
-                                           req.min_orientation_deltas, req.max_orientation_deltas));
+  params.goal_manifold_sampler = std::make_shared<WorkspaceSeparateSampler>(
+      UniformPositionInAsymmetricBox(shared_parameters.poses.at("goal_manifold"), req.min_position_deltas,
+                                     req.max_position_deltas),
+      DeltaXYZOrientation(shared_parameters.orientations.at("goal_manifold"), req.min_orientation_deltas,
+                          req.max_orientation_deltas));
 
   params.collision_specification = processCollisionSpecification(req.allowed_collisions);
 
@@ -130,12 +130,8 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
   CheckSurfaceGraspParameters params;
 
   SurfaceGraspPregraspManifold::Description pregrasp_description;
-  pregrasp_description.min_position_deltas = req.pregrasp_manifold.min_position_deltas;
-  pregrasp_description.max_position_deltas = req.pregrasp_manifold.max_position_deltas;
-  pregrasp_description.min_orientation_deltas = req.pregrasp_manifold.min_orientation_deltas;
-  pregrasp_description.max_orientation_deltas = req.pregrasp_manifold.max_orientation_deltas;
-  tf::poseMsgToEigen(req.pregrasp_manifold.position_frame, pregrasp_description.position_frame);
-  tf::quaternionMsgToEigen(req.pregrasp_manifold.orientation, pregrasp_description.orientation);
+  pregrasp_description.radius = req.pregrasp_manifold.radius;
+  tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, pregrasp_description.initial_frame);
 
   params.pregrasp_manifold = SurfaceGraspPregraspManifold(pregrasp_description);
 
@@ -143,10 +139,10 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
   tf::poseMsgToEigen(req.go_down_allowed_position_frame, go_down_allowed_position_frame);
 
   // does not check for orientation - the orientation is not changed in the go down movement
-  params.go_down_position_checker = WorkspaceChecker(
+  params.go_down_position_checker = std::make_shared<WorkspaceSeparateChecker>(
       BoxPositionChecker(go_down_allowed_position_frame, req.go_down_allowed_position_min_deltas,
                          req.go_down_allowed_position_max_deltas),
-        [](const rl::math::Rotation&) {return true; });
+      [](const rl::math::Rotation&) { return true; });
 
   params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
 

@@ -17,13 +17,13 @@ std::array<double, 3> convertToXYZEuler(const Eigen::Matrix3d& rotation_matrix)
   return result;
 }
 
-WorkspaceChecker::WorkspaceChecker(WorkspaceChecker::CheckPosition position_check,
-                                   WorkspaceChecker::CheckOrientation orientation_check)
+WorkspaceSeparateChecker::WorkspaceSeparateChecker(WorkspaceSeparateChecker::CheckPosition position_check,
+                                   WorkspaceSeparateChecker::CheckOrientation orientation_check)
   : orientation_check_(orientation_check), position_check_(position_check)
 {
 }
 
-bool WorkspaceChecker::contains(const rl::math::Transform& transform_to_check) const
+bool WorkspaceSeparateChecker::contains(const rl::math::Transform& transform_to_check) const
 {
   return position_check_(transform_to_check.translation()) && orientation_check_(transform_to_check.rotation());
 }
@@ -84,4 +84,9 @@ bool AroundTargetOrientationChecker::operator()(const rl::math::Rotation& orient
       return false;
 
   return true;
+}
+
+WorkspaceChecker::~WorkspaceChecker()
+{
+
 }

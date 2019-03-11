@@ -10,6 +10,13 @@
 #include "jacobian_controller.h"
 
 // TODO in dire need of rework. Have not figured out a way to write it cleanly so far.
+class WorkspaceSampler
+{
+public:
+  virtual ~WorkspaceSampler();
+  typedef std::function<double()> SampleRandom01;
+  virtual rl::math::Transform generate(SampleRandom01 sample_random_01) const = 0;
+};
 
 class UniformPositionInAsymmetricBox
 {
@@ -41,14 +48,14 @@ private:
 rl::math::Quaternion
 uniformOrientation(std::function<double()> sample_random_01);
 
-class WorkspaceSampler
+class WorkspaceSeparateSampler final : public WorkspaceSampler
 {
 public:
   typedef std::function<double()> SampleRandom01;
   typedef std::function<rl::math::Vector3(SampleRandom01)> SamplePosition;
   typedef std::function<rl::math::Quaternion(SampleRandom01)> SampleOrientation;
 
-  WorkspaceSampler(SamplePosition sample_position, SampleOrientation sample_orientation);
+  WorkspaceSeparateSampler(SamplePosition sample_position, SampleOrientation sample_orientation);
 
   rl::math::Transform generate(SampleRandom01 sample_random_01) const;
 

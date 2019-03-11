@@ -6,16 +6,23 @@
 #include <rl/math/Transform.h>
 #include <boost/array.hpp>
 
-/* Checks whether a pose is contained within a workspace manifold. */
 class WorkspaceChecker
+{
+public:
+  virtual ~WorkspaceChecker();
+  virtual bool contains(const rl::math::Transform& transform_to_check) const = 0;
+};
+
+/* Checks whether a pose is contained within a workspace manifold. */
+class WorkspaceSeparateChecker final: public WorkspaceChecker
 {
 public:
   typedef std::function<bool(const rl::math::Rotation&)> CheckOrientation;
   typedef std::function<bool(const rl::math::Vector3&)> CheckPosition;
 
-  WorkspaceChecker(CheckPosition position_check, CheckOrientation orientation_check);
+  WorkspaceSeparateChecker(CheckPosition position_check, CheckOrientation orientation_check);
 
-  bool contains(const rl::math::Transform& transform_to_check) const;
+  bool contains(const rl::math::Transform& transform_to_check) const override;
 
 private:
   CheckOrientation orientation_check_;
