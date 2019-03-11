@@ -343,7 +343,6 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   }
 
   ROS_INFO("Beginning to sample grasps");
-
   auto& pregrasp_manifold_description = specific_parameters->pregrasp_manifold->description();
   drawPregraspManifold(pregrasp_manifold_description);
   emit drawNamedFrame(pregrasp_manifold_description.initial_frame, "pregrasp manifold");
@@ -365,9 +364,13 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     rl::math::Transform sampled_pregrasp_pose = specific_parameters->pregrasp_manifold->sampler().generate(sample_01);
     emit drawNamedFrame(sampled_pregrasp_pose, "sampled pregrasp pose");
 
-    // TODO: translation should also be derived from the sampled pregrasp pose
-    rl::math::Transform sampled_go_down_pose = sampled_pregrasp_pose;
-    sampled_go_down_pose.translation() = shared_parameters->poses.at("go_down_goal").translation();
+    rl::math::Transform sampled_go_down_pose;
+    // the rotation should stay the same
+    sampled_go_down_pose.linear() = sampled_pregrasp_pose.linear();
+    // the translation is corrected so the go down frame is underneath the sampled pregrasp frame
+    sampled_go_down_pose.translation() =
+        shared_parameters->poses.at("go_down_goal").translation() + sampled_pregrasp_pose.translation() -
+        specific_parameters->pregrasp_manifold->description().initial_frame.translation();
 
     ROS_INFO_STREAM("Trying sampled grasp number " << i);
     emit resetPoints();
