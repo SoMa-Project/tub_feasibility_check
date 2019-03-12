@@ -6,7 +6,7 @@ int main(int argc, char** argv)
 {
   try
   {
-    ros::init(argc, argv, "check_kinematics_server");
+    ros::init(argc, argv, "check_kinematics_server", ros::init_options::NoSigintHandler);
     ros::NodeHandle n;
 
     std::string ifco_scene_graph_file;
