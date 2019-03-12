@@ -1,15 +1,27 @@
 # tub_feasibility_check
 
-## Combined surface grasp call
+## Changes in this branch
+### Combined surface grasp call
 This branch introduces a combined surface grasp call. Inputs to that call are pregrasp goal pose and a go down goal pose. The combined service call will try to execute initial grasp defined by those poses. 
 
 If that fails, pregrasp poses will be sampled from a manifold. Then a trajectory will be tried that first goes to sampled pose, and from there downward to a modified go down pose preserving the orientation of the sampled pregrasp pose.
 
+### A pregrasp manifold for surface grasping circular objects
 A new type of manifold is also introduced. It is designed for circular objects.
 In the following, initial pregrasp goal pose is referred to as initial frame. 
 The sampled frame origin is sampled in the plane defined by the X and Y axes of the initial frame. It is sampled uniformly from a circle lying in that plane around the goal frame position with a certain radius. The sampled frame orientation is rotated such that the X axis of the frame points towards the origin of the initial frame.
 
-Check the [jupyter notebook](notebooks/surface-grasp-manifold.ipynb) for visualizations and example code. The following [video](https://drive.google.com/open?id=1rifkSblYNoxWirS3yiKDp53Ti947qAfm) demonstrates how the new combined call works.
+Check the [jupyter notebook](notebooks/surface-grasp-manifold.ipynb) for visualizations and example code. 
+
+### Examples
+The following [video](https://drive.google.com/open?id=1rifkSblYNoxWirS3yiKDp53Ti947qAfm) demonstrates how the new combined call works. To try examples used to produced this video yourself, first start the feasibility checker and then call the `/check_surface_grasp` service using the provided example yaml files:
+
+```bash
+roslaunch tub_feasibility_check tub_feasibility_check.launch
+rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/success_without_sampling.yaml`"
+rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/sampling_near_wall.yaml`"
+rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/sampling_in_center.yaml`"
+```
 
 ## Installation:
 ### Requirements
