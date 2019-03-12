@@ -1,5 +1,16 @@
 # tub_feasibility_check
 
+## Combined surface grasp call
+This branch introduces a combined surface grasp call. Inputs to that call are pregrasp goal pose and a go down goal pose. The combined service call will try to execute initial grasp defined by those poses. 
+
+If that fails, pregrasp poses will be sampled from a manifold. Then a trajectory will be tried that first goes to sampled pose, and from there downward to a modified go down pose preserving the orientation of the sampled pregrasp pose.
+
+A new type of manifold is also introduced. It is designed for circular objects.
+In the following, initial pregrasp goal pose is referred to as initial frame. 
+The sampled frame origin is sampled in the plane defined by the X and Y axes of the initial frame. It is sampled uniformly from a circle lying in that plane around the goal frame position with a certain radius. The sampled frame orientation is rotated such that the X axis of the frame points towards the origin of the initial frame.
+
+Check the [jupyter notebook](notebooks/surface-grasp-manifold.ipynb) for visualizations and example code.
+
 ## Installation:
 ### Requirements
 In order to use the feasibility checker you have to fulfill the requirements of the contact-motion-planning submodule (https://gitlab.tubit.tu-berlin.de/rbo-lab/contact-motion-planning).
@@ -41,5 +52,3 @@ Since the ifco_pose can be set arbitrarily it makes no sense to refer to them af
 You can see the naming in this image:
 
 ![ifco wall naming](https://github.com/SoMa-Project/tub_feasibility_check/blob/master/examples/ifco_tub_feasibility_naming.png)
-
-**TODO**: more paramters, more details in general?
