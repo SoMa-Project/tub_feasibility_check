@@ -9,7 +9,7 @@ A new type of manifold is also introduced. It is designed for circular objects.
 In the following, initial pregrasp goal pose is referred to as initial frame. 
 The sampled frame origin is sampled in the plane defined by the X and Y axes of the initial frame. It is sampled uniformly from a circle lying in that plane around the goal frame position with a certain radius. The sampled frame orientation is rotated such that the X axis of the frame points towards the origin of the initial frame.
 
-Check the [jupyter notebook](notebooks/surface-grasp-manifold.ipynb) for visualizations and example code.
+Check the [jupyter notebook](notebooks/surface-grasp-manifold.ipynb) for visualizations and example code. The following [video](https://drive.google.com/open?id=1rifkSblYNoxWirS3yiKDp53Ti947qAfm) demonstrates how the new combined call works.
 
 ## Installation:
 ### Requirements
