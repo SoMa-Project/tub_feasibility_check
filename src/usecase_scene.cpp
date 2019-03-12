@@ -76,8 +76,8 @@ void UsecaseScene::removeBoxes()
 {
   auto removeBoxesInScene = [this](rl::sg::Scene& scene) {
     auto boxes_model = scene.getModel(boxes_model_index_);
-    for (std::size_t i = 0; i < boxes_model->getNumBodies(); ++i)
-      boxes_model->remove(boxes_model->getBody(i));
+    while (boxes_model->getNumBodies())
+      boxes_model->remove(boxes_model->getBody(0));
   };
 
   removeBoxesInScene(*bullet_scene_);
