@@ -95,7 +95,9 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/collision_specification.cpp
         src/usecase_scene.cpp
         src/tabletop_scene.cpp
-        src/surface_grasp_pregrasp_manifold.cpp
+        src/manifold.cpp
+        src/surface_pregrasp_manifolds/circular_manifold.cpp
+        src/surface_pregrasp_manifolds/elongated_manifold.cpp
         src/check_kinematics_parameters.cpp
     )
 

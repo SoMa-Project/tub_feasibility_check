@@ -96,7 +96,8 @@ private:
   void drawGoalManifold(rl::math::Transform pose, const boost::array<double, 3>& min_position_deltas,
                         const boost::array<double, 3>& max_position_deltas, double zero_dimension_correction = 0.01);
 
-  void drawPregraspManifold(const SurfaceGraspPregraspManifold::Description& description);
+  void drawManifold(const SurfacePregraspManifolds::CircularManifold::Description& description);
+  void drawManifold(const SurfacePregraspManifolds::ElongatedManifold::Description& description);
 
   std::unique_ptr<IfcoScene> ifco_scene;
   std::unique_ptr<TabletopScene> tabletop_scene;
@@ -104,6 +105,42 @@ private:
 
   QMutex keep_running_mutex;
   bool keep_running = true;
+
+  // TODO find a way to remove this nastiness
+  struct convert_to_manifold_visitor : public boost::static_visitor<const Manifold&>
+  {
+    const Manifold& operator()(const boost::blank)
+    {
+      assert(false);
+    }
+
+    template <typename T>
+    const Manifold& operator()(const T& manifold)
+    {
+      return manifold;
+    }
+  };
+
+  struct visualize_manifold_visitor : public boost::static_visitor<>
+  {
+    visualize_manifold_visitor(ServiceWorker& worker) : worker_(worker)
+    {
+    }
+
+    template <typename T>
+    void operator()(const T& manifold)
+    {
+      worker_.drawManifold(manifold.description());
+    }
+
+    void operator()(const boost::blank)
+    {
+    }
+
+    ServiceWorker& worker_;
+  };
+
+  friend visualize_manifold_visitor;
 };
 
 #endif  // KINEMATICS_CHECK_H

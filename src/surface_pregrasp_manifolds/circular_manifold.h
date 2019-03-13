@@ -1,26 +1,26 @@
-#ifndef SURFACE_GRASP_PREGRASP_MANIFOLD_H
-#define SURFACE_GRASP_PREGRASP_MANIFOLD_H
+#ifndef CIRCULAR_MANIFOLD_H
+#define CIRCULAR_MANIFOLD_H
 
 #include <Eigen/Geometry>
 #include <boost/array.hpp>
-#include "workspace_checkers.h"
-#include "workspace_samplers.h"
+#include "../manifold.h"
 
-class SurfaceGraspPregraspManifold
+namespace SurfacePregraspManifolds
+{
+class CircularManifold final : public Manifold
 {
 public:
-  struct Description
+  struct Description : public Manifold::Description
   {
-    Eigen::Affine3d initial_frame;
     double radius;
-    double orientation_delta;
   };
 
-  SurfaceGraspPregraspManifold(Description description);
+  CircularManifold(Description description);
+  virtual ~CircularManifold();
 
-  const WorkspaceChecker& checker() const;
-  const WorkspaceSampler& sampler() const;
   const Description& description() const;
+  const Eigen::Affine3d& initialFrame() const override;
+  double orientationDelta() const override;
 
 private:
   struct ManifoldSampler final : public WorkspaceSampler
@@ -48,8 +48,7 @@ private:
   };
 
   Description description_;
-  std::shared_ptr<WorkspaceChecker> checker_;
-  std::shared_ptr<WorkspaceSampler> sampler_;
 };
+}
 
 #endif  // SURFACE_GRASP_PREGRASP_MANIFOLD_H

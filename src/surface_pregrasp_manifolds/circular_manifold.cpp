@@ -1,6 +1,8 @@
-#include "surface_grasp_pregrasp_manifold.h"
+#include "circular_manifold.h"
 
-rl::math::Transform SurfaceGraspPregraspManifold::ManifoldSampler::generate(SampleRandom01 sample_random_01) const
+namespace SurfacePregraspManifolds
+{
+rl::math::Transform CircularManifold::ManifoldSampler::generate(SampleRandom01 sample_random_01) const
 {
   double sampled_radius = std::sqrt(sample_random_01()) * description_.radius;
   double sampled_phi = sample_random_01() * M_PI * 2;
@@ -28,7 +30,7 @@ rl::math::Transform SurfaceGraspPregraspManifold::ManifoldSampler::generate(Samp
   return sampled_transform;
 }
 
-bool SurfaceGraspPregraspManifold::ManifoldChecker::contains(const rl::math::Transform& transform_to_check) const
+bool CircularManifold::ManifoldChecker::contains(const rl::math::Transform& transform_to_check) const
 {
   Eigen::Matrix<double, 3, 2> A;
   Eigen::Vector3d b;
@@ -53,24 +55,28 @@ bool SurfaceGraspPregraspManifold::ManifoldChecker::contains(const rl::math::Tra
           description_.orientation_delta + angle_comparison_epsilon_);
 }
 
-SurfaceGraspPregraspManifold::SurfaceGraspPregraspManifold(SurfaceGraspPregraspManifold::Description description)
-  : description_(description)
+CircularManifold::CircularManifold(CircularManifold::Description description) : description_(description)
 {
   sampler_ = std::make_shared<ManifoldSampler>(description);
   checker_ = std::make_shared<ManifoldChecker>(description);
 }
 
-const WorkspaceChecker& SurfaceGraspPregraspManifold::checker() const
-{
-  return *checker_;
-}
-
-const WorkspaceSampler& SurfaceGraspPregraspManifold::sampler() const
-{
-  return *sampler_;
-}
-
-const SurfaceGraspPregraspManifold::Description& SurfaceGraspPregraspManifold::description() const
+const CircularManifold::Description& CircularManifold::description() const
 {
   return description_;
+}
+
+const Eigen::Affine3d &CircularManifold::initialFrame() const
+{
+  return description_.initial_frame;
+}
+
+double CircularManifold::orientationDelta() const
+{
+  return description_.orientation_delta;
+}
+
+CircularManifold::~CircularManifold()
+{
+}
 }

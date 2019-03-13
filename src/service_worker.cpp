@@ -263,9 +263,9 @@ ServiceWorker::SurfaceGraspResult ServiceWorker::trySurfaceGrasp(JacobianControl
 
   ROS_INFO("Going to initial pregrasp pose");
   auto prohibit_all_collisions = WorldPartsCollisions({});
-  surface_grasp_result.pregrasp_result =
-      jacobian_controller.moveSingleParticle(shared_parameters.initial_configuration, pregrasp_goal,
-                                             prohibit_all_collisions, specific_parameters.pregrasp_manifold->checker());
+  auto& pregrasp_manifold = boost::apply_visitor(convert_to_manifold_visitor(), specific_parameters.pregrasp_manifold);
+  surface_grasp_result.pregrasp_result = jacobian_controller.moveSingleParticle(
+      shared_parameters.initial_configuration, pregrasp_goal, prohibit_all_collisions, pregrasp_manifold.checker());
 
   if (!surface_grasp_result.pregrasp_result)
   {
@@ -343,9 +343,8 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   }
 
   ROS_INFO("Beginning to sample grasps");
-  auto& pregrasp_manifold_description = specific_parameters->pregrasp_manifold->description();
-  drawPregraspManifold(pregrasp_manifold_description);
-  emit drawNamedFrame(pregrasp_manifold_description.initial_frame, "pregrasp manifold");
+  boost::apply_visitor(visualize_manifold_visitor(*this), specific_parameters->pregrasp_manifold);
+  //  drawPregraspManifold(pregrasp_manifold_description);
 
   std::size_t seed = req.seed ? req.seed : time(nullptr);
   ROS_INFO_STREAM("Random seed used: " << seed);
@@ -359,11 +358,13 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   n.param("/feasibility_check/sample_count", sample_count, 20);
 
   std::ofstream out("sampled_pregrasp.txt", std::ofstream::app);
+  auto& pregrasp_manifold =
+      boost::apply_visitor(convert_to_manifold_visitor(), specific_parameters->pregrasp_manifold);
 
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_pregrasp_pose = specific_parameters->pregrasp_manifold->sampler().generate(sample_01);
+    rl::math::Transform sampled_pregrasp_pose = pregrasp_manifold.sampler().generate(sample_01);
     out << sampled_pregrasp_pose.matrix() << "\n";
     emit drawNamedFrame(sampled_pregrasp_pose, "sampled pregrasp pose");
 
@@ -371,9 +372,9 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     // the rotation should stay the same
     sampled_go_down_pose.linear() = sampled_pregrasp_pose.linear();
     // the translation is corrected so the go down frame is underneath the sampled pregrasp frame
-    sampled_go_down_pose.translation() =
-        shared_parameters->poses.at("go_down_goal").translation() + sampled_pregrasp_pose.translation() -
-        specific_parameters->pregrasp_manifold->description().initial_frame.translation();
+    sampled_go_down_pose.translation() = shared_parameters->poses.at("go_down_goal").translation() +
+                                         sampled_pregrasp_pose.translation() -
+                                         pregrasp_manifold.initialFrame().translation();
 
     ROS_INFO_STREAM("Trying sampled grasp number " << i);
     emit resetPoints();
@@ -547,11 +548,16 @@ void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::arra
   emit drawBox(size, pose);
 }
 
-void ServiceWorker::drawPregraspManifold(const SurfaceGraspPregraspManifold::Description& description)
+void ServiceWorker::drawManifold(const SurfacePregraspManifolds::CircularManifold::Description& description)
 {
   using namespace rl::math;
 
   rl::math::Transform corrected_frame(description.initial_frame);
   corrected_frame.rotate(rl::math::AngleAxis(M_PI / 2, Vector3::UnitX()));
   emit drawCylinder(corrected_frame, description.radius, 0.01);
+  emit drawNamedFrame(description.initial_frame, "pregrasp_manifold");
+}
+
+void ServiceWorker::drawManifold(const SurfacePregraspManifolds::ElongatedManifold::Description &description)
+{
 }

@@ -1,6 +1,7 @@
 #ifndef CHECK_KINEMATICS_PARAMETER_CHECK_H
 #define CHECK_KINEMATICS_PARAMETER_CHECK_H
 
+#include <boost/variant.hpp>
 #include <eigen_conversions/eigen_msg.h>
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
@@ -9,7 +10,8 @@
 #include "workspace_samplers.h"
 #include "workspace_checkers.h"
 #include "collision_specification.h"
-#include "surface_grasp_pregrasp_manifold.h"
+#include "surface_pregrasp_manifolds/circular_manifold.h"
+#include "surface_pregrasp_manifolds/elongated_manifold.h"
 
 typedef std::pair<std::string, geometry_msgs::Pose> ContainerNameAndPose;
 
@@ -30,7 +32,8 @@ struct CheckKinematicsParameters
 
 struct CheckSurfaceGraspParameters
 {
-  boost::optional<SurfaceGraspPregraspManifold> pregrasp_manifold;
+  boost::variant<boost::blank, SurfacePregraspManifolds::CircularManifold, SurfacePregraspManifolds::ElongatedManifold>
+      pregrasp_manifold;
   std::shared_ptr<WorkspaceChecker> go_down_position_checker;
   boost::optional<WorldPartsCollisions> go_down_collision_specification;
 };
@@ -127,14 +130,40 @@ template <typename Request>
 boost::optional<CheckSurfaceGraspParameters>
 processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& shared_parameters)
 {
+  using namespace SurfacePregraspManifolds;
+
   CheckSurfaceGraspParameters params;
+  auto assignSharedManifoldParameters = [&req](Manifold::Description& description) {
+    description.orientation_delta = req.pregrasp_manifold.orientation_delta;
+    tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
+  };
 
-  SurfaceGraspPregraspManifold::Description pregrasp_description;
-  pregrasp_description.radius = req.pregrasp_manifold.radius;
-  pregrasp_description.orientation_delta = req.pregrasp_manifold.orientation_delta;
-  tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, pregrasp_description.initial_frame);
+  switch (req.pregrasp_manifold.type)
+  {
+    case req.pregrasp_manifold.CIRCULAR:
+    {
+      CircularManifold::Description circular_description;
+      assignSharedManifoldParameters(circular_description);
+      circular_description.radius = req.pregrasp_manifold.radius;
 
-  params.pregrasp_manifold = SurfaceGraspPregraspManifold(pregrasp_description);
+      params.pregrasp_manifold = CircularManifold(circular_description);
+      break;
+    }
+    case req.pregrasp_manifold.ELONGATED:
+    {
+      ElongatedManifold::Description elongated_description;
+      assignSharedManifoldParameters(elongated_description);
+      elongated_description.stripe_width = req.pregrasp_manifold.stripe_width;
+      elongated_description.stripe_height = req.pregrasp_manifold.stripe_height;
+      elongated_description.stripe_offset = req.pregrasp_manifold.stripe_offset;
+
+      params.pregrasp_manifold = ElongatedManifold(elongated_description);
+      break;
+    }
+    default:
+      ROS_ERROR_STREAM("Unknown pregrasp manifold type: " << req.pregrasp_manifold.type);
+      return boost::none;
+  }
 
   Eigen::Affine3d go_down_allowed_position_frame;
   tf::poseMsgToEigen(req.go_down_allowed_position_frame, go_down_allowed_position_frame);
