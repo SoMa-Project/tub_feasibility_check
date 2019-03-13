@@ -13,6 +13,7 @@ pregrasp_manifold:
     position: {x: 0.4, y: -0.02, z: 0.1}
     orientation: {x: -0.6768474, y: 0.7326971, z: -0.0481371, w: 0.0521091}
   radius: 0.05
+  orientation_delta: 0.15
 go_down_allowed_position_frame:
   position: {x: 0.4, y: -0.02, z: -0.056}
   orientation: {x: -0.6768474, y: 0.7326971, z: -0.0481371, w: 0.0521091}

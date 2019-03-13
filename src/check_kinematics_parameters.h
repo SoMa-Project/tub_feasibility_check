@@ -131,6 +131,7 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
 
   SurfaceGraspPregraspManifold::Description pregrasp_description;
   pregrasp_description.radius = req.pregrasp_manifold.radius;
+  pregrasp_description.orientation_delta = req.pregrasp_manifold.orientation_delta;
   tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, pregrasp_description.initial_frame);
 
   params.pregrasp_manifold = SurfaceGraspPregraspManifold(pregrasp_description);

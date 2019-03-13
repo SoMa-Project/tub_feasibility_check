@@ -358,10 +358,13 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   ros::NodeHandle n;
   n.param("/feasibility_check/sample_count", sample_count, 20);
 
+  std::ofstream out("sampled_pregrasp.txt", std::ofstream::app);
+
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
     rl::math::Transform sampled_pregrasp_pose = specific_parameters->pregrasp_manifold->sampler().generate(sample_01);
+    out << sampled_pregrasp_pose.matrix() << "\n";
     emit drawNamedFrame(sampled_pregrasp_pose, "sampled pregrasp pose");
 
     rl::math::Transform sampled_go_down_pose;

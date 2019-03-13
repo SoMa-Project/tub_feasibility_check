@@ -13,6 +13,7 @@ public:
   {
     Eigen::Affine3d initial_frame;
     double radius;
+    double orientation_delta;
   };
 
   SurfaceGraspPregraspManifold(Description description);
@@ -42,6 +43,8 @@ private:
     bool contains(const rl::math::Transform& transform_to_check) const override;
 
     Description description_;
+    const double angle_comparison_epsilon_ = 1e-3;
+    const double z_axis_comparison_epsilon_ = 1e-4;
   };
 
   Description description_;

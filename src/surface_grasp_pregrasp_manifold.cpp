@@ -4,6 +4,7 @@ rl::math::Transform SurfaceGraspPregraspManifold::ManifoldSampler::generate(Samp
 {
   double sampled_radius = std::sqrt(sample_random_01()) * description_.radius;
   double sampled_phi = sample_random_01() * M_PI * 2;
+  double sampled_orientation_delta = (sample_random_01() - 0.5) * description_.orientation_delta;
 
   double sampled_circle_x = sampled_radius * std::cos(sampled_phi);
   double sampled_circle_y = sampled_radius * std::sin(sampled_phi);
@@ -21,7 +22,8 @@ rl::math::Transform SurfaceGraspPregraspManifold::ManifoldSampler::generate(Samp
 
   rl::math::Transform sampled_transform(description_.initial_frame);
   sampled_transform.translation() = sampled_point_on_circle;
-  sampled_transform.rotate(rl::math::AngleAxis(sampled_phi - M_PI, Eigen::Vector3d::UnitZ()));
+  sampled_transform.rotate(
+      rl::math::AngleAxis(sampled_phi + sampled_orientation_delta - M_PI, Eigen::Vector3d::UnitZ()));
 
   return sampled_transform;
 }
@@ -33,22 +35,22 @@ bool SurfaceGraspPregraspManifold::ManifoldChecker::contains(const rl::math::Tra
   Eigen::Vector3d x_axis;
   Eigen::Vector3d y_axis;
 
-  for (int i = 0; i < 3; ++i)
-  {
-    x_axis(i) = description_.initial_frame.linear()(i, 0);
-    y_axis(i) = description_.initial_frame.linear()(i, 1);
+  Eigen::Affine3d difference_transform = description_.initial_frame.inverse() * transform_to_check;
 
-    // first column of A is X axis of frame
-    A(i, 0) = x_axis(i);
-    // second column of A is Y axis of frame
-    A(i, 1) = y_axis(i);
-    b(i) = transform_to_check.translation()(i) - description_.initial_frame.translation()(i);
-  }
+  bool origin_in_plane = std::abs(difference_transform.translation()(2)) < z_axis_comparison_epsilon_;
+  if (!origin_in_plane)
+    return false;
 
-  // find the least squares solution for description_frame_origin + alpha * X_axis + beta * Y_axis = to_check_origin
-  Eigen::Vector2d solution = A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
-  return transform_to_check.translation().isApprox(description_.initial_frame.translation() + solution(0) * x_axis +
-                                                   solution(1) * y_axis);
+  Eigen::AngleAxisd difference_in_orientation(difference_transform.linear());
+  bool rotated_around_z_only = difference_in_orientation.axis().isApprox(Eigen::Vector3d::UnitZ());
+  if (!rotated_around_z_only)
+    return false;
+
+  double distance = difference_transform.translation().norm();
+  double desired_rotation_angle =
+      std::atan2(difference_transform.translation()(1) / distance, difference_transform.translation()(1) / distance);
+  return (std::abs(desired_rotation_angle - difference_in_orientation.angle()) <
+          description_.orientation_delta + angle_comparison_epsilon_);
 }
 
 SurfaceGraspPregraspManifold::SurfaceGraspPregraspManifold(SurfaceGraspPregraspManifold::Description description)
