@@ -134,8 +134,13 @@ void ServiceWorker::start(unsigned rate)
   loop_timer.start();
 }
 
-ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_ptr<TabletopScene> tabletop_scene)
-  : QObject(nullptr), ifco_scene(std::move(ifco_scene)), tabletop_scene(std::move(tabletop_scene))
+ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_ptr<TabletopScene> tabletop_scene,
+                             double simulation_delta)
+  : QObject(nullptr)
+  , ifco_scene(std::move(ifco_scene))
+  , tabletop_scene(std::move(tabletop_scene))
+  , delta_(simulation_delta)
+  , maximum_steps_(100 / simulation_delta)
 {
   // TODO find a better solution than to send signals to both viewers simultaneously
   for (auto viewer : { this->ifco_scene->getViewer(), this->tabletop_scene->getViewer() })
@@ -163,9 +168,6 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_
 bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinematics::Request& req,
                                              tub_feasibility_check::CheckKinematics::Response& res)
 {
-  const double delta = 0.017;
-  const unsigned maximum_steps = 1000;
-
   ROS_INFO("Receiving query");
   auto shared_parameters = processSharedQueryParameters(
       req, { { "ifco", req.ifco_pose }, { "goal", req.goal_pose }, { "goal_manifold", req.goal_manifold_frame } },
@@ -190,8 +192,8 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
-                                         maximum_steps, ifco_scene->getViewer());
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
+                                         maximum_steps_, ifco_scene->getViewer());
   auto result = jacobian_controller.moveSingleParticle(
       shared_parameters->initial_configuration, shared_parameters->poses["goal"],
       *specific_parameters->collision_specification, *specific_parameters->goal_manifold_checker);
@@ -290,9 +292,6 @@ ServiceWorker::SurfaceGraspResult ServiceWorker::trySurfaceGrasp(JacobianControl
 bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGrasp::Request& req,
                                            tub_feasibility_check::CheckSurfaceGrasp::Response& res)
 {
-  const double delta = 0.017;
-  const unsigned maximum_steps = 1000;
-
   ROS_INFO("Receiving query");
   auto shared_parameters =
       processSharedQueryParameters(req, { { "ifco", req.ifco_pose },
@@ -321,8 +320,8 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
   }
 
-  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta,
-                                         maximum_steps, ifco_scene->getViewer());
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
+                                         maximum_steps_, ifco_scene->getViewer());
 
   drawGoalManifold(shared_parameters->poses.at("go_down_allowed_position_frame"),
                    req.go_down_allowed_position_min_deltas, req.go_down_allowed_position_max_deltas);
@@ -358,8 +357,7 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   n.param("/feasibility_check/sample_count", sample_count, 20);
 
   std::ofstream out("sampled_pregrasp.txt", std::ofstream::app);
-  auto& pregrasp_manifold =
-      boost::apply_visitor(convert_to_manifold_visitor(), specific_parameters->pregrasp_manifold);
+  auto& pregrasp_manifold = boost::apply_visitor(convert_to_manifold_visitor(), specific_parameters->pregrasp_manifold);
 
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
@@ -400,9 +398,6 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
 bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKinematicsTabletop::Request& req,
                                                  tub_feasibility_check::CheckKinematicsTabletop::Response& res)
 {
-  const double delta = 0.017;
-  const unsigned maximum_steps = 1000;
-
   ROS_INFO("Receiving query");
   auto shared_parameters = processSharedQueryParameters(
       req, { { "table", req.table_pose }, { "goal", req.goal_pose }, { "goal_manifold", req.goal_manifold_frame } },
@@ -428,8 +423,8 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(tabletop_scene->getKinematics(), tabletop_scene->getBulletScene(), delta,
-                                         maximum_steps, tabletop_scene->getViewer());
+  JacobianController jacobian_controller(tabletop_scene->getKinematics(), tabletop_scene->getBulletScene(), delta_,
+                                         maximum_steps_, tabletop_scene->getViewer());
   auto result = jacobian_controller.moveSingleParticle(
       shared_parameters->initial_configuration, shared_parameters->poses["goal"],
       *specific_parameters->collision_specification, *specific_parameters->goal_manifold_checker);
@@ -558,7 +553,7 @@ void ServiceWorker::drawManifold(const SurfacePregraspManifolds::CircularManifol
   emit drawNamedFrame(description.initial_frame, "pregrasp_manifold");
 }
 
-void ServiceWorker::drawManifold(const SurfacePregraspManifolds::ElongatedManifold::Description &description)
+void ServiceWorker::drawManifold(const SurfacePregraspManifolds::ElongatedManifold::Description& description)
 {
   Eigen::Affine3d stripe_center = description.initial_frame;
   Eigen::Vector3d size;

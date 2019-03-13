@@ -12,11 +12,13 @@ int main(int argc, char** argv)
     std::string ifco_scene_graph_file;
     std::string tabletop_scene_graph_file;
     std::string kinematics_file;
+    double delta;
     bool mdl;
 
     n.param("/feasibility_check/ifco_scene_graph_file", ifco_scene_graph_file, std::string());
     n.param("/feasibility_check/tabletop_scene_graph_file", tabletop_scene_graph_file, std::string());
     n.param("/feasibility_check/kinematics_file", kinematics_file, std::string());
+    n.param("/feasibility_check/delta", delta, 0.017);
 
     auto ifco_scene = std::unique_ptr<IfcoScene>(new IfcoScene(ifco_scene_graph_file, kinematics_file));
     auto tabletop_scene =
@@ -36,7 +38,7 @@ int main(int argc, char** argv)
     else
       main_window.hide();
 
-    ServiceWorker service_worker(std::move(ifco_scene), std::move(tabletop_scene));
+    ServiceWorker service_worker(std::move(ifco_scene), std::move(tabletop_scene), delta);
     QThread worker_thread;
     service_worker.moveToThread(&worker_thread);
     QObject::connect(&application, SIGNAL(lastWindowClosed()), &application, SLOT(quit()));

@@ -36,7 +36,8 @@ class ServiceWorker : public QObject
   Q_OBJECT
 
 public:
-  ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_ptr<TabletopScene> tabletop_scene);
+  ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_ptr<TabletopScene> tabletop_scene,
+                double simulation_delta);
 
   bool checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinematics::Request& req,
                                 tub_feasibility_check::CheckKinematics::Response& res);
@@ -101,6 +102,8 @@ private:
 
   std::unique_ptr<IfcoScene> ifco_scene;
   std::unique_ptr<TabletopScene> tabletop_scene;
+  double delta_;
+  double maximum_steps_;
   QTimer loop_timer;
 
   QMutex keep_running_mutex;
