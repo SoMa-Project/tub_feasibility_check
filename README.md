@@ -11,7 +11,12 @@ A new type of manifold is also introduced. It is designed for circular objects.
 In the following, initial pregrasp goal pose is referred to as initial frame. 
 The sampled frame origin is sampled in the plane defined by the X and Y axes of the initial frame. It is sampled uniformly from a circle lying in that plane around the goal frame position with a certain radius. The sampled frame orientation is rotated such that the X axis of the frame points towards the origin of the initial frame.
 
-Check the [jupyter notebook](notebooks/surface-grasp-manifold.ipynb) for visualizations and example code. 
+Check the [jupyter notebook](notebooks/surface-grasp-circular.ipynb) for visualizations and example code. 
+
+### A pregrasp manifold for surface grasping elongated objects
+The sampled frame origin is sampled in the plane defined by the X and Y axes of the initial frame. It is sampled uniformly from two stripes aligned with the X axis of the initial frame. The placement and sizes of stripes can be controlled via their width, height and offset. The sampled frame orientation is rotated such that the X axis of the frame is perpendicular to the X and Z axes of the initial frame and goes in the direction of the initial frame.
+
+Check the [jupyter notebook](notebooks/surface-grasp-elongated.ipynb) for visualizations and example code. 
 
 ### Examples
 The following [video](https://drive.google.com/open?id=1rifkSblYNoxWirS3yiKDp53Ti947qAfm) demonstrates how the new combined call works. To try examples used to produced this video yourself, first start the feasibility checker and then call the `/check_surface_grasp` service using the provided example yaml files:
