@@ -560,4 +560,13 @@ void ServiceWorker::drawManifold(const SurfacePregraspManifolds::CircularManifol
 
 void ServiceWorker::drawManifold(const SurfacePregraspManifolds::ElongatedManifold::Description &description)
 {
+  Eigen::Affine3d stripe_center = description.initial_frame;
+  Eigen::Vector3d size;
+  size << description.stripe_width, description.stripe_height, 0.01;
+  stripe_center.translate(Eigen::Vector3d::UnitY() * (description.stripe_offset + description.stripe_height / 2));
+  emit drawBox(size, stripe_center);
+
+  stripe_center.translate(-Eigen::Vector3d::UnitY() * (2 * description.stripe_offset + description.stripe_height));
+  emit drawBox(size, stripe_center);
+  emit drawNamedFrame(description.initial_frame, "pregrasp_manifold");
 }
