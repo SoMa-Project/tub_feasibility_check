@@ -6,6 +6,7 @@ uint8 type
 # These parameters are shared between different manifolds.
 geometry_msgs/Pose initial_frame
 float32 orientation_delta
+bool orient_outward
 
 # Parameters specific to the circular manifold.
 

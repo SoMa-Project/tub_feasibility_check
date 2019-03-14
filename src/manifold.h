@@ -11,6 +11,7 @@ public:
   {
     Eigen::Affine3d initial_frame;
     double orientation_delta;
+    bool orient_outward;
   };
 
   virtual ~Manifold();

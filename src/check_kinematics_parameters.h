@@ -135,6 +135,7 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
   CheckSurfaceGraspParameters params;
   auto assignSharedManifoldParameters = [&req](Manifold::Description& description) {
     description.orientation_delta = req.pregrasp_manifold.orientation_delta;
+    description.orient_outward = req.pregrasp_manifold.orient_outward;
     tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
   };
 

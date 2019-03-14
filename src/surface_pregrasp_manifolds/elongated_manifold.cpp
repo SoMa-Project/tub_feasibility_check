@@ -31,7 +31,7 @@ ElongatedManifold::ManifoldSampler::generate(WorkspaceSampler::SampleRandom01 sa
   sampled_position_in_plane(1) = description_.stripe_height * (sample_random_01() - 0.5);
   sampled_position_in_plane(1) += std::copysign(description_.stripe_offset, sampled_position_in_plane(1));
 
-  double orientation = std::copysign(M_PI / 2, -sampled_position_in_plane(1));
+  double orientation = std::copysign(M_PI / 2, (description_.orient_outward ? 1 : -1) * sampled_position_in_plane(1));
   double sampled_orientation_delta = (sample_random_01() - 0.5) * description_.orientation_delta;
 
   rl::math::Transform sampled_transform = description_.initial_frame;
