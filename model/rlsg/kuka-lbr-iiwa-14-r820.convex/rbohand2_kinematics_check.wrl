@@ -3,7 +3,7 @@
 Transform
   {
   rotation -0.5773503 -0.5773503 -0.5773503 2.0943951
-  translation 0.003 0 0
+  translation 0 0 0
   children 
     [
     DEF Mount Shape
