@@ -82,6 +82,14 @@ target_link_libraries(workspace_checker_sampler_test
         rlkin
         rlsg)
 
+catkin_add_gtest(surface_pregrasp_manifolds_test test/test_surface_pregrasp_manifolds.cpp src/workspace_samplers.cpp
+    src/workspace_checkers.cpp src/manifold.cpp src/surface_pregrasp_manifolds/circular_manifold.cpp
+    src/surface_pregrasp_manifolds/elongated_manifold.cpp)
+target_link_libraries(surface_pregrasp_manifolds_test
+        rlplan
+        rlkin
+        rlsg)
+
 if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
     set(SRCS
         src/mainwindow.cpp

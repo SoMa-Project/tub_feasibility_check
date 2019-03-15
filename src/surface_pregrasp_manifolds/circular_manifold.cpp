@@ -30,15 +30,23 @@ bool CircularManifold::ManifoldChecker::contains(const rl::math::Transform& tran
     return false;
 
   Eigen::AngleAxisd difference_in_orientation(difference_transform.linear());
+  if (difference_in_orientation.axis()(2) < 0)
+  {
+    difference_in_orientation.axis() *= -1;
+    difference_in_orientation.angle() *= -1;
+  }
+
   bool rotated_around_z_only = difference_in_orientation.axis().isApprox(Eigen::Vector3d::UnitZ());
   if (!rotated_around_z_only)
     return false;
 
   double distance = difference_transform.translation().norm();
   double desired_rotation_angle =
-      std::atan2(difference_transform.translation()(1) / distance, difference_transform.translation()(1) / distance);
-  return (std::abs(desired_rotation_angle - difference_in_orientation.angle()) <
-          description_.orientation_delta + angle_comparison_epsilon_);
+      std::atan2(difference_transform.translation()(1) / distance, difference_transform.translation()(0) / distance);
+  if (!description_.orient_outward)
+    desired_rotation_angle -= M_PI;
+  return std::abs(std::remainder(desired_rotation_angle - difference_in_orientation.angle(), 2 * M_PI)) <
+         description_.orientation_delta + angle_comparison_epsilon_;
 }
 
 CircularManifold::CircularManifold(CircularManifold::Description description) : description_(description)
