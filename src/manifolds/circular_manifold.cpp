@@ -61,7 +61,7 @@ bool CircularManifold::contains(const rl::math::Transform& transform_to_check) c
 
   double distance = difference_transform.translation().norm();
   double desired_rotation_angle =
-      std::atan2(difference_transform.translation()(1) / distance, difference_transform.translation()(0) / distance);
+      std::atan2(difference_transform.translation()(1), difference_transform.translation()(0));
   if (!description_.orient_outward)
     desired_rotation_angle -= M_PI;
   return std::abs(std::remainder(desired_rotation_angle - difference_in_orientation.angle(), 2 * M_PI)) <

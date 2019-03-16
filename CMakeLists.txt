@@ -84,7 +84,8 @@ catkin_package(
 
 catkin_add_gtest(surface_pregrasp_manifolds_test test/test_surface_pregrasp_manifolds.cpp
     src/manifold.cpp src/manifolds/circular_manifold.cpp
-    src/manifolds/elongated_manifold.cpp)
+    src/manifolds/elongated_manifold.cpp
+    src/manifolds/wall_grasp_manifold.cpp)
 target_link_libraries(surface_pregrasp_manifolds_test
         rlplan
         rlkin
@@ -105,6 +106,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/manifolds/circular_manifold.cpp
         src/manifolds/elongated_manifold.cpp
         src/manifolds/old_manifold.cpp
+        src/manifolds/wall_grasp_manifold.cpp
         src/check_kinematics_parameters.cpp
     )
 

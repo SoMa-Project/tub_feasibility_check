@@ -1,0 +1,3 @@
+geometry_msgs/Pose initial_frame
+geometry_msgs/Pose object_centroid
+float32 width
