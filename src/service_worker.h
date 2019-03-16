@@ -21,6 +21,7 @@
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
 #include "tub_feasibility_check/CheckSurfaceGrasp.h"
+#include "tub_feasibility_check/CheckWallGrasp.h"
 #include "tub_feasibility_check/VisualizeTrajectory.h"
 
 #include "mainwindow.h"
@@ -47,6 +48,9 @@ public:
 
   bool checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGrasp::Request& req,
                               tub_feasibility_check::CheckSurfaceGrasp::Response& res);
+
+  bool checkWallGraspQuery(tub_feasibility_check::CheckWallGrasp::Request& req,
+                           tub_feasibility_check::CheckWallGrasp::Response& res);
 
   bool visualizeTrajectoryQuery(tub_feasibility_check::VisualizeTrajectory::Request& req,
                                 tub_feasibility_check::VisualizeTrajectory::Response& res);
@@ -80,13 +84,27 @@ private:
     std::vector<rl::math::Vector> combinedTrajectory() const;
   };
 
+  struct WallGraspResult
+  {
+    JacobianController::SingleResult pregrasp_result;
+    boost::optional<JacobianController::SingleResult> go_down_result;
+    boost::optional<JacobianController::SingleResult> slide_result;
+
+    operator bool() const;
+    std::vector<rl::math::Vector> combinedTrajectory() const;
+  };
+
   void clearViewerScene();
 
   SurfaceGraspResult trySurfaceGrasp(JacobianController& controller, const SharedParameters& shared_parameters,
                                      const CheckSurfaceGraspParameters& specific_parameters,
                                      const Eigen::Affine3d& pregrasp_goal, const Eigen::Affine3d& go_down_goal);
 
-  std::unique_ptr<IfcoScene> ifco_scene;
+  WallGraspResult tryWallGrasp(JacobianController& jacobian_controller, const SharedParameters& shared_parameters,
+                               const CheckWallGraspParameters& specific_parameters,
+                               const Eigen::Affine3d& pregrasp_goal, const Eigen::Affine3d& go_down_goal);
+
+      std::unique_ptr<IfcoScene> ifco_scene;
   std::unique_ptr<TabletopScene> tabletop_scene;
   double delta_;
   double maximum_steps_;

@@ -41,12 +41,15 @@ rl::math::Transform WallGraspManifold::generate(Manifold::SampleRandom01 sample_
   rl::math::Transform sampled_frame = description_.initial_frame;
   sampled_frame.translate(sampled_translation);
 
-  Eigen::Vector3d towards_centroid_in_sampled_frame =
-      sampled_frame.inverse() * description_.object_centroid.translation();
+  Eigen::Vector3d towards_centroid_in_surface_frame =
+      description_.surface_frame.rotation().inverse() *
+      (description_.object_centroid.translation() - sampled_frame.translation());
+  Eigen::Vector3d rotation_vector_in_sampled_frame =
+      sampled_frame.inverse() * description_.surface_frame * rl::math::Vector3::UnitZ();
 
-  double z_rotation = std::atan2(towards_centroid_in_sampled_frame.y(), towards_centroid_in_sampled_frame.x());
+  double rotation = std::atan2(towards_centroid_in_surface_frame.y(), towards_centroid_in_surface_frame.x());
 
-  return sampled_frame.rotate(rl::math::AngleAxis(z_rotation, rl::math::Vector3::UnitZ()));
+  return sampled_frame.rotate(rl::math::AngleAxis(rotation, rotation_vector_in_sampled_frame));
 }
 
 SoNode* WallGraspManifold::visualization() const

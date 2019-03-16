@@ -92,6 +92,8 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
   for (std::size_t i = 0; i < maximum_steps_; ++i)
   {
     auto q_dot = calculateQDot(current_config, to_pose, delta_);
+    // assumes frames were updated in calculateQDot!
+    result.final_transform = noisy_model_.forwardPosition();
 
     // arrived at the target pose
     if (q_dot.isZero())
@@ -119,6 +121,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
     noisy_model_.updateJacobian();
     noisy_model_.updateJacobianInverse();
     noisy_model_.isColliding();
+    result.final_transform = noisy_model_.forwardPosition();
 
     if (noisy_model_.getDof() > 3 && noisy_model_.getManipulabilityMeasure() < 1.0e-3)
       result.addSingleOutcome(SingleResult::Outcome::SINGULARITY);

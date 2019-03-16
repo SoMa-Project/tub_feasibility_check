@@ -106,6 +106,11 @@ ServiceWorker::SurfaceGraspResult::operator bool() const
   return pregrasp_result && go_down_result && *go_down_result;
 }
 
+ServiceWorker::WallGraspResult::operator bool() const
+{
+  return pregrasp_result && go_down_result && *go_down_result && slide_result && *slide_result;
+}
+
 std::vector<rl::math::Vector> ServiceWorker::SurfaceGraspResult::combinedTrajectory() const
 {
   assert(go_down_result);
@@ -114,6 +119,23 @@ std::vector<rl::math::Vector> ServiceWorker::SurfaceGraspResult::combinedTraject
   // the end configuration of pregrasp and start configuration of go down are the same, so throw one of them out
   combined_trajectory.reserve(pregrasp_result.trajectory.size() + go_down_result->trajectory.size() - 1);
   std::copy(std::next(go_down_result->trajectory.begin()), go_down_result->trajectory.end(),
+            std::back_inserter(combined_trajectory));
+
+  return combined_trajectory;
+}
+
+std::vector<rl::math::Vector> ServiceWorker::WallGraspResult::combinedTrajectory() const
+{
+  assert(go_down_result);
+  assert(slide_result);
+
+  auto combined_trajectory = pregrasp_result.trajectory;
+  combined_trajectory.reserve(pregrasp_result.trajectory.size() + go_down_result->trajectory.size() +
+                              slide_result->trajectory.size() - 2);
+
+  std::copy(std::next(go_down_result->trajectory.begin()), go_down_result->trajectory.end(),
+            std::back_inserter(combined_trajectory));
+  std::copy(std::next(slide_result->trajectory.begin()), slide_result->trajectory.end(),
             std::back_inserter(combined_trajectory));
 
   return combined_trajectory;
@@ -155,12 +177,8 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_
                        SLOT(drawConfiguration(rl::math::Vector)));
       QObject::connect(this, SIGNAL(drawBox(rl::math::Vector, rl::math::Transform)), *viewer,
                        SLOT(drawBox(rl::math::Vector, rl::math::Transform)));
-      QObject::connect(this, SIGNAL(drawNode(SoNode*)), *viewer,
-                       SLOT(drawNode(SoNode*)));
-      QObject::connect(this, SIGNAL(drawCylinder(rl::math::Transform, double, double)), *viewer,
-                       SLOT(drawCylinder(rl::math::Transform, double, double)));
+      QObject::connect(this, SIGNAL(drawNode(SoNode*)), *viewer, SLOT(drawNode(SoNode*)));
       QObject::connect(this, SIGNAL(resetBoxes()), *viewer, SLOT(resetBoxes()));
-      QObject::connect(this, SIGNAL(resetCylinders()), *viewer, SLOT(resetCylinders()));
       QObject::connect(this, SIGNAL(resetPoints()), *viewer, SLOT(resetPoints()));
       QObject::connect(this, SIGNAL(resetLines()), *viewer, SLOT(resetLines()));
       QObject::connect(this, SIGNAL(resetFrames()), *viewer, SLOT(resetFrames()));
@@ -267,11 +285,10 @@ ServiceWorker::SurfaceGraspResult ServiceWorker::trySurfaceGrasp(JacobianControl
 {
   ServiceWorker::SurfaceGraspResult surface_grasp_result;
 
-  ROS_INFO("Going to initial pregrasp pose");
+  ROS_INFO("Going to pregrasp pose");
   auto prohibit_all_collisions = WorldPartsCollisions({});
-  surface_grasp_result.pregrasp_result =
-      jacobian_controller.moveSingleParticle(shared_parameters.initial_configuration, pregrasp_goal,
-                                             prohibit_all_collisions, *specific_parameters.pregrasp_manifold);
+  surface_grasp_result.pregrasp_result = jacobian_controller.moveSingleParticle(shared_parameters.initial_configuration,
+                                                                                pregrasp_goal, prohibit_all_collisions);
 
   if (!surface_grasp_result.pregrasp_result)
   {
@@ -291,6 +308,61 @@ ServiceWorker::SurfaceGraspResult ServiceWorker::trySurfaceGrasp(JacobianControl
     ROS_INFO_STREAM("Go down success: " << describeSingleResult(*surface_grasp_result.go_down_result));
 
   return surface_grasp_result;
+}
+
+ServiceWorker::WallGraspResult ServiceWorker::tryWallGrasp(JacobianController& jacobian_controller,
+                                                           const SharedParameters& shared_parameters,
+                                                           const CheckWallGraspParameters& specific_parameters,
+                                                           const Eigen::Affine3d& pregrasp_goal,
+                                                           const Eigen::Affine3d& go_down_goal)
+{
+  ServiceWorker::WallGraspResult wall_grasp_result;
+
+  ROS_INFO("Going to pregrasp pose");
+  auto prohibit_all_collisions = WorldPartsCollisions({});
+  wall_grasp_result.pregrasp_result = jacobian_controller.moveSingleParticle(shared_parameters.initial_configuration,
+                                                                             pregrasp_goal, prohibit_all_collisions);
+
+  if (!wall_grasp_result.pregrasp_result)
+  {
+    ROS_INFO_STREAM("Pregrasp failure:" << describeSingleResult(wall_grasp_result.pregrasp_result));
+    return wall_grasp_result;
+  }
+
+  ROS_INFO_STREAM("Pregrasp success: " << describeSingleResult(wall_grasp_result.pregrasp_result));
+
+  wall_grasp_result.go_down_result =
+      jacobian_controller.moveSingleParticle(wall_grasp_result.pregrasp_result.trajectory.back(), go_down_goal,
+                                             *specific_parameters.go_down_collision_specification);
+
+  if (!wall_grasp_result.go_down_result || !*wall_grasp_result.go_down_result)
+  {
+    ROS_INFO_STREAM("Go down failure: " << describeSingleResult(*wall_grasp_result.go_down_result));
+    return wall_grasp_result;
+  }
+
+  ROS_INFO_STREAM("Go down success: " << describeSingleResult(*wall_grasp_result.go_down_result));
+
+  rl::math::Transform distance_slide_goal = wall_grasp_result.go_down_result->final_transform;
+  // TODO point of dependency on scene type! maybe introduce surface pose?
+  rl::math::Vector3 sliding_direction = shared_parameters.poses.at("ifco").linear().inverse() *
+                                        (specific_parameters.object_centroid.translation() -
+                                         wall_grasp_result.go_down_result->final_transform.translation());
+  sliding_direction(2) = 0;
+  sliding_direction = shared_parameters.poses.at("ifco").linear() * sliding_direction;
+  // TODO name 1 as constant and place in header
+  distance_slide_goal.translation() += sliding_direction.normalized() * 1;
+
+  wall_grasp_result.slide_result =
+      jacobian_controller.moveSingleParticle(wall_grasp_result.go_down_result->trajectory.back(), distance_slide_goal,
+                                             *specific_parameters.slide_collision_specification);
+
+  if (!wall_grasp_result.slide_result || !*wall_grasp_result.slide_result)
+    ROS_INFO_STREAM("Slide failure: " << describeSingleResult(*wall_grasp_result.slide_result));
+  else
+    ROS_INFO_STREAM("Slide success: " << describeSingleResult(*wall_grasp_result.slide_result));
+
+  return wall_grasp_result;
 }
 
 bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGrasp::Request& req,
@@ -373,6 +445,100 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     emit resetPoints();
     auto sampled_surface_grasp_result = trySurfaceGrasp(jacobian_controller, *shared_parameters, *specific_parameters,
                                                         sampled_pregrasp_pose, sampled_go_down_pose);
+
+    if (sampled_surface_grasp_result)
+    {
+      res.status = res.REACHED_SAMPLED;
+      res.final_configuration = utilities::eigenToStd(sampled_surface_grasp_result.go_down_result->trajectory.back());
+      auto combined_trajectory = sampled_surface_grasp_result.combinedTrajectory();
+      res.trajectory = utilities::concatanateEigneToStd(combined_trajectory, res.final_configuration.size());
+      ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
+      return true;
+    }
+  }
+
+  ROS_INFO_STREAM("All " << sample_count << " attempts failed.");
+  res.status = res.FAILED;
+  return true;
+}
+
+bool ServiceWorker::checkWallGraspQuery(tub_feasibility_check::CheckWallGrasp::Request& req,
+                                        tub_feasibility_check::CheckWallGrasp::Response& res)
+{
+  ROS_INFO("Receiving query");
+  auto shared_parameters = processSharedQueryParameters(req, { { "ifco", req.ifco_pose },
+                                                               { "pregrasp_goal", req.pregrasp_goal_pose },
+                                                               { "go_down_goal", req.go_down_goal_pose } },
+                                                        {}, ifco_scene->dof());
+
+  if (!shared_parameters)
+    return false;
+
+  auto specific_parameters = processCheckWallGraspParameters(req, *shared_parameters);
+
+  emit selectViewer(MainWindow::ViewerType::IfcoScene);
+  clearViewerScene();
+  for (auto& name_and_pose : shared_parameters->poses)
+    emit drawNamedFrame(name_and_pose.second, name_and_pose.first);
+
+  ROS_INFO("Setting ifco pose and creating bounding boxes");
+  ifco_scene->moveIfco(shared_parameters->poses.at("ifco"));
+  ifco_scene->removeBoxes();
+  for (auto name_and_box : shared_parameters->name_to_object_bounding_box)
+  {
+    ifco_scene->createBox(name_and_box.first, name_and_box.second);
+    emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
+  }
+
+  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
+                                         maximum_steps_, ifco_scene->getViewer());
+
+  ROS_INFO("Trying initial grasp");
+  auto initial_wall_grasp_result =
+      tryWallGrasp(jacobian_controller, *shared_parameters, *specific_parameters,
+                   shared_parameters->poses.at("pregrasp_goal"), shared_parameters->poses.at("go_down_goal"));
+  if (initial_wall_grasp_result)
+  {
+    res.status = res.REACHED_INITIAL;
+    res.final_configuration = utilities::eigenToStd(initial_wall_grasp_result.slide_result->trajectory.back());
+    auto combined_trajectory = initial_wall_grasp_result.combinedTrajectory();
+    res.trajectory = utilities::concatanateEigneToStd(combined_trajectory, res.final_configuration.size());
+    ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
+    return true;
+  }
+
+  ROS_INFO("Beginning to sample grasps");
+  emit drawNode(specific_parameters->pregrasp_manifold->visualization());
+
+  std::size_t seed = req.seed ? req.seed : time(nullptr);
+  ROS_INFO_STREAM("Random seed used: " << seed);
+  std::mt19937 generator(seed);
+
+  std::uniform_real_distribution<double> random_01;
+  auto sample_01 = [&generator, &random_01]() { return random_01(generator); };
+
+  int sample_count;
+  ros::NodeHandle n;
+  n.param("/feasibility_check/sample_count", sample_count, 20);
+
+  ROS_INFO("Beginning to sample from the goal manifold");
+  for (unsigned i = 0; i < sample_count; ++i)
+  {
+    rl::math::Transform sampled_pregrasp_pose = specific_parameters->pregrasp_manifold->generate(sample_01);
+    emit drawNamedFrame(sampled_pregrasp_pose, "sampled pregrasp pose");
+
+    rl::math::Transform sampled_go_down_pose;
+    // the rotation should stay the same
+    sampled_go_down_pose.linear() = sampled_pregrasp_pose.linear();
+    // the translation is corrected so the go down frame is underneath the sampled pregrasp frame
+    sampled_go_down_pose.translation() = shared_parameters->poses.at("go_down_goal").translation() +
+                                         sampled_pregrasp_pose.translation() -
+                                         specific_parameters->pregrasp_manifold->initialFrame().translation();
+
+    ROS_INFO_STREAM("Trying sampled grasp number " << i);
+    emit resetPoints();
+    auto sampled_surface_grasp_result = tryWallGrasp(jacobian_controller, *shared_parameters, *specific_parameters,
+                                                     sampled_pregrasp_pose, sampled_go_down_pose);
 
     if (sampled_surface_grasp_result)
     {

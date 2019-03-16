@@ -10,6 +10,7 @@ public:
   struct Description
   {
     Eigen::Affine3d initial_frame;
+    Eigen::Affine3d surface_frame;
     Eigen::Affine3d object_centroid;
     double width;
   };

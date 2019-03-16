@@ -97,3 +97,25 @@ processCollisionSpecification(const std::vector<tub_feasibility_check::AllowedCo
 
   return WorldPartsCollisions(part_to_type);
 }
+
+boost::optional<CheckWallGraspParameters> processCheckWallGraspParameters(
+    const tub_feasibility_check::CheckWallGrasp::Request& req, const SharedParameters& shared_parameters)
+{
+  using namespace SurfacePregraspManifolds;
+
+  CheckWallGraspParameters params;
+
+  WallGraspManifold::Description description;
+  tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
+  tf::poseMsgToEigen(req.pregrasp_manifold.object_centroid, description.object_centroid);
+  description.surface_frame = shared_parameters.poses.at("ifco");
+  description.width = req.pregrasp_manifold.width;
+
+  params.pregrasp_manifold = std::make_shared<WallGraspManifold>(description);
+  params.object_centroid = description.object_centroid;
+
+  params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
+  params.slide_collision_specification = processCollisionSpecification(req.slide_allowed_collisions);
+
+  return params;
+}

@@ -51,6 +51,7 @@ add_service_files(
     CheckKinematics.srv
     CheckKinematicsTabletop.srv
     CheckSurfaceGrasp.srv
+    CheckWallGrasp.srv
     VisualizeTrajectory.srv
 )
 
@@ -59,6 +60,7 @@ add_message_files(
     BoundingBoxWithPose.msg
     AllowedCollision.msg
     SurfaceGraspPregraspManifold.msg
+    WallGraspPregraspManifold.msg
 )
 
 

@@ -56,6 +56,9 @@ int main(int argc, char** argv)
     ros::ServiceServer checkSurfaceGraspService =
         n.advertiseService("check_surface_grasp", &ServiceWorker::checkSurfaceGraspQuery, &service_worker);
 
+    ros::ServiceServer checkWallGraspService =
+        n.advertiseService("check_wall_grasp", &ServiceWorker::checkWallGraspQuery, &service_worker);
+
     ros::ServiceServer visualizeTrajectoryService =
         n.advertiseService("visualize_trajectory", &ServiceWorker::visualizeTrajectoryQuery, &service_worker);
 

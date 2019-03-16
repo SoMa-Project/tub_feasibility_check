@@ -52,6 +52,9 @@ public:
     /* The trajectory steps from start to termination. */
     std::vector<rl::math::Vector> trajectory;
 
+    /* The final transform of the end effector. */
+    rl::math::Transform final_transform;
+
     /* A map of outcomes.
      * It contains either only one positive outcome: REACHED or TERMINATING_COLLISION,
      * or one or more negative outcomes, that led to the termination of the planner. The outcomes

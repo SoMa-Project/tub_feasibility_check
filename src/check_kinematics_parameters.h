@@ -5,6 +5,7 @@
 #include <rl/math/Vector.h>
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
+#include "tub_feasibility_check/CheckWallGrasp.h"
 
 #include "bounding_box.h"
 #include "collision_specification.h"
@@ -12,6 +13,7 @@
 #include "manifolds/circular_manifold.h"
 #include "manifolds/elongated_manifold.h"
 #include "manifolds/old_manifold.h"
+#include "manifolds/wall_grasp_manifold.h"
 
 typedef std::pair<std::string, geometry_msgs::Pose> ContainerNameAndPose;
 
@@ -33,6 +35,16 @@ struct CheckSurfaceGraspParameters
 {
   std::shared_ptr<Manifold> pregrasp_manifold;
   boost::optional<WorldPartsCollisions> go_down_collision_specification;
+};
+
+struct CheckWallGraspParameters
+{
+  std::shared_ptr<Manifold> pregrasp_manifold;
+  boost::optional<WorldPartsCollisions> go_down_collision_specification;
+  boost::optional<WorldPartsCollisions> slide_collision_specification;
+
+  // duplicate it here so there's no need to extract it from Manifold
+  Eigen::Affine3d object_centroid;
 };
 
 std::string getBoxName(std::size_t box_id);
@@ -130,6 +142,7 @@ void assignSharedManifoldParameters(const Request& req, Description& description
   tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
 }
 
+// TODO template is not needed
 template <typename Request>
 boost::optional<CheckSurfaceGraspParameters>
 processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& shared_parameters)
@@ -171,5 +184,8 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
   params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
   return params;
 }
+
+boost::optional<CheckWallGraspParameters> processCheckWallGraspParameters(
+    const tub_feasibility_check::CheckWallGrasp::Request& req, const SharedParameters& shared_parameters);
 
 #endif  // CHECK_KINEMATICS_PARAMETER_CHECK_H
