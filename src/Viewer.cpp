@@ -436,6 +436,12 @@ void Viewer::changeColor(const SbColor& col) {
   viewer->setBackgroundColor(col);
 }
 
+void Viewer::drawNode(SoNode *node)
+{
+  // TODO another group for those objects
+  boxesGroup->addChild(node);
+}
+
 void Viewer::drawBox(const rl::math::Vector& size, const rl::math::Transform& transform)
 {
   auto vrml_transform = new SoVRMLTransform();

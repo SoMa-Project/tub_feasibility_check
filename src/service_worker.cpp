@@ -26,9 +26,11 @@
 
 #include <QMutexLocker>
 #include <fstream>
+
+#include <Inventor/nodes/SoNode.h>
+
 #include "service_worker.h"
 #include "jacobian_controller.h"
-#include "workspace_samplers.h"
 #include "utilities.h"
 
 #include "check_kinematics_parameters.h"
@@ -148,10 +150,13 @@ ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_
     {
       qRegisterMetaType<rl::math::Transform>("rl::math::Transform");
       qRegisterMetaType<std::string>("std::string");
+      qRegisterMetaType<SoNode*>("SoNode*");
       QObject::connect(this, SIGNAL(drawConfiguration(rl::math::Vector)), *viewer,
                        SLOT(drawConfiguration(rl::math::Vector)));
       QObject::connect(this, SIGNAL(drawBox(rl::math::Vector, rl::math::Transform)), *viewer,
                        SLOT(drawBox(rl::math::Vector, rl::math::Transform)));
+      QObject::connect(this, SIGNAL(drawNode(SoNode*)), *viewer,
+                       SLOT(drawNode(SoNode*)));
       QObject::connect(this, SIGNAL(drawCylinder(rl::math::Transform, double, double)), *viewer,
                        SLOT(drawCylinder(rl::math::Transform, double, double)));
       QObject::connect(this, SIGNAL(resetBoxes()), *viewer, SLOT(resetBoxes()));
@@ -196,7 +201,7 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
                                          maximum_steps_, ifco_scene->getViewer());
   auto result = jacobian_controller.moveSingleParticle(
       shared_parameters->initial_configuration, shared_parameters->poses["goal"],
-      *specific_parameters->collision_specification, *specific_parameters->goal_manifold_checker);
+      *specific_parameters->collision_specification, *specific_parameters->goal_manifold);
 
   if (result)
   {
@@ -212,8 +217,7 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
 
   ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
-  drawGoalManifold(shared_parameters->poses["goal_manifold"], req.min_position_deltas, req.max_position_deltas);
-  emit drawNamedFrame(shared_parameters->poses["goal_manifold"], "goal manifold");
+  emit drawNode(specific_parameters->goal_manifold->visualization());
 
   std::size_t seed = req.seed ? req.seed : time(nullptr);
   ROS_INFO_STREAM("Random seed used: " << seed);
@@ -229,14 +233,14 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_transform = specific_parameters->goal_manifold_sampler->generate(sample_01);
+    rl::math::Transform sampled_transform = specific_parameters->goal_manifold->generate(sample_01);
     emit drawNamedFrame(sampled_transform, "sampled goal");
 
     ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
     emit resetPoints();
     auto result = jacobian_controller.moveSingleParticle(shared_parameters->initial_configuration, sampled_transform,
                                                          *specific_parameters->collision_specification,
-                                                         *specific_parameters->goal_manifold_checker);
+                                                         *specific_parameters->goal_manifold);
 
     if (result)
     {
@@ -265,9 +269,9 @@ ServiceWorker::SurfaceGraspResult ServiceWorker::trySurfaceGrasp(JacobianControl
 
   ROS_INFO("Going to initial pregrasp pose");
   auto prohibit_all_collisions = WorldPartsCollisions({});
-  auto& pregrasp_manifold = boost::apply_visitor(convert_to_manifold_visitor(), specific_parameters.pregrasp_manifold);
-  surface_grasp_result.pregrasp_result = jacobian_controller.moveSingleParticle(
-      shared_parameters.initial_configuration, pregrasp_goal, prohibit_all_collisions, pregrasp_manifold.checker());
+  surface_grasp_result.pregrasp_result =
+      jacobian_controller.moveSingleParticle(shared_parameters.initial_configuration, pregrasp_goal,
+                                             prohibit_all_collisions, *specific_parameters.pregrasp_manifold);
 
   if (!surface_grasp_result.pregrasp_result)
   {
@@ -277,9 +281,9 @@ ServiceWorker::SurfaceGraspResult ServiceWorker::trySurfaceGrasp(JacobianControl
 
   ROS_INFO_STREAM("Pregrasp success: " << describeSingleResult(surface_grasp_result.pregrasp_result));
 
-  surface_grasp_result.go_down_result = jacobian_controller.moveSingleParticle(
-      surface_grasp_result.pregrasp_result.trajectory.back(), go_down_goal,
-      *specific_parameters.go_down_collision_specification, *specific_parameters.go_down_position_checker);
+  surface_grasp_result.go_down_result =
+      jacobian_controller.moveSingleParticle(surface_grasp_result.pregrasp_result.trajectory.back(), go_down_goal,
+                                             *specific_parameters.go_down_collision_specification);
 
   if (!*surface_grasp_result.go_down_result)
     ROS_INFO_STREAM("Go down failure: " << describeSingleResult(*surface_grasp_result.go_down_result));
@@ -323,10 +327,6 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
                                          maximum_steps_, ifco_scene->getViewer());
 
-  drawGoalManifold(shared_parameters->poses.at("go_down_allowed_position_frame"),
-                   req.go_down_allowed_position_min_deltas, req.go_down_allowed_position_max_deltas);
-  emit drawNamedFrame(shared_parameters->poses.at("go_down_allowed_position_frame"), "go down manifold");
-
   ROS_INFO("Trying initial grasp");
   auto initial_surface_grasp_result =
       trySurfaceGrasp(jacobian_controller, *shared_parameters, *specific_parameters,
@@ -342,8 +342,7 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   }
 
   ROS_INFO("Beginning to sample grasps");
-  boost::apply_visitor(visualize_manifold_visitor(*this), specific_parameters->pregrasp_manifold);
-  //  drawPregraspManifold(pregrasp_manifold_description);
+  emit drawNode(specific_parameters->pregrasp_manifold->visualization());
 
   std::size_t seed = req.seed ? req.seed : time(nullptr);
   ROS_INFO_STREAM("Random seed used: " << seed);
@@ -356,14 +355,10 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   ros::NodeHandle n;
   n.param("/feasibility_check/sample_count", sample_count, 20);
 
-  std::ofstream out("sampled_pregrasp.txt", std::ofstream::app);
-  auto& pregrasp_manifold = boost::apply_visitor(convert_to_manifold_visitor(), specific_parameters->pregrasp_manifold);
-
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_pregrasp_pose = pregrasp_manifold.sampler().generate(sample_01);
-    out << sampled_pregrasp_pose.matrix() << "\n";
+    rl::math::Transform sampled_pregrasp_pose = specific_parameters->pregrasp_manifold->generate(sample_01);
     emit drawNamedFrame(sampled_pregrasp_pose, "sampled pregrasp pose");
 
     rl::math::Transform sampled_go_down_pose;
@@ -372,7 +367,7 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     // the translation is corrected so the go down frame is underneath the sampled pregrasp frame
     sampled_go_down_pose.translation() = shared_parameters->poses.at("go_down_goal").translation() +
                                          sampled_pregrasp_pose.translation() -
-                                         pregrasp_manifold.initialFrame().translation();
+                                         specific_parameters->pregrasp_manifold->initialFrame().translation();
 
     ROS_INFO_STREAM("Trying sampled grasp number " << i);
     emit resetPoints();
@@ -427,7 +422,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
                                          maximum_steps_, tabletop_scene->getViewer());
   auto result = jacobian_controller.moveSingleParticle(
       shared_parameters->initial_configuration, shared_parameters->poses["goal"],
-      *specific_parameters->collision_specification, *specific_parameters->goal_manifold_checker);
+      *specific_parameters->collision_specification, *specific_parameters->goal_manifold);
 
   if (result)
   {
@@ -443,7 +438,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
 
   ROS_INFO_STREAM("Goal frame failures: " << describeSingleResult(result));
 
-  drawGoalManifold(shared_parameters->poses["goal_manifold"], req.min_position_deltas, req.max_position_deltas);
+  emit drawNode(specific_parameters->goal_manifold->visualization());
   emit drawNamedFrame(shared_parameters->poses["goal_manifold"], "goal manifold");
 
   std::size_t seed = req.seed ? req.seed : time(nullptr);
@@ -460,14 +455,14 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   ROS_INFO("Beginning to sample from the goal manifold");
   for (unsigned i = 0; i < sample_count; ++i)
   {
-    rl::math::Transform sampled_transform = specific_parameters->goal_manifold_sampler->generate(sample_01);
+    rl::math::Transform sampled_transform = specific_parameters->goal_manifold->generate(sample_01);
     emit drawNamedFrame(sampled_transform, "sampled goal");
 
     ROS_INFO_STREAM("Trying to plan to the sampled frame number " << i);
     emit resetPoints();
     auto result = jacobian_controller.moveSingleParticle(shared_parameters->initial_configuration, sampled_transform,
                                                          *specific_parameters->collision_specification,
-                                                         *specific_parameters->goal_manifold_checker);
+                                                         *specific_parameters->goal_manifold);
 
     if (result)
     {
@@ -506,62 +501,6 @@ void ServiceWorker::clearViewerScene()
 {
   emit resetBoxes();
   emit resetPoints();
-  emit resetCylinders();
   emit resetFrames();
   emit toggleWorkFrames(true);
-}
-
-void ServiceWorker::drawGoalManifold(rl::math::Transform pose, const boost::array<double, 3>& min_position_deltas,
-                                     const boost::array<double, 3>& max_position_deltas,
-                                     double zero_dimension_correction)
-{
-  using namespace rl::math;
-
-  Vector3 size;
-  Vector3 center_correction;
-  unsigned zero_count = 0;
-  boost::optional<unsigned> zero_index;
-
-  for (unsigned i = 0; i < 3; ++i)
-  {
-    center_correction(i) = min_position_deltas[i] / 2 + max_position_deltas[i] / 2;
-    size(i) = max_position_deltas[i] - min_position_deltas[i];
-    if (!size(i))
-    {
-      ++zero_count;
-      zero_index = i;
-    }
-  }
-
-  if (zero_count == 2)
-  {
-    assert(zero_index.is_initialized());
-    size(*zero_index) = zero_dimension_correction;
-  }
-  pose.translate(center_correction);
-
-  emit drawBox(size, pose);
-}
-
-void ServiceWorker::drawManifold(const SurfacePregraspManifolds::CircularManifold::Description& description)
-{
-  using namespace rl::math;
-
-  rl::math::Transform corrected_frame(description.initial_frame);
-  corrected_frame.rotate(rl::math::AngleAxis(M_PI / 2, Vector3::UnitX()));
-  emit drawCylinder(corrected_frame, description.radius, 0.01);
-  emit drawNamedFrame(description.initial_frame, "pregrasp_manifold");
-}
-
-void ServiceWorker::drawManifold(const SurfacePregraspManifolds::ElongatedManifold::Description& description)
-{
-  Eigen::Affine3d stripe_center = description.initial_frame;
-  Eigen::Vector3d size;
-  size << description.stripe_width, description.stripe_height, 0.01;
-  stripe_center.translate(Eigen::Vector3d::UnitY() * (description.stripe_offset + description.stripe_height / 2));
-  emit drawBox(size, stripe_center);
-
-  stripe_center.translate(-Eigen::Vector3d::UnitY() * (2 * description.stripe_offset + description.stripe_height));
-  emit drawBox(size, stripe_center);
-  emit drawNamedFrame(description.initial_frame, "pregrasp_manifold");
 }

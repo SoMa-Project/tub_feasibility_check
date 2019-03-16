@@ -1,17 +1,17 @@
 #ifndef CHECK_KINEMATICS_PARAMETER_CHECK_H
 #define CHECK_KINEMATICS_PARAMETER_CHECK_H
 
-#include <boost/variant.hpp>
 #include <eigen_conversions/eigen_msg.h>
+#include <rl/math/Vector.h>
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
 
 #include "bounding_box.h"
-#include "workspace_samplers.h"
-#include "workspace_checkers.h"
 #include "collision_specification.h"
-#include "surface_pregrasp_manifolds/circular_manifold.h"
-#include "surface_pregrasp_manifolds/elongated_manifold.h"
+#include "utilities.h"
+#include "manifolds/circular_manifold.h"
+#include "manifolds/elongated_manifold.h"
+#include "manifolds/old_manifold.h"
 
 typedef std::pair<std::string, geometry_msgs::Pose> ContainerNameAndPose;
 
@@ -25,16 +25,13 @@ struct SharedParameters
 
 struct CheckKinematicsParameters
 {
-  std::shared_ptr<WorkspaceChecker> goal_manifold_checker;
-  std::shared_ptr<WorkspaceSampler> goal_manifold_sampler;
+  std::shared_ptr<Manifold> goal_manifold;
   boost::optional<WorldPartsCollisions> collision_specification;
 };
 
 struct CheckSurfaceGraspParameters
 {
-  boost::variant<boost::blank, SurfacePregraspManifolds::CircularManifold, SurfacePregraspManifolds::ElongatedManifold>
-      pregrasp_manifold;
-  std::shared_ptr<WorkspaceChecker> go_down_position_checker;
+  std::shared_ptr<Manifold> pregrasp_manifold;
   boost::optional<WorldPartsCollisions> go_down_collision_specification;
 };
 
@@ -109,21 +106,28 @@ boost::optional<CheckKinematicsParameters> processCheckKinematicsParameters(cons
     return boost::none;
 
   CheckKinematicsParameters params;
+  OldManifold::Description description;
 
-  params.goal_manifold_checker = std::make_shared<WorkspaceSeparateChecker>(
-      BoxPositionChecker(shared_parameters.poses.at("goal_manifold"), req.min_position_deltas, req.max_position_deltas),
-      AroundTargetOrientationChecker(rl::math::Rotation(shared_parameters.orientations.at("goal_manifold")),
-                                     req.min_orientation_deltas, req.max_orientation_deltas));
+  description.frame = shared_parameters.poses.at("goal_manifold");
+  description.min_position_deltas = req.min_position_deltas;
+  description.max_position_deltas = req.max_position_deltas;
+  description.min_orientation_deltas = req.min_orientation_deltas;
+  description.max_orientation_deltas = req.max_orientation_deltas;
+  description.orientation = shared_parameters.orientations.at("goal_manifold");
 
-  params.goal_manifold_sampler = std::make_shared<WorkspaceSeparateSampler>(
-      UniformPositionInAsymmetricBox(shared_parameters.poses.at("goal_manifold"), req.min_position_deltas,
-                                     req.max_position_deltas),
-      DeltaXYZOrientation(shared_parameters.orientations.at("goal_manifold"), req.min_orientation_deltas,
-                          req.max_orientation_deltas));
+  params.goal_manifold = std::make_shared<OldManifold>(description);
 
   params.collision_specification = processCollisionSpecification(req.allowed_collisions);
 
   return params;
+}
+
+template <typename Description, typename Request>
+void assignSharedManifoldParameters(const Request& req, Description& description)
+{
+  description.orientation_delta = req.pregrasp_manifold.orientation_delta;
+  description.orient_outward = req.pregrasp_manifold.orient_outward;
+  tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
 }
 
 template <typename Request>
@@ -133,32 +137,27 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
   using namespace SurfacePregraspManifolds;
 
   CheckSurfaceGraspParameters params;
-  auto assignSharedManifoldParameters = [&req](Manifold::Description& description) {
-    description.orientation_delta = req.pregrasp_manifold.orientation_delta;
-    description.orient_outward = req.pregrasp_manifold.orient_outward;
-    tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
-  };
 
   switch (req.pregrasp_manifold.type)
   {
     case req.pregrasp_manifold.CIRCULAR:
     {
       CircularManifold::Description circular_description;
-      assignSharedManifoldParameters(circular_description);
+      assignSharedManifoldParameters(req, circular_description);
       circular_description.radius = req.pregrasp_manifold.radius;
 
-      params.pregrasp_manifold = CircularManifold(circular_description);
+      params.pregrasp_manifold = std::make_shared<CircularManifold>(circular_description);
       break;
     }
     case req.pregrasp_manifold.ELONGATED:
     {
       ElongatedManifold::Description elongated_description;
-      assignSharedManifoldParameters(elongated_description);
+      assignSharedManifoldParameters(req, elongated_description);
       elongated_description.stripe_width = req.pregrasp_manifold.stripe_width;
       elongated_description.stripe_height = req.pregrasp_manifold.stripe_height;
       elongated_description.stripe_offset = req.pregrasp_manifold.stripe_offset;
 
-      params.pregrasp_manifold = ElongatedManifold(elongated_description);
+      params.pregrasp_manifold = std::make_shared<ElongatedManifold>(elongated_description);
       break;
     }
     default:
@@ -169,14 +168,7 @@ processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& s
   Eigen::Affine3d go_down_allowed_position_frame;
   tf::poseMsgToEigen(req.go_down_allowed_position_frame, go_down_allowed_position_frame);
 
-  // does not check for orientation - the orientation is not changed in the go down movement
-  params.go_down_position_checker = std::make_shared<WorkspaceSeparateChecker>(
-      BoxPositionChecker(go_down_allowed_position_frame, req.go_down_allowed_position_min_deltas,
-                         req.go_down_allowed_position_max_deltas),
-      [](const rl::math::Rotation&) { return true; });
-
   params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
-
   return params;
 }
 

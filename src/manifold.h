@@ -1,30 +1,24 @@
 #ifndef MANIFOLD_H
 #define MANIFOLD_H
 
-#include "workspace_checkers.h"
-#include "workspace_samplers.h"
+#include <functional>
+#include <rl/math/Transform.h>
+#include <Inventor/nodes/SoNode.h>
+
+class SoVRMLAppearance;
+class SoVRMLTransform;
 
 class Manifold
 {
 public:
-  struct Description
-  {
-    Eigen::Affine3d initial_frame;
-    double orientation_delta;
-    bool orient_outward;
-  };
+  typedef std::function<double()> SampleRandom01;
 
   virtual ~Manifold();
 
-  const WorkspaceChecker& checker() const;
-  const WorkspaceSampler& sampler() const;
-
+  virtual bool contains(const rl::math::Transform& transform_to_check) const = 0;
+  virtual rl::math::Transform generate(SampleRandom01 sample_random_01) const = 0;
+  virtual SoNode* visualization() const = 0;
   virtual const Eigen::Affine3d& initialFrame() const = 0;
-  virtual double orientationDelta() const = 0;
-
-protected:
-  std::shared_ptr<WorkspaceChecker> checker_;
-  std::shared_ptr<WorkspaceSampler> sampler_;
 };
 
 #endif  // MANIFOLD_H

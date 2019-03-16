@@ -73,6 +73,8 @@ public slots:
 
 	void changeColor(const SbColor& col);
 
+  void drawNode(SoNode* node);
+
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
 
   void drawCylinder(const rl::math::Transform& transform, double radius, double height);

@@ -13,6 +13,7 @@
 #include <rl/math/Vector.h>
 #include <rl/math/Rotation.h>
 #include <rl/plan/VectorList.h>
+#include <Inventor/nodes/SoNode.h>
 
 #include "ros/ros.h"
 #include <ros/package.h>
@@ -25,11 +26,10 @@
 #include "mainwindow.h"
 #include "bounding_box.h"
 #include "collision_specification.h"
-#include "workspace_checkers.h"
-#include "workspace_samplers.h"
 #include "ifco_scene.h"
 #include "tabletop_scene.h"
 #include "check_kinematics_parameters.h"
+#include "jacobian_controller.h"
 
 class ServiceWorker : public QObject
 {
@@ -59,11 +59,10 @@ public slots:
 
 signals:
   void drawConfiguration(const rl::math::Vector& size);
+  void drawNode(SoNode* node);
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
-  void drawCylinder(const rl::math::Transform& transform, double radius, double height);
   void drawNamedFrame(const rl::math::Transform& transform, const std::string& name);
   void resetBoxes();
-  void resetCylinders();
   void resetPoints();
   void resetLines();
   void resetFrames();
@@ -87,19 +86,6 @@ private:
                                      const CheckSurfaceGraspParameters& specific_parameters,
                                      const Eigen::Affine3d& pregrasp_goal, const Eigen::Affine3d& go_down_goal);
 
-  /* Visualize the position part of the goal manifold in the viewer. The manifold is specified by
-   * the goal pose, and the minimum and maximum deviations from the goal pose in each coordinate.
-   *
-   * @param pose The goal pose.
-   * @param zero_dimension_correction If exactly two of the manifold sizes are zero, set one of them to this number,
-   * because viewer will not visualize a box with only one non-zero size.
-   */
-  void drawGoalManifold(rl::math::Transform pose, const boost::array<double, 3>& min_position_deltas,
-                        const boost::array<double, 3>& max_position_deltas, double zero_dimension_correction = 0.01);
-
-  void drawManifold(const SurfacePregraspManifolds::CircularManifold::Description& description);
-  void drawManifold(const SurfacePregraspManifolds::ElongatedManifold::Description& description);
-
   std::unique_ptr<IfcoScene> ifco_scene;
   std::unique_ptr<TabletopScene> tabletop_scene;
   double delta_;
@@ -108,42 +94,6 @@ private:
 
   QMutex keep_running_mutex;
   bool keep_running = true;
-
-  // TODO find a way to remove this nastiness
-  struct convert_to_manifold_visitor : public boost::static_visitor<const Manifold&>
-  {
-    const Manifold& operator()(const boost::blank)
-    {
-      assert(false);
-    }
-
-    template <typename T>
-    const Manifold& operator()(const T& manifold)
-    {
-      return manifold;
-    }
-  };
-
-  struct visualize_manifold_visitor : public boost::static_visitor<>
-  {
-    visualize_manifold_visitor(ServiceWorker& worker) : worker_(worker)
-    {
-    }
-
-    template <typename T>
-    void operator()(const T& manifold)
-    {
-      worker_.drawManifold(manifold.description());
-    }
-
-    void operator()(const boost::blank)
-    {
-    }
-
-    ServiceWorker& worker_;
-  };
-
-  friend visualize_manifold_visitor;
 };
 
 #endif  // KINEMATICS_CHECK_H

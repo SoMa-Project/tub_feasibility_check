@@ -76,7 +76,7 @@ JacobianController::JacobianController(std::shared_ptr<rl::kin::Kinematics> kine
 JacobianController::SingleResult JacobianController::moveSingleParticle(
     const rl::math::Vector& initial_configuration, const rl::math::Transform& to_pose,
     const CollisionSpecification& collision_specification,
-    boost::optional<const WorkspaceChecker&> goal_manifold_checker)
+    boost::optional<const Manifold&> goal_manifold)
 {
   using namespace rl::math;
 
@@ -139,7 +139,7 @@ JacobianController::SingleResult JacobianController::moveSingleParticle(
       auto collisions = SingleResult::OutcomeInformation::CollisionInformation(
           collision_constraints_check.seen_terminating_collisions);
 
-      if (goal_manifold_checker && !goal_manifold_checker->contains(noisy_model_.forwardPosition()))
+      if (goal_manifold && !goal_manifold->contains(noisy_model_.forwardPosition()))
         return result.setSingleOutcome(SingleResult::Outcome::TERMINATED_OUTSIDE_GOAL_MANIFOLD, collisions);
 
       return result.setSingleOutcome(SingleResult::Outcome::TERMINATING_COLLISION, collisions);

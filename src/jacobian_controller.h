@@ -10,7 +10,7 @@
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
 #include "collision_specification.h"
-#include "workspace_checkers.h"
+#include "manifold.h"
 #include "utilities.h"
 #include <unordered_map>
 
@@ -122,7 +122,7 @@ public:
    */
   SingleResult moveSingleParticle(const rl::math::Vector& initial_configuration, const rl::math::Transform& target_pose,
                                   const CollisionSpecification& collision_specification,
-                                  boost::optional<const WorkspaceChecker&> goal_manifold_checker = boost::none);
+                                  boost::optional<const Manifold&> goal_manifold = boost::none);
 
   /* Create a belief in initial configuration and propagate it to the target pose using jacobian control and obeying
    * collision constraints. Done in two phases: first, a single particle is moved without noise to target pose.

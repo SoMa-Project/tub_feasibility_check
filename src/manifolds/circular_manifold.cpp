@@ -1,8 +1,27 @@
+#include <rl/math/Rotation.h>
+#include <Inventor/VRMLnodes/SoVRMLTransform.h>
+#include <Inventor/VRMLnodes/SoVRMLCylinder.h>
+#include <Inventor/VRMLnodes/SoVRMLShape.h>
+#include <Inventor/VRMLnodes/SoVRMLAppearance.h>
+#include <Inventor/VRMLnodes/SoVRMLMaterial.h>
 #include "circular_manifold.h"
 
 namespace SurfacePregraspManifolds
 {
-rl::math::Transform CircularManifold::ManifoldSampler::generate(SampleRandom01 sample_random_01) const
+CircularManifold::CircularManifold(CircularManifold::Description description) : description_(description)
+{
+  appearance_ = new SoVRMLAppearance;
+  auto material = new SoVRMLMaterial;
+  material->diffuseColor.setValue(0.2f, 0.2f, 0.2f);
+  material->transparency.setValue(0.75f);
+  appearance_->material.setValue(material);
+}
+
+CircularManifold::~CircularManifold()
+{
+}
+
+rl::math::Transform CircularManifold::generate(Manifold::SampleRandom01 sample_random_01) const
 {
   double sampled_radius = std::sqrt(sample_random_01()) * description_.radius;
   double sampled_phi = sample_random_01() * M_PI * 2;
@@ -21,7 +40,7 @@ rl::math::Transform CircularManifold::ManifoldSampler::generate(SampleRandom01 s
   return sampled_transform;
 }
 
-bool CircularManifold::ManifoldChecker::contains(const rl::math::Transform& transform_to_check) const
+bool CircularManifold::contains(const rl::math::Transform& transform_to_check) const
 {
   Eigen::Affine3d difference_transform = description_.initial_frame.inverse() * transform_to_check;
 
@@ -49,28 +68,33 @@ bool CircularManifold::ManifoldChecker::contains(const rl::math::Transform& tran
          description_.orientation_delta + angle_comparison_epsilon_;
 }
 
-CircularManifold::CircularManifold(CircularManifold::Description description) : description_(description)
+SoNode* CircularManifold::visualization() const
 {
-  sampler_ = std::make_shared<ManifoldSampler>(description);
-  checker_ = std::make_shared<ManifoldChecker>(description);
-}
+  using namespace rl::math;
 
-const CircularManifold::Description& CircularManifold::description() const
-{
-  return description_;
+  rl::math::Transform corrected_frame(description_.initial_frame);
+  corrected_frame.rotate(rl::math::AngleAxis(M_PI / 2, Eigen::Vector3d::UnitX()));
+
+  auto vrml_transform = new SoVRMLTransform();
+  rl::math::Quaternion rotation(corrected_frame.rotation());
+  vrml_transform->translation.setValue(corrected_frame.translation()(0), corrected_frame.translation()(1),
+                                       corrected_frame.translation()(2));
+  vrml_transform->rotation.setValue(rotation.x(), rotation.y(), rotation.z(), rotation.w());
+
+  auto shape = new SoVRMLShape();
+  shape->appearance = appearance_;
+
+  auto cylinder = new SoVRMLCylinder();
+  cylinder->radius.setValue(description_.radius);
+  cylinder->height.setValue(visualization_cylinder_height_);
+
+  shape->geometry = cylinder;
+  vrml_transform->addChild(shape);
+  return vrml_transform;
 }
 
 const Eigen::Affine3d& CircularManifold::initialFrame() const
 {
   return description_.initial_frame;
-}
-
-double CircularManifold::orientationDelta() const
-{
-  return description_.orientation_delta;
-}
-
-CircularManifold::~CircularManifold()
-{
 }
 }
