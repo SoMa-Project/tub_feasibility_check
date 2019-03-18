@@ -18,6 +18,9 @@ The sampled frame origin is sampled in the plane defined by the X and Y axes of 
 
 Check the [jupyter notebook](notebooks/surface-grasp-elongated.ipynb) for visualizations and example code. 
 
+### Wall grasp pregrasp manifold
+[Jupyter notebook](notebooks/wall-grasp-manifold.ipynb).
+
 ### Examples
 The following [video](https://drive.google.com/open?id=1rifkSblYNoxWirS3yiKDp53Ti947qAfm) demonstrates how the new combined call works. To try examples used to produced this video yourself, first start the feasibility checker and then call the `/check_surface_grasp` service using the provided example yaml files:
 
