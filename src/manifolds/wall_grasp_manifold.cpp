@@ -19,6 +19,9 @@ WallGraspManifold::WallGraspManifold(WallGraspManifold::Description description)
 
 bool WallGraspManifold::contains(const rl::math::Transform& transform_to_check) const
 {
+  // TODO implement this if you need to use it
+  assert(false);
+
   Eigen::Vector3d diff = description_.initial_frame.inverse() * transform_to_check.translation();
 
   if (!diff.normalized().isApprox(Eigen::Vector3d::UnitY()) || !diff.normalized().isApprox(-Eigen::Vector3d::UnitY()))
@@ -45,9 +48,9 @@ rl::math::Transform WallGraspManifold::generate(Manifold::SampleRandom01 sample_
       description_.surface_frame.rotation().inverse() *
       (description_.object_centroid.translation() - sampled_frame.translation());
   Eigen::Vector3d rotation_vector_in_sampled_frame =
-      sampled_frame.inverse() * description_.surface_frame * rl::math::Vector3::UnitZ();
+      sampled_frame.linear().inverse() * description_.surface_frame.linear() * rl::math::Vector3::UnitZ();
 
-  double rotation = std::atan2(towards_centroid_in_surface_frame.y(), towards_centroid_in_surface_frame.x());
+  double rotation = M_PI + std::atan2(towards_centroid_in_surface_frame.y(), towards_centroid_in_surface_frame.x());
 
   return sampled_frame.rotate(rl::math::AngleAxis(rotation, rotation_vector_in_sampled_frame));
 }
