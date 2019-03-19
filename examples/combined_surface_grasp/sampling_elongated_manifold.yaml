@@ -10,13 +10,16 @@ ifco_pose:
   orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
 pregrasp_manifold:
   type: 1
-  initial_frame:
+  position_frame:
     position: {x: 0.4, y: -0.02, z: 0.1}
     orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
+  orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
+  object_centroid: {x: 0.4, y: -0.02, z: -0.096}
   orientation_delta: 0.15
   stripe_width: 0.3
   stripe_height: 0.1
   stripe_offset: 0.05
+  orient_outward: true
 bounding_boxes_with_poses:
 - box:
     type: 0

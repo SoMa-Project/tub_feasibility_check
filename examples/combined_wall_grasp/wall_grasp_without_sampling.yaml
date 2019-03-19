@@ -9,12 +9,11 @@ go_down_goal_pose:
   position: {x: 0.48, y: 0.1, z: -0.311}
   orientation: [ 0.6830127, 0.6830127, -0.1830127, 0.1830127 ]
 pregrasp_manifold:
-  initial_frame:
+  position_frame:
     position: {x: 0.5, y: 0.1, z: -0.15}
     orientation: [ 0.6830127, 0.6830127, -0.1830127, 0.1830127 ]
-  object_centroid:
-    position: {x: 0.5, y: -0.02, z: -0.311}
-    orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+  orientation: {x: 0.6830127, y: 0.6830127, z: -0.1830127, w: 0.1830127}
+  object_centroid: {x: 0.5, y: -0.02, z: -0.311}
   width: 0.25
 bounding_boxes_with_poses:
 - box:

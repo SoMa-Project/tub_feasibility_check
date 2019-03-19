@@ -9,10 +9,12 @@ class WallGraspManifold : public Manifold
 public:
   struct Description
   {
-    Eigen::Affine3d initial_frame;
+    Eigen::Affine3d position_frame;
     Eigen::Affine3d surface_frame;
     Eigen::Vector3d object_centroid;
+    Eigen::Quaterniond orientation;
     double width;
+    bool orient_outward;
   };
 
   WallGraspManifold(Description description);

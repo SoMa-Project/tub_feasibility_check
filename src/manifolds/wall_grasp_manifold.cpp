@@ -7,6 +7,7 @@
 #include <Inventor/VRMLnodes/SoVRMLBox.h>
 
 #include "wall_grasp_manifold.h"
+#include "shared_functions.h"
 
 WallGraspManifold::WallGraspManifold(WallGraspManifold::Description description) : description_(description)
 {
@@ -21,45 +22,29 @@ bool WallGraspManifold::contains(const rl::math::Transform& transform_to_check) 
 {
   // TODO implement this if you need to use it
   assert(false);
-
-  Eigen::Vector3d diff = description_.initial_frame.inverse() * transform_to_check.translation();
-
-  if (!diff.normalized().isApprox(Eigen::Vector3d::UnitY()) || !diff.normalized().isApprox(-Eigen::Vector3d::UnitY()))
-    return false;
-
-  if (diff.norm() > description_.width / 2 + position_comparison_epsilon_)
-    return false;
-
-  Eigen::Vector3d direction_towards_centroid =
-      transform_to_check.inverse() * description_.object_centroid;
-  direction_towards_centroid(2) = 0;
-  direction_towards_centroid.normalize();
-  return direction_towards_centroid.isApprox(Eigen::Vector3d::UnitX());
 }
 
 rl::math::Transform WallGraspManifold::generate(Manifold::SampleRandom01 sample_random_01) const
 {
-  Eigen::Vector3d sampled_translation = (sample_random_01() - 0.5) * description_.width * Eigen::Vector3d::UnitY();
+  Eigen::Vector3d sampled_translation = (sample_random_01() - 0.5) * description_.width * Eigen::Vector3d::UnitX();
 
-  rl::math::Transform sampled_frame = description_.initial_frame;
+  rl::math::Transform sampled_frame = description_.position_frame;
   sampled_frame.translate(sampled_translation);
+  sampled_frame.linear() = description_.orientation.matrix();
 
-  Eigen::Vector3d towards_centroid_in_surface_frame =
-      description_.surface_frame.rotation().inverse() *
-      (description_.object_centroid - sampled_frame.translation());
-  Eigen::Vector3d rotation_vector_in_sampled_frame =
-      sampled_frame.linear().inverse() * description_.surface_frame.linear() * rl::math::Vector3::UnitZ();
+  auto rotation_towards_centroid = rotationTowardsCentroidOnSurfaceZ(
+      description_.orientation, sampled_frame, description_.object_centroid, description_.surface_frame);
+  if (description_.orient_outward)
+    rotation_towards_centroid.angle() += M_PI;
 
-  double rotation = M_PI + std::atan2(towards_centroid_in_surface_frame.y(), towards_centroid_in_surface_frame.x());
-
-  return sampled_frame.rotate(rl::math::AngleAxis(rotation, rotation_vector_in_sampled_frame));
+  return sampled_frame.rotate(rotation_towards_centroid);
 }
 
 SoNode* WallGraspManifold::visualization() const
 {
   auto vrml_transform = new SoVRMLTransform;
-  const auto& translation = description_.initial_frame.translation();
-  rl::math::Quaternion rotation(description_.initial_frame.rotation());
+  const auto& translation = description_.position_frame.translation();
+  rl::math::Quaternion rotation(description_.position_frame.rotation());
   vrml_transform->translation.setValue(translation(0), translation(1), translation(2));
   vrml_transform->rotation.setValue(rotation.x(), rotation.y(), rotation.z(), rotation.w());
 
@@ -67,7 +52,7 @@ SoNode* WallGraspManifold::visualization() const
   shape->appearance = appearance_;
 
   auto box = new SoVRMLBox;
-  box->size.setValue(visualization_box_zero_correction_, description_.width, visualization_box_zero_correction_);
+  box->size.setValue(description_.width, visualization_box_zero_correction_, visualization_box_zero_correction_);
 
   shape->geometry = box;
   vrml_transform->addChild(shape);
@@ -77,5 +62,5 @@ SoNode* WallGraspManifold::visualization() const
 
 const Eigen::Affine3d& WallGraspManifold::initialFrame() const
 {
-  return description_.initial_frame;
+  return description_.position_frame;
 }

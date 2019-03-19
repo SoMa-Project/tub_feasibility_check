@@ -15,6 +15,7 @@ rl::math::Vector3 samplePositionInAsymmetricBox(const rl::math::Transform& box_f
 Eigen::AngleAxisd rotationTowardsCentroidOnSurfaceZ(const Eigen::Quaterniond& initial_orientation,
                                                     const Eigen::Affine3d& frame_position,
                                                     const Eigen::Vector3d& object_centroid,
-                                                    const Eigen::Affine3d& surface_frame);
+                                                    const Eigen::Affine3d& surface_frame,
+                                                    bool cancel_x_out=false);
 
 #endif  // SHARED_FUNCTIONS_H

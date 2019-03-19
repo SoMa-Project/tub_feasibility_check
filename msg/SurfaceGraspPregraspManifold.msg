@@ -5,8 +5,8 @@ uint8 type
 
 # These parameters are shared between different manifolds.
 geometry_msgs/Pose position_frame
-geometry_msgs/Quaternion orientation
 geometry_msgs/Point object_centroid
+geometry_msgs/Quaternion orientation
 
 float32 orientation_delta
 bool orient_outward

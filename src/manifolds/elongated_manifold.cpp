@@ -7,6 +7,7 @@
 #include <Inventor/VRMLnodes/SoVRMLMaterial.h>
 
 #include "elongated_manifold.h"
+#include "shared_functions.h"
 
 namespace SurfacePregraspManifolds
 {
@@ -23,16 +24,22 @@ rl::math::Transform ElongatedManifold::generate(SampleRandom01 sample_random_01)
 {
   Eigen::Vector3d sampled_position_in_plane = Eigen::Vector3d::Zero();
   sampled_position_in_plane(0) = description_.stripe_width * (sample_random_01() - 0.5);
-  sampled_position_in_plane(1) = description_.stripe_height * (sample_random_01() - 0.5);
+  sampled_position_in_plane(1) = 2 * description_.stripe_height * (sample_random_01() - 0.5);
   sampled_position_in_plane(1) += std::copysign(description_.stripe_offset, sampled_position_in_plane(1));
 
-  double orientation = std::copysign(M_PI / 2, (description_.orient_outward ? 1 : -1) * sampled_position_in_plane(1));
   double sampled_orientation_delta = (sample_random_01() - 0.5) * description_.orientation_delta;
 
   rl::math::Transform sampled_transform;
   sampled_transform.translation() = description_.position_frame * sampled_position_in_plane;
-  sampled_transform.rotate(Eigen::AngleAxisd(orientation + sampled_orientation_delta, Eigen::Vector3d::UnitZ()));
-  return sampled_transform;
+  sampled_transform.linear() = description_.orientation.matrix();
+  auto rotate_towards_centerline =
+      rotationTowardsCentroidOnSurfaceZ(description_.orientation, sampled_transform,
+                                        description_.object_centroid, description_.surface_frame, true);
+  rotate_towards_centerline.angle() += sampled_orientation_delta;
+  if (description_.orient_outward)
+    rotate_towards_centerline.angle() += M_PI;
+
+  return sampled_transform.rotate(rotate_towards_centerline);
 }
 
 bool ElongatedManifold::contains(const rl::math::Transform& transform_to_check) const

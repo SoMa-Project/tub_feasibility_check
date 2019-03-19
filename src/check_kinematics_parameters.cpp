@@ -106,10 +106,17 @@ boost::optional<CheckWallGraspParameters> processCheckWallGraspParameters(
   CheckWallGraspParameters params;
 
   WallGraspManifold::Description description;
-  tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
+  tf::poseMsgToEigen(req.pregrasp_manifold.position_frame, description.position_frame);
   tf::pointMsgToEigen(req.pregrasp_manifold.object_centroid, description.object_centroid);
-  description.surface_frame = shared_parameters.poses.at("ifco");
+
+  // tf::quaternionMsgToEigen(req.pregrasp_manifold.orientation, description.orientation);
+  description.orientation =
+      Eigen::Quaterniond(req.pregrasp_manifold.orientation.w, req.pregrasp_manifold.orientation.x,
+                         req.pregrasp_manifold.orientation.y, req.pregrasp_manifold.orientation.z);
+
+  description.surface_frame = Eigen::Affine3d::Identity();
   description.width = req.pregrasp_manifold.width;
+  description.orient_outward = req.pregrasp_manifold.orient_outward;
 
   params.pregrasp_manifold = std::make_shared<WallGraspManifold>(description);
   params.object_centroid = description.object_centroid;

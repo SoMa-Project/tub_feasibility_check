@@ -1,4 +1,5 @@
-geometry_msgs/Pose initial_frame
+geometry_msgs/Pose position_frame
 geometry_msgs/Point object_centroid
-geometry_msgs/Pose surface_frame
+geometry_msgs/Quaternion orientation
 float32 width
+bool orient_outward
