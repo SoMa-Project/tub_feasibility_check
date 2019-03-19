@@ -109,6 +109,7 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/manifolds/elongated_manifold.cpp
         src/manifolds/old_manifold.cpp
         src/manifolds/wall_grasp_manifold.cpp
+        src/manifolds/shared_functions.cpp
         src/check_kinematics_parameters.cpp
     )
 

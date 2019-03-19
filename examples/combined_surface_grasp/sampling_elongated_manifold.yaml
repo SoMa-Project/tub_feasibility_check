@@ -17,11 +17,6 @@ pregrasp_manifold:
   stripe_width: 0.3
   stripe_height: 0.1
   stripe_offset: 0.05
-go_down_allowed_position_frame:
-  position: {x: 0.4, y: -0.02, z: -0.056}
-  orientation: {x: 0.997, y: 0, z: 0.071, w: 0}
-go_down_allowed_position_min_deltas: [-0.05, -0.05, -0.06]
-go_down_allowed_position_max_deltas: [0.05, 0.05, 0]
 bounding_boxes_with_poses:
 - box:
     type: 0

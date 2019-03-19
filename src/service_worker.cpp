@@ -345,9 +345,9 @@ ServiceWorker::WallGraspResult ServiceWorker::tryWallGrasp(JacobianController& j
 
   rl::math::Transform distance_slide_goal = wall_grasp_result.go_down_result->final_transform;
   // TODO point of dependency on scene type! maybe introduce surface pose?
-  rl::math::Vector3 sliding_direction = shared_parameters.poses.at("ifco").linear().inverse() *
-                                        (specific_parameters.object_centroid.translation() -
-                                         wall_grasp_result.go_down_result->final_transform.translation());
+  rl::math::Vector3 sliding_direction =
+      shared_parameters.poses.at("ifco").linear().inverse() *
+      (specific_parameters.object_centroid - wall_grasp_result.go_down_result->final_transform.translation());
   sliding_direction(2) = 0;
   sliding_direction = shared_parameters.poses.at("ifco").linear() * sliding_direction;
   // TODO name 1 as constant and place in header
@@ -369,12 +369,10 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
                                            tub_feasibility_check::CheckSurfaceGrasp::Response& res)
 {
   ROS_INFO("Receiving query");
-  auto shared_parameters =
-      processSharedQueryParameters(req, { { "ifco", req.ifco_pose },
-                                          { "pregrasp_goal", req.pregrasp_goal_pose },
-                                          { "go_down_goal", req.go_down_goal_pose },
-                                          { "go_down_allowed_position_frame", req.go_down_allowed_position_frame } },
-                                   {}, ifco_scene->dof());
+  auto shared_parameters = processSharedQueryParameters(req, { { "ifco", req.ifco_pose },
+                                                               { "pregrasp_goal", req.pregrasp_goal_pose },
+                                                               { "go_down_goal", req.go_down_goal_pose } },
+                                                        {}, ifco_scene->dof());
 
   if (!shared_parameters)
     return false;

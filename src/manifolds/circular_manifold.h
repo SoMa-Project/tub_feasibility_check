@@ -12,7 +12,11 @@ class CircularManifold final : public Manifold
 public:
   struct Description
   {
-    Eigen::Affine3d initial_frame;
+    Eigen::Affine3d position_frame;
+    Eigen::Quaterniond orientation;
+    Eigen::Vector3d object_centroid;
+    Eigen::Affine3d surface_frame;
+
     double orientation_delta;
     double radius;
     bool orient_outward;
@@ -28,7 +32,7 @@ public:
 
 private:
   const double angle_comparison_epsilon_ = 1e-3;
-  const double z_axis_comparison_epsilon_ = 1e-4;
+  const double distance_comparison_epsilon_ = 1e-4;
   const double visualization_cylinder_height_ = 1e-2;
 
   Description description_;

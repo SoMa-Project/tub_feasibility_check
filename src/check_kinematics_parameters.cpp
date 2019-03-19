@@ -107,7 +107,7 @@ boost::optional<CheckWallGraspParameters> processCheckWallGraspParameters(
 
   WallGraspManifold::Description description;
   tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
-  tf::poseMsgToEigen(req.pregrasp_manifold.object_centroid, description.object_centroid);
+  tf::pointMsgToEigen(req.pregrasp_manifold.object_centroid, description.object_centroid);
   description.surface_frame = shared_parameters.poses.at("ifco");
   description.width = req.pregrasp_manifold.width;
 
@@ -117,5 +117,43 @@ boost::optional<CheckWallGraspParameters> processCheckWallGraspParameters(
   params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
   params.slide_collision_specification = processCollisionSpecification(req.slide_allowed_collisions);
 
+  return params;
+}
+
+boost::optional<CheckSurfaceGraspParameters> processCheckSurfaceGraspParameters(
+    const tub_feasibility_check::CheckSurfaceGraspRequest& req, const SharedParameters& shared_parameters)
+{
+  using namespace SurfacePregraspManifolds;
+
+  CheckSurfaceGraspParameters params;
+
+  switch (req.pregrasp_manifold.type)
+  {
+    case req.pregrasp_manifold.CIRCULAR:
+    {
+      CircularManifold::Description circular_description;
+      assignSharedManifoldParameters(req, circular_description);
+      circular_description.radius = req.pregrasp_manifold.radius;
+
+      params.pregrasp_manifold = std::make_shared<CircularManifold>(circular_description);
+      break;
+    }
+    case req.pregrasp_manifold.ELONGATED:
+    {
+      ElongatedManifold::Description elongated_description;
+      assignSharedManifoldParameters(req, elongated_description);
+      elongated_description.stripe_width = req.pregrasp_manifold.stripe_width;
+      elongated_description.stripe_height = req.pregrasp_manifold.stripe_height;
+      elongated_description.stripe_offset = req.pregrasp_manifold.stripe_offset;
+
+      params.pregrasp_manifold = std::make_shared<ElongatedManifold>(elongated_description);
+      break;
+    }
+    default:
+      ROS_ERROR_STREAM("Unknown pregrasp manifold type: " << req.pregrasp_manifold.type);
+      return boost::none;
+  }
+
+  params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
   return params;
 }

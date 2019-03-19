@@ -21,14 +21,6 @@ BoundingBoxWithPose[] bounding_boxes_with_poses
 # The definition of the pregrasp manifold.
 SurfaceGraspPregraspManifold pregrasp_manifold
 
-# The definition of allowed final pregrasp positions.
-# It is specified as box aligned to go_down_allowed_position_frame
-# with minimum and maximum coordinates specified by
-# go_down_allowed_position_min_deltas and go_down_allowed_position_max_deltas
-geometry_msgs/Pose go_down_allowed_position_frame
-float64[3] go_down_allowed_position_min_deltas
-float64[3] go_down_allowed_position_max_deltas
-
 # An array of allowed collisions in go down phase. Check AllowedCollision.msg for more details.
 # A collision that is not listed here will trigger a failure.
 # Every collision in pregrasp phase is a failure.

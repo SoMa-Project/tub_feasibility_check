@@ -29,16 +29,17 @@ rl::math::Transform ElongatedManifold::generate(SampleRandom01 sample_random_01)
   double orientation = std::copysign(M_PI / 2, (description_.orient_outward ? 1 : -1) * sampled_position_in_plane(1));
   double sampled_orientation_delta = (sample_random_01() - 0.5) * description_.orientation_delta;
 
-  rl::math::Transform sampled_transform = description_.initial_frame;
-  sampled_transform.translation() = description_.initial_frame * sampled_position_in_plane;
+  rl::math::Transform sampled_transform;
+  sampled_transform.translation() = description_.position_frame * sampled_position_in_plane;
   sampled_transform.rotate(Eigen::AngleAxisd(orientation + sampled_orientation_delta, Eigen::Vector3d::UnitZ()));
   return sampled_transform;
 }
 
 bool ElongatedManifold::contains(const rl::math::Transform& transform_to_check) const
 {
-  // TODO write and test this
-  return true;
+  // not implemented due to time limit
+  // currently unused in the combined service calls
+  assert(false);
 }
 
 SoNode* ElongatedManifold::visualization() const
@@ -64,7 +65,7 @@ SoNode* ElongatedManifold::visualization() const
     return vrml_transform;
   };
 
-  Eigen::Affine3d stripe_center = description_.initial_frame;
+  Eigen::Affine3d stripe_center = description_.position_frame;
   Eigen::Vector3d size(description_.stripe_width, description_.stripe_height, visualization_box_height_);
   stripe_center.translate(Eigen::Vector3d::UnitY() * (description_.stripe_offset + description_.stripe_height / 2));
   group->addChild(makeBox(size, stripe_center));
@@ -77,6 +78,6 @@ SoNode* ElongatedManifold::visualization() const
 
 const Eigen::Affine3d& ElongatedManifold::initialFrame() const
 {
-  return description_.initial_frame;
+  return description_.position_frame;
 }
 }

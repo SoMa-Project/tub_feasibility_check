@@ -5,6 +5,7 @@
 #include <Inventor/VRMLnodes/SoVRMLAppearance.h>
 #include <Inventor/VRMLnodes/SoVRMLMaterial.h>
 #include "circular_manifold.h"
+#include "shared_functions.h"
 
 namespace SurfacePregraspManifolds
 {
@@ -32,47 +33,31 @@ rl::math::Transform CircularManifold::generate(Manifold::SampleRandom01 sample_r
   sampled_point_on_circle(1) = sampled_radius * std::sin(sampled_phi);
   sampled_point_on_circle(2) = 0;
 
-  rl::math::Transform sampled_transform(description_.initial_frame);
-  sampled_transform.translation() = description_.initial_frame * sampled_point_on_circle;
-  sampled_transform.rotate(rl::math::AngleAxis(
-      sampled_phi + sampled_orientation_delta - (description_.orient_outward ? 0 : M_PI), Eigen::Vector3d::UnitZ()));
+  rl::math::Transform sampled_transform;
+  sampled_transform.translation() = description_.position_frame * sampled_point_on_circle;
+  sampled_transform.linear() = description_.orientation.matrix();
 
-  return sampled_transform;
+  auto rotation_towards_centroid = rotationTowardsCentroidOnSurfaceZ(
+      description_.orientation, sampled_transform, description_.object_centroid, description_.surface_frame);
+  rotation_towards_centroid.angle() += sampled_orientation_delta;
+  if (description_.orient_outward)
+    rotation_towards_centroid.angle() += M_PI;
+
+  return sampled_transform.rotate(rotation_towards_centroid);
 }
 
 bool CircularManifold::contains(const rl::math::Transform& transform_to_check) const
 {
-  Eigen::Affine3d difference_transform = description_.initial_frame.inverse() * transform_to_check;
-
-  bool origin_in_plane = std::abs(difference_transform.translation()(2)) < z_axis_comparison_epsilon_;
-  if (!origin_in_plane)
-    return false;
-
-  Eigen::AngleAxisd difference_in_orientation(difference_transform.linear());
-  if (difference_in_orientation.axis()(2) < 0)
-  {
-    difference_in_orientation.axis() *= -1;
-    difference_in_orientation.angle() *= -1;
-  }
-
-  bool rotated_around_z_only = difference_in_orientation.axis().isApprox(Eigen::Vector3d::UnitZ());
-  if (!rotated_around_z_only)
-    return false;
-
-  double distance = difference_transform.translation().norm();
-  double desired_rotation_angle =
-      std::atan2(difference_transform.translation()(1), difference_transform.translation()(0));
-  if (!description_.orient_outward)
-    desired_rotation_angle -= M_PI;
-  return std::abs(std::remainder(desired_rotation_angle - difference_in_orientation.angle(), 2 * M_PI)) <
-         description_.orientation_delta + angle_comparison_epsilon_;
+  // not implemented due to time limit
+  // currently unused in the combined service calls
+  assert(false);
 }
 
 SoNode* CircularManifold::visualization() const
 {
   using namespace rl::math;
 
-  rl::math::Transform corrected_frame(description_.initial_frame);
+  rl::math::Transform corrected_frame(description_.position_frame);
   corrected_frame.rotate(rl::math::AngleAxis(M_PI / 2, Eigen::Vector3d::UnitX()));
 
   auto vrml_transform = new SoVRMLTransform();
@@ -95,6 +80,6 @@ SoNode* CircularManifold::visualization() const
 
 const Eigen::Affine3d& CircularManifold::initialFrame() const
 {
-  return description_.initial_frame;
+  return description_.position_frame;
 }
 }

@@ -31,7 +31,7 @@ bool WallGraspManifold::contains(const rl::math::Transform& transform_to_check) 
     return false;
 
   Eigen::Vector3d direction_towards_centroid =
-      transform_to_check.inverse() * description_.object_centroid.translation();
+      transform_to_check.inverse() * description_.object_centroid;
   direction_towards_centroid(2) = 0;
   direction_towards_centroid.normalize();
   return direction_towards_centroid.isApprox(Eigen::Vector3d::UnitX());
@@ -46,7 +46,7 @@ rl::math::Transform WallGraspManifold::generate(Manifold::SampleRandom01 sample_
 
   Eigen::Vector3d towards_centroid_in_surface_frame =
       description_.surface_frame.rotation().inverse() *
-      (description_.object_centroid.translation() - sampled_frame.translation());
+      (description_.object_centroid - sampled_frame.translation());
   Eigen::Vector3d rotation_vector_in_sampled_frame =
       sampled_frame.linear().inverse() * description_.surface_frame.linear() * rl::math::Vector3::UnitZ();
 

@@ -11,7 +11,7 @@ public:
   {
     Eigen::Affine3d initial_frame;
     Eigen::Affine3d surface_frame;
-    Eigen::Affine3d object_centroid;
+    Eigen::Vector3d object_centroid;
     double width;
   };
 

@@ -10,8 +10,11 @@ class ElongatedManifold final : public Manifold
 public:
   struct Description
   {
-    Eigen::Affine3d initial_frame;
+    Eigen::Affine3d position_frame;
+    Eigen::Quaterniond orientation;
     double orientation_delta;
+    Eigen::Vector3d object_centroid;
+    Eigen::Affine3d surface_frame;
 
     double stripe_width;
     double stripe_height;

@@ -6,6 +6,7 @@
 #include "tub_feasibility_check/CheckKinematics.h"
 #include "tub_feasibility_check/CheckKinematicsTabletop.h"
 #include "tub_feasibility_check/CheckWallGrasp.h"
+#include "tub_feasibility_check/CheckSurfaceGrasp.h"
 
 #include "bounding_box.h"
 #include "collision_specification.h"
@@ -44,7 +45,7 @@ struct CheckWallGraspParameters
   boost::optional<WorldPartsCollisions> slide_collision_specification;
 
   // duplicate it here so there's no need to extract it from Manifold
-  Eigen::Affine3d object_centroid;
+  Eigen::Vector3d object_centroid;
 };
 
 std::string getBoxName(std::size_t box_id);
@@ -134,56 +135,20 @@ boost::optional<CheckKinematicsParameters> processCheckKinematicsParameters(cons
   return params;
 }
 
-template <typename Description, typename Request>
-void assignSharedManifoldParameters(const Request& req, Description& description)
+template <typename Description>
+void assignSharedManifoldParameters(const tub_feasibility_check::CheckSurfaceGraspRequest& req,
+                                    Description& description)
 {
   description.orientation_delta = req.pregrasp_manifold.orientation_delta;
   description.orient_outward = req.pregrasp_manifold.orient_outward;
-  tf::poseMsgToEigen(req.pregrasp_manifold.initial_frame, description.initial_frame);
+  tf::poseMsgToEigen(req.pregrasp_manifold.position_frame, description.position_frame);
+  tf::quaternionMsgToEigen(req.pregrasp_manifold.orientation, description.orientation);
+  tf::pointMsgToEigen(req.pregrasp_manifold.object_centroid, description.object_centroid);
+  description.surface_frame = Eigen::Affine3d::Identity();
 }
 
-// TODO template is not needed
-template <typename Request>
-boost::optional<CheckSurfaceGraspParameters>
-processCheckSurfaceGraspParameters(const Request& req, const SharedParameters& shared_parameters)
-{
-  using namespace SurfacePregraspManifolds;
-
-  CheckSurfaceGraspParameters params;
-
-  switch (req.pregrasp_manifold.type)
-  {
-    case req.pregrasp_manifold.CIRCULAR:
-    {
-      CircularManifold::Description circular_description;
-      assignSharedManifoldParameters(req, circular_description);
-      circular_description.radius = req.pregrasp_manifold.radius;
-
-      params.pregrasp_manifold = std::make_shared<CircularManifold>(circular_description);
-      break;
-    }
-    case req.pregrasp_manifold.ELONGATED:
-    {
-      ElongatedManifold::Description elongated_description;
-      assignSharedManifoldParameters(req, elongated_description);
-      elongated_description.stripe_width = req.pregrasp_manifold.stripe_width;
-      elongated_description.stripe_height = req.pregrasp_manifold.stripe_height;
-      elongated_description.stripe_offset = req.pregrasp_manifold.stripe_offset;
-
-      params.pregrasp_manifold = std::make_shared<ElongatedManifold>(elongated_description);
-      break;
-    }
-    default:
-      ROS_ERROR_STREAM("Unknown pregrasp manifold type: " << req.pregrasp_manifold.type);
-      return boost::none;
-  }
-
-  Eigen::Affine3d go_down_allowed_position_frame;
-  tf::poseMsgToEigen(req.go_down_allowed_position_frame, go_down_allowed_position_frame);
-
-  params.go_down_collision_specification = processCollisionSpecification(req.go_down_allowed_collisions);
-  return params;
-}
+boost::optional<CheckSurfaceGraspParameters> processCheckSurfaceGraspParameters(
+    const tub_feasibility_check::CheckSurfaceGraspRequest& req, const SharedParameters& shared_parameters);
 
 boost::optional<CheckWallGraspParameters> processCheckWallGraspParameters(
     const tub_feasibility_check::CheckWallGrasp::Request& req, const SharedParameters& shared_parameters);

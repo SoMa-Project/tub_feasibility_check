@@ -1,3 +1,4 @@
 geometry_msgs/Pose initial_frame
-geometry_msgs/Pose object_centroid
+geometry_msgs/Point object_centroid
+geometry_msgs/Pose surface_frame
 float32 width
