@@ -3,8 +3,8 @@
 #include "utilities.h"
 #include "ifco_scene.h"
 
-IfcoScene::IfcoScene(const std::string& scene_graph_file, const std::string& kinematics_file) :
-  UsecaseScene(scene_graph_file, kinematics_file)
+IfcoScene::IfcoScene(const std::string& scene_graph_file, const std::string& kinematics_file, bool mdl_format) :
+  UsecaseScene(scene_graph_file, kinematics_file, mdl_format)
 {
   auto index = findModelIndexByName("ifco");
   if (!index)
@@ -23,6 +23,6 @@ void IfcoScene::moveIfco(const rl::math::Transform& ifco_pose)
     scene.getModel(ifco_model_index_)->getBody(0)->setFrame(ifco_pose);
   };
 
-  findAndMoveIfco(*bullet_scene_);
+  findAndMoveIfco(*scene_and_model_.first);
   emit applyFunctionToScene(findAndMoveIfco);
 }

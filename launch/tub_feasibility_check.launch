@@ -1,10 +1,13 @@
 <?xml version="1.0"?>
 <launch>
-    <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check">
-        <param name="scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/wam-rbohand2-with-camera-ifco.convex.xml" />
+    <arg name="delta" default="0.017" />
+    <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check" output="screen">
+        <param name="ifco_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/wam-rbohand2-with-camera-ifco.convex.xml" />
+        <param name="tabletop_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/wam-rbohand2-with-camera-tabletop.convex.xml" />
         <param name="kinematics_file" value="$(find tub_feasibility_check)/model/rlkin/barrett-wam-rbohand2.xml"/>
         <param name="hide_window" type="bool" value="false" /> 
         <param name="sample_count" value="20" /> 
+        <param name="delta" value="$(arg delta)" />
     </node>
 </launch>
 

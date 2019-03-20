@@ -58,8 +58,6 @@ public:
 	
 	rl::math::Real delta;
 
-  std::unique_ptr<rl::kin::Kinematics> kinematics;
-
   std::unique_ptr<rl::sg::so::Scene> scene_graph;
 	
   std::unique_ptr<rl::plan::Model> model;
@@ -73,7 +71,11 @@ public slots:
 
 	void changeColor(const SbColor& col);
 
+  void drawNode(SoNode* node);
+
   void drawBox(const rl::math::Vector& size, const rl::math::Transform& transform);
+
+  void drawCylinder(const rl::math::Transform& transform, double radius, double height);
 
 	void drawConfiguration(const rl::math::Vector& q);
 	
@@ -106,6 +108,8 @@ public slots:
 	void reset();
 
   void resetBoxes();
+
+  void resetCylinders();
 	
 	void resetEdges();
 	
@@ -149,6 +153,16 @@ private:
   SoVRMLGroup* boxesGroup;
 
   SoVRMLMaterial* boxesMaterial;
+
+  SoVRMLSwitch* cylinders;
+
+  SoDrawStyle* cylindersDrawStyle;
+
+  SoVRMLAppearance* cylindersAppearance;
+
+  SoVRMLGroup* cylindersGroup;
+
+  SoVRMLMaterial* cylindersMaterial;
 
   SoVRMLSwitch* edges;
 	

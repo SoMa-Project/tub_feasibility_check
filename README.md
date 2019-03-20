@@ -1,5 +1,47 @@
 # tub_feasibility_check
 
+## Changes in this branch
+### Surface grasp call and wall grasp call
+This branch introduces a combined surface grasp call and a combined wall grasp call and pregrasp manifolds for those grasps.
+They are documented in the ROS .srv and .msg definitions:
+
+- [combined surface grasp call](srv/CheckSurfaceGrasp.srv)
+- [pregrasp manifolds for surface grasp](msg/SurfaceGraspPregraspManifold.msg)
+- [combined wall grasp call](srv/CheckWallGrasp.srv)
+- [pregrasp manifold for wall grasp](msg/WallGraspPregraspManifold.msg)
+
+### Currently only for the IFCO scene
+The combined calls currently only work for the IFCO scene. Extending them to work for the tabletop scene would be straightforward.
+
+### Notebooks for prototyping the manifolds
+There is a notebook for every pregrasp manifold type: [circular manifold for surface grasp](notebooks/surface-grasp-circular.ipynb),
+[elongated manifold for surface grasp](notebooks/surface-grasp-elongated.ipynb) and [wall grasp manifold](notebooks/wall-grasp-manifold.ipynb). However, they have not been updated, and there are some differences in the text description to what is currently implemented. The up-to-date description resides in the .srv and .msg files. Still, they can be used to visualize what is going on or test ideas.
+
+### Examples
+There is a number of examples demonstrating how the combined calls work. They can be found in [examples/combined_surface_grasp](examples/combined_surface_grasp) and [examples/combined_wall_grasp](examples/combined_wall_grasp). To run an example, you need to start the feasibility checker for the IFCO scene.
+```bash
+roslaunch tub_feasibility_check tub_feasibility_check.launch
+```
+
+And then pipe the provided YAML file to the `rosservice` call:
+```bash
+rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/success_without_sampling.yaml`"
+```
+
+### Visualization
+The pregrasp manifolds are visualized with grey boxes. 
+
+**Note that** for the circular manifold, the visualization always shows a circle, but the positions are actually sampled on a ring defined by `min_radius` and `max_radius`.
+
+### How do I modify existing manifolds?
+If you only wish to change how a specific manifold works, you only need to edit the `generate` method of the respective manifold. For example, if you wish to tweak the logic for the circular manifold, you would edit `CircularManifold::generate` in [src/manifolds/circular_manifold.cpp](src/manifolds/circular_manifold.cpp).
+
+If your modification does not require passing new parameters, that is it. If it does, then you need to:
+
+- add the parameters to the .msg file that defines the manifold
+- add a field to the corresponding `Description` struct of the manifold, for example `CircularManifold::Description` in [src/manifolds/circular_manifold.h](src/manifolds/circular_manifold.h)
+- parse the ROS message field and write it into the `Description` struct in `processCheckSurfaceGraspParameters` or `processCheckWallGraspParameters` in [src/check_kinematics_parameters.cpp](src/check_kinematics_parameters.cpp)
+
 ## Installation:
 ### Requirements
 In order to use the feasibility checker you have to fulfill the requirements of the contact-motion-planning submodule (https://gitlab.tubit.tu-berlin.de/rbo-lab/contact-motion-planning).
@@ -41,5 +83,3 @@ Since the ifco_pose can be set arbitrarily it makes no sense to refer to them af
 You can see the naming in this image:
 
 ![ifco wall naming](https://github.com/SoMa-Project/tub_feasibility_check/blob/master/examples/ifco_tub_feasibility_naming.png)
-
-**TODO**: more paramters, more details in general?

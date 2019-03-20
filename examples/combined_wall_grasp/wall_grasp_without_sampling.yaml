@@ -1,0 +1,37 @@
+initial_configuration: [0.439999, 0.624437, -0.218715, 1.71695, -0.735594, 0.197093, -0.920799]
+pregrasp_goal_pose:
+  position: {x: 0.48, y: 0.1, z: -0.15}
+  orientation: [ 0.6830127, 0.6830127, -0.1830127, 0.1830127 ]
+ifco_pose:
+  position: {x: 0.48, y: 0, z: -0.346}
+  orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
+go_down_goal_pose:
+  position: {x: 0.48, y: 0.1, z: -0.311}
+  orientation: [ 0.6830127, 0.6830127, -0.1830127, 0.1830127 ]
+pregrasp_manifold:
+  position_frame:
+    position: {x: 0.5, y: 0.1, z: -0.15}
+    orientation: [ 0.6830127, 0.6830127, -0.1830127, 0.1830127 ]
+  orientation: {x: 0.6830127, y: 0.6830127, z: -0.1830127, w: 0.1830127}
+  object_centroid: {x: 0.5, y: -0.02, z: -0.311}
+  width: 0.25
+  length: 0.1
+bounding_boxes_with_poses:
+- box:
+    type: 0
+    dimensions: [0.06, 0.06, 0.06]
+  pose:
+    position: {x: 0.5, y: -0.02, z: -0.311}
+    orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+- box:
+    type: 0
+    dimensions: [0.06, 0.06, 0.06]
+  pose:
+    position: {x: 0.4, y: -0.2, z: -0.311}
+    orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+go_down_allowed_collisions:
+- {type: 2, constraint_name: 'bottom', terminating: true, required: true}
+slide_allowed_collisions:
+- {type: 2, constraint_name: 'bottom'}
+- {type: 1, box_id: 0, required: true}
+- {type: 2, constraint_name: 'south', terminating: true, required: true}

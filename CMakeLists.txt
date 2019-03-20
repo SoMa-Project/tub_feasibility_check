@@ -50,7 +50,8 @@ add_service_files(
     FILES
     CheckKinematics.srv
     CheckKinematicsTabletop.srv
-    CerrtExample.srv
+    CheckSurfaceGrasp.srv
+    CheckWallGrasp.srv
     VisualizeTrajectory.srv
 )
 
@@ -58,6 +59,8 @@ add_message_files(
     FILES
     BoundingBoxWithPose.msg
     AllowedCollision.msg
+    SurfaceGraspPregraspManifold.msg
+    WallGraspPregraspManifold.msg
 )
 
 
@@ -74,9 +77,18 @@ catkin_package(
   CATKIN_DEPENDS message_runtime
 )
 
-catkin_add_gtest(workspace_checker_sampler_test test/test_workspace_checker_and_sampler.cpp src/workspace_samplers.cpp
-    src/workspace_checkers.cpp)
-target_link_libraries(workspace_checker_sampler_test
+#catkin_add_gtest(workspace_checker_sampler_test test/test_workspace_checker_and_sampler.cpp src/workspace_samplers.cpp
+#    src/workspace_checkers.cpp)
+#target_link_libraries(workspace_checker_sampler_test
+#        rlplan
+#        rlkin
+#        rlsg)
+
+catkin_add_gtest(surface_pregrasp_manifolds_test test/test_surface_pregrasp_manifolds.cpp
+    src/manifold.cpp src/manifolds/circular_manifold.cpp
+    src/manifolds/elongated_manifold.cpp
+    src/manifolds/wall_grasp_manifold.cpp)
+target_link_libraries(surface_pregrasp_manifolds_test
         rlplan
         rlkin
         rlsg)
@@ -89,11 +101,16 @@ if(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND )
         src/ifco_scene.cpp
         src/service_worker.cpp
         src/jacobian_controller.cpp
-        src/workspace_samplers.cpp
-        src/workspace_checkers.cpp
         src/collision_specification.cpp
         src/usecase_scene.cpp
         src/tabletop_scene.cpp
+        src/manifold.cpp
+        src/manifolds/circular_manifold.cpp
+        src/manifolds/elongated_manifold.cpp
+        src/manifolds/old_manifold.cpp
+        src/manifolds/wall_grasp_manifold.cpp
+        src/manifolds/shared_functions.cpp
+        src/check_kinematics_parameters.cpp
     )
 
 qt4_wrap_ui(UI_HEADERS src/mainwindow.ui)

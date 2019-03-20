@@ -11,8 +11,8 @@ typedef boost::array<double, 3> a3;
 
 TEST(WorkspaceCheckerSampler, checker_absolute_tolerance)
 {
-  WorkspaceChecker checker(BoxPositionChecker(Transform::Identity(), a3{0, 0, 0}, a3{0, 0, 0}),
-                           AroundTargetOrientationChecker(Rotation::Identity(), a3{0, 0, 0}, a3{0, 0, 0}));
+  WorkspaceSeparateChecker checker(BoxPositionChecker(Transform::Identity(), a3{ 0, 0, 0 }, a3{ 0, 0, 0 }),
+                                   AroundTargetOrientationChecker(Rotation::Identity(), a3{ 0, 0, 0 }, a3{ 0, 0, 0 }));
 
   auto transform = Transform::Identity();
   transform.translate(Vector3(0, 0, 1e-8));
@@ -34,21 +34,19 @@ TEST(WorkspaceCheckerSampler, generate_and_check)
   auto center_transform = Transform::Identity();
   center_transform.translate(translation).rotate(rotation);
 
-  a3 min_pos{-0.2, 0.1, 0};
-  a3 max_pos{-0.1, 0.4, 0};
-  a3 min_rot{-1, 0, 0.3};
-  a3 max_rot{-0.6, 0, 0.9};
+  a3 min_pos{ -0.2, 0.1, 0 };
+  a3 max_pos{ -0.1, 0.4, 0 };
+  a3 min_rot{ -1, 0, 0.3 };
+  a3 max_rot{ -0.6, 0, 0.9 };
 
-  WorkspaceChecker checker(BoxPositionChecker(center_transform, min_pos, max_pos),
-                           AroundTargetOrientationChecker(center_transform.rotation(), min_rot, max_rot));
-  WorkspaceSampler sampler(UniformPositionInAsymmetricBox(center_transform, min_pos, max_pos),
-                           DeltaXYZOrientation(Quaternion(center_transform.rotation()), min_rot, max_rot));
+  WorkspaceSeparateChecker checker(BoxPositionChecker(center_transform, min_pos, max_pos),
+                                   AroundTargetOrientationChecker(center_transform.rotation(), min_rot, max_rot));
+  WorkspaceSeparateSampler sampler(UniformPositionInAsymmetricBox(center_transform, min_pos, max_pos),
+                                   DeltaXYZOrientation(Quaternion(center_transform.rotation()), min_rot, max_rot));
 
   std::mt19937 gen;
   std::uniform_real_distribution<double> random_01;
-  auto sample_01 = [&gen, &random_01]() {
-    return random_01(gen);
-  };
+  auto sample_01 = [&gen, &random_01]() { return random_01(gen); };
 
   for (unsigned i = 0; i < sample_attempts; ++i)
   {

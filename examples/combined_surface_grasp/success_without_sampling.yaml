@@ -1,0 +1,38 @@
+initial_configuration: [0, 0.1, 0, 2.3, 0, 0.5, 0]
+pregrasp_goal_pose:
+  position: {x: 0.4, y: -0.02, z: 0.1}
+  orientation: {x: -0.6768474, y: 0.7326971, z: -0.0481371, w: 0.0521091}
+go_down_goal_pose:
+  position: {x: 0.4, y: -0.02, z: -0.056}
+  orientation: {x: -0.6768474, y: 0.7326971, z: -0.0481371, w: 0.0521091}
+ifco_pose:
+  position: {x: 0.48, y: 0, z: -0.146}
+  orientation: {x: 0.0, y: 0.0, z: 0.7071081, w: 0.7071055}
+pregrasp_manifold:
+  initial_frame:
+    position: {x: 0.4, y: -0.02, z: 0.1}
+    orientation: {x: -0.6768474, y: 0.7326971, z: -0.0481371, w: 0.0521091}
+  min_radius: 0.02
+  max_radius: 0.05
+  orientation_delta: 0.15
+bounding_boxes_with_poses:
+- box:
+    type: 0
+    dimensions: [0.08, 0.08, 0.08]
+  pose:
+    position: {x: 0.4, y: -0.02, z: -0.096}
+    orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+- box:
+    type: 0
+    dimensions: [0.08, 0.08, 0.05]
+  pose:
+    position: {x: 0.52, y: -0.01, z: -0.111}
+    orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+- box:
+    type: 0
+    dimensions: [0.04, 0.15, 0.04]
+  pose:
+    position: {x: 0.6, y: 0.2, z: -0.106}
+    orientation: {x: 0, y: 0, z: 0.3826834, w: 0.9238795}
+go_down_allowed_collisions:
+- {type: 1, box_id: 0, terminating: true, required: true}

@@ -1,6 +1,7 @@
 #include <rl/plan/DistanceModel.h>
 #include <rl/sg/so/Model.h>
 #include <rl/sg/bullet/Model.h>
+#include <rl/mdl/XmlFactory.h>
 #include <QMetaType>
 #include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/VRMLnodes/SoVRMLBox.h>
@@ -9,13 +10,9 @@
 
 void UsecaseScene::connectToViewer(Viewer* viewer)
 {
-  viewer->kinematics.reset(rl::kin::Kinematics::create(kinematics_file_));
-  viewer->scene_graph.reset(new rl::sg::so::Scene);
-  viewer->scene_graph->load(scene_graph_file_);
-  viewer->model.reset(new rl::plan::DistanceModel);
-  viewer->model->kin = viewer->kinematics.get();
-  viewer->model->model = viewer->scene_graph->getModel(0);
-  viewer->model->scene = viewer->scene_graph.get();
+  auto scene_and_model = createSceneAndModel<rl::sg::so::Scene, rl::plan::DistanceModel>();
+  viewer->scene_graph.reset(scene_and_model.first);
+  viewer->model.reset(scene_and_model.second);
 
   viewer->sceneGroup->addChild(viewer->scene_graph->root);
   viewer->viewer->setBackgroundColor(SbColor(1, 1, 1));
@@ -65,7 +62,7 @@ void UsecaseScene::createBox(const std::string& name, const BoundingBox& box)
     sg_shape->setName(name);
   };
 
-  createBoxInScene(*bullet_scene_);
+  createBoxInScene(*scene_and_model_.first);
   emit applyFunctionToScene(createBoxInScene);
 
   if (++current_color_ == colors_.end())
@@ -80,7 +77,7 @@ void UsecaseScene::removeBoxes()
       boxes_model->remove(boxes_model->getBody(0));
   };
 
-  removeBoxesInScene(*bullet_scene_);
+  removeBoxesInScene(*scene_and_model_.first);
   emit applyFunctionToScene(removeBoxesInScene);
 
   current_color_ = colors_.begin();
@@ -88,9 +85,9 @@ void UsecaseScene::removeBoxes()
 
 boost::optional<std::size_t> UsecaseScene::findModelIndexByName(const std::string& name) const
 {
-  for (std::size_t i = 0; i < bullet_scene_->getNumModels(); ++i)
+  for (std::size_t i = 0; i < scene_and_model_.first->getNumModels(); ++i)
   {
-    auto model = bullet_scene_->getModel(i);
+    auto model = scene_and_model_.first->getModel(i);
     if (model->getName() == name)
       return i;
   }
@@ -98,13 +95,11 @@ boost::optional<std::size_t> UsecaseScene::findModelIndexByName(const std::strin
   return boost::none;
 }
 
-UsecaseScene::UsecaseScene(const std::string& scene_graph_file, const std::string& kinematics_file)
-  : scene_graph_file_(scene_graph_file), kinematics_file_(kinematics_file)
+UsecaseScene::UsecaseScene(const std::string& scene_graph_file, const std::string& kinematics_file, bool mdl_format)
+  : scene_graph_file_(scene_graph_file), kinematics_file_(kinematics_file), mdl_format_(mdl_format)
 {
-  kinematics_.reset(rl::kin::Kinematics::create(kinematics_file));
-  bullet_scene_.reset(new rl::sg::bullet::Scene);
-  bullet_scene_->load(scene_graph_file);
+  scene_and_model_ = createSceneAndModel<rl::sg::bullet::Scene, rl::plan::NoisyModel>();
 
-  new rl::sg::bullet::Model(bullet_scene_.get());
-  boxes_model_index_ = bullet_scene_->getNumModels() - 1;
+  new rl::sg::bullet::Model(scene_and_model_.first);
+  boxes_model_index_ = scene_and_model_.first->getNumModels() - 1;
 }

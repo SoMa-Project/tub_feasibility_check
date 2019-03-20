@@ -30,6 +30,7 @@
 #include <Inventor/VRMLnodes/SoVRMLIndexedFaceSet.h>
 #include <Inventor/VRMLnodes/SoVRMLSphere.h>
 #include <Inventor/VRMLnodes/SoVRMLBox.h>
+#include <Inventor/VRMLnodes/SoVRMLCylinder.h>
 #include <Inventor/VRMLnodes/SoVRMLText.h>
 #include <Inventor/VRMLnodes/SoVRMLFontStyle.h>
 #include <Inventor/nodes/SoCamera.h>
@@ -54,6 +55,11 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
   boxesDrawStyle(new SoDrawStyle()),
   boxesGroup(new SoVRMLGroup()),
   boxesMaterial(new SoVRMLMaterial()),
+  cylinders(new SoVRMLSwitch()),
+  cylindersDrawStyle(new SoDrawStyle()),
+  cylindersAppearance(new SoVRMLAppearance()),
+  cylindersGroup(new SoVRMLGroup()),
+  cylindersMaterial(new SoVRMLMaterial()),
   edges(new SoVRMLSwitch()),
 	edgesColliding(new SoVRMLSwitch()),
 	edgesCollidingAppearance(new SoVRMLAppearance()),
@@ -156,6 +162,16 @@ Viewer::Viewer(QWidget* parent, Qt::WindowFlags f) :
   boxes->addChild(this->boxesGroup);
 
   root->addChild(this->boxes);
+
+  cylinders->setName("cylinders");
+  cylinders->whichChoice = SO_SWITCH_ALL;
+  cylinders->addChild(cylindersDrawStyle);
+  cylindersMaterial->diffuseColor.setValue(0.2f, 0.2f, 0.2f);
+  cylindersMaterial->transparency.setValue(0.75f);
+  cylindersAppearance->material = cylindersMaterial;
+  cylindersAppearance->ref();
+  cylinders->addChild(cylindersGroup);
+  root->addChild(cylinders);
 
 	// edgesColliding
 	
@@ -420,6 +436,12 @@ void Viewer::changeColor(const SbColor& col) {
   viewer->setBackgroundColor(col);
 }
 
+void Viewer::drawNode(SoNode *node)
+{
+  // TODO another group for those objects
+  boxesGroup->addChild(node);
+}
+
 void Viewer::drawBox(const rl::math::Vector& size, const rl::math::Transform& transform)
 {
   auto vrml_transform = new SoVRMLTransform();
@@ -440,15 +462,36 @@ void Viewer::drawBox(const rl::math::Vector& size, const rl::math::Transform& tr
   boxesGroup->addChild(vrml_transform);
 }
 
+void Viewer::drawCylinder(const rl::math::Transform& transform, double radius, double height)
+{
+  auto vrml_transform = new SoVRMLTransform();
+  rl::math::Vector translation = transform.translation();
+  rl::math::Quaternion rotation(transform.rotation());
+  vrml_transform->translation.setValue(translation(0), translation(1), translation(2));
+  vrml_transform->rotation.setValue(rotation.x(), rotation.y(), rotation.z(), rotation.w());
+
+  auto shape = new SoVRMLShape();
+  shape->appearance = cylindersAppearance;
+
+  auto cylinder = new SoVRMLCylinder();
+  cylinder->radius.setValue(radius);
+  cylinder->height.setValue(height);
+
+  shape->geometry = cylinder;
+
+  vrml_transform->addChild(shape);
+  cylindersGroup->addChild(vrml_transform);
+}
+
 // =============================================================================================
 void Viewer::drawConfiguration(const rl::math::Vector& q)
 {
 //	std::cout << "q: " << q.transpose() << std::endl;
-	this->model->setPosition(q);
-	this->model->updateFrames();
+  this->model->setPosition(q);
+  this->model->updateFrames();
 
 	// Visualize the end-effector position
-	::rl::math::Transform eeT = this->model->forwardPosition();
+  ::rl::math::Transform eeT = this->model->forwardPosition();
 	::rl::math::Vector3 pos (eeT(0,3), eeT(1,3), eeT(2,3));
 	drawPoint(pos);
 }
@@ -460,17 +503,17 @@ void Viewer::drawWorkspaceLinePath (const rl::math::Vector& q, const rl::math::V
 	SoVRMLIndexedLineSet* indexedLineSet = this->edgesFreeIndexedLineSet;
 
 	this->edges->enableNotify(false);
-	for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l) {
+  for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l) {
 
 		// Get the end-effector positions for the two configurations
-		this->model->setPosition(q);
-		this->model->updateFrames(false);
-		rl::math::Vector3 p (this->model->forwardPosition(l)(0, 3),
-			this->model->forwardPosition(l)(1, 3), this->model->forwardPosition(l)(2, 3));
-		this->model->setPosition(q2);
-		this->model->updateFrames(false);
-		rl::math::Vector3 p2 (this->model->forwardPosition(l)(0, 3),
-			this->model->forwardPosition(l)(1, 3), this->model->forwardPosition(l)(2, 3));
+    this->model->setPosition(q);
+    this->model->updateFrames(false);
+    rl::math::Vector3 p (this->model->forwardPosition(l)(0, 3),
+      this->model->forwardPosition(l)(1, 3), this->model->forwardPosition(l)(2, 3));
+    this->model->setPosition(q2);
+    this->model->updateFrames(false);
+    rl::math::Vector3 p2 (this->model->forwardPosition(l)(0, 3),
+      this->model->forwardPosition(l)(1, 3), this->model->forwardPosition(l)(2, 3));
 
 		// Add the points to visualize for the drawing
 		coordinate->point.set1Value( coordinate->point.getNum(), p(0), p(1), p(2));
@@ -508,26 +551,26 @@ void Viewer::drawConfigurationEdge(const rl::math::Vector& u, const rl::math::Ve
 	
 	this->edges->enableNotify(false);
 	
-	rl::math::Vector inter(this->model->getDof());
+  rl::math::Vector inter(this->model->getDof());
 	
-	rl::math::Real steps = std::ceil(this->model->distance(u, v) / (this->delta / 10));
+  rl::math::Real steps = std::ceil(this->model->distance(u, v) / (this->delta / 10));
 	
 	if (steps > 0)
 	{
-		for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l)
+    for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l)
 		{
 			for (std::size_t i = 0; i < steps + 1; ++i)
 			{
-				this->model->interpolate(u, v, i / steps, inter);
+        this->model->interpolate(u, v, i / steps, inter);
 				
-				this->model->setPosition(inter);
-				this->model->updateFrames(false);
+        this->model->setPosition(inter);
+        this->model->updateFrames(false);
 				
 				coordinate->point.set1Value(
 					coordinate->point.getNum(),
-					this->model->forwardPosition(l)(0, 3),
-					this->model->forwardPosition(l)(1, 3),
-					this->model->forwardPosition(l)(2, 3)
+          this->model->forwardPosition(l)(0, 3),
+          this->model->forwardPosition(l)(1, 3),
+          this->model->forwardPosition(l)(2, 3)
 				);
 				
 				indexedLineSet->coordIndex.set1Value(
@@ -556,23 +599,23 @@ Viewer::drawConfigurationPath(const rl::plan::VectorList& path)
 //	this->pathCoordinate->point.setNum(0);
 //	this->pathIndexedLineSet->coordIndex.setNum(0);
 	
-	rl::math::Vector inter(this->model->getDof());
+  rl::math::Vector inter(this->model->getDof());
 	
-	for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l)
+  for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l)
 	{
 		rl::plan::VectorList::const_iterator i = path.begin();
 		rl::plan::VectorList::const_iterator j = ++path.begin();
 		
 		if (i != path.end() && j != path.end())
 		{
-			this->model->setPosition(*i);
-			this->model->updateFrames();
+      this->model->setPosition(*i);
+      this->model->updateFrames();
 			
 			this->pathCoordinate->point.set1Value(
 				this->pathCoordinate->point.getNum(),
-				this->model->forwardPosition(l)(0, 3),
-				this->model->forwardPosition(l)(1, 3),
-				this->model->forwardPosition(l)(2, 3)
+        this->model->forwardPosition(l)(0, 3),
+        this->model->forwardPosition(l)(1, 3),
+        this->model->forwardPosition(l)(2, 3)
 			);
 			
 			this->pathIndexedLineSet->coordIndex.set1Value(
@@ -583,20 +626,20 @@ Viewer::drawConfigurationPath(const rl::plan::VectorList& path)
 		
 		for (; i != path.end() && j != path.end(); ++i, ++j)
 		{
-			rl::math::Real steps = std::ceil(this->model->distance(*i, *j) / this->delta);
+      rl::math::Real steps = std::ceil(this->model->distance(*i, *j) / this->delta);
 			
 			for (std::size_t k = 1; k < steps + 1; ++k)
 			{
-				this->model->interpolate(*i, *j, k / steps, inter);
+        this->model->interpolate(*i, *j, k / steps, inter);
 				
-				this->model->setPosition(inter);
-				this->model->updateFrames(false);
+        this->model->setPosition(inter);
+        this->model->updateFrames(false);
 				
 				this->pathCoordinate->point.set1Value(
 					this->pathCoordinate->point.getNum(),
-					this->model->forwardPosition(l)(0, 3),
-					this->model->forwardPosition(l)(1, 3),
-					this->model->forwardPosition(l)(2, 3)
+          this->model->forwardPosition(l)(0, 3),
+          this->model->forwardPosition(l)(1, 3),
+          this->model->forwardPosition(l)(2, 3)
 				);
 				
 				this->pathIndexedLineSet->coordIndex.set1Value(
@@ -633,16 +676,16 @@ Viewer::drawConfigurationVertex(const rl::math::Vector& q, const bool& free)
 	
 	this->vertices->enableNotify(false);
 	
-	this->model->setPosition(q);
-	this->model->updateFrames(false);
+  this->model->setPosition(q);
+  this->model->updateFrames(false);
 	
-	for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l)
+  for (std::size_t l = 0; l < this->model->getOperationalDof(); ++l)
 	{
 		coordinate->point.set1Value(
 			coordinate->point.getNum(),
-			this->model->forwardPosition(l)(0, 3),
-			this->model->forwardPosition(l)(1, 3),
-			this->model->forwardPosition(l)(2, 3)
+      this->model->forwardPosition(l)(0, 3),
+      this->model->forwardPosition(l)(1, 3),
+      this->model->forwardPosition(l)(2, 3)
 		);
 	}
 	
@@ -722,28 +765,28 @@ Viewer::drawSweptVolume(const rl::plan::VectorList& path)
 	
   //this->sweptGroup->removeAllChildren();
 	
-	rl::math::Vector inter(this->model->getDof());
+  rl::math::Vector inter(this->model->getDof());
 	
 	rl::plan::VectorList::const_iterator i = path.begin();
 	rl::plan::VectorList::const_iterator j = ++path.begin();
 	
 	if (i != path.end() && j != path.end())
 	{
-		this->model->setPosition(*i);
-		this->model->updateFrames();
+    this->model->setPosition(*i);
+    this->model->updateFrames();
 		
 		SoVRMLGroup* model = new SoVRMLGroup();
 		
-		for (std::size_t i = 0; i < this->model->model->getNumBodies(); ++i)
+    for (std::size_t i = 0; i < this->model->model->getNumBodies(); ++i)
 		{
 			SoVRMLTransform* frame = new SoVRMLTransform();
-			frame->copyFieldValues(static_cast< rl::sg::so::Body* >(this->model->model->getBody(i))->root);
+      frame->copyFieldValues(static_cast< rl::sg::so::Body* >(this->model->model->getBody(i))->root);
 			
-			for (std::size_t j = 0; j < this->model->model->getBody(i)->getNumShapes(); ++j)
+      for (std::size_t j = 0; j < this->model->model->getBody(i)->getNumShapes(); ++j)
 			{
 				SoVRMLTransform* transform = new SoVRMLTransform();
-				transform->copyFieldValues(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->root);
-				transform->addChild(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->shape);
+        transform->copyFieldValues(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->root);
+        transform->addChild(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->shape);
 				frame->addChild(transform);
 			}
 			
@@ -755,27 +798,27 @@ Viewer::drawSweptVolume(const rl::plan::VectorList& path)
 	
 	for (; i != path.end() && j != path.end(); ++i, ++j)
 	{
-		rl::math::Real steps = std::ceil(this->model->distance(*i, *j) / this->delta);
+    rl::math::Real steps = std::ceil(this->model->distance(*i, *j) / this->delta);
 		
 		for (std::size_t k = 1; k < steps + 1; ++k)
 		{
-			this->model->interpolate(*i, *j, k / steps, inter);
+      this->model->interpolate(*i, *j, k / steps, inter);
 			
-			this->model->setPosition(inter);
-			this->model->updateFrames();
+      this->model->setPosition(inter);
+      this->model->updateFrames();
 			
 			SoVRMLGroup* model = new SoVRMLGroup();
 			
-			for (std::size_t i = 0; i < this->model->model->getNumBodies(); ++i)
+      for (std::size_t i = 0; i < this->model->model->getNumBodies(); ++i)
 			{
 				SoVRMLTransform* frame = new SoVRMLTransform();
-				frame->copyFieldValues(static_cast< rl::sg::so::Body* >(this->model->model->getBody(i))->root);
+        frame->copyFieldValues(static_cast< rl::sg::so::Body* >(this->model->model->getBody(i))->root);
 				
-				for (std::size_t j = 0; j < this->model->model->getBody(i)->getNumShapes(); ++j)
+        for (std::size_t j = 0; j < this->model->model->getBody(i)->getNumShapes(); ++j)
 				{
 					SoVRMLTransform* transform = new SoVRMLTransform();
-					transform->copyFieldValues(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->root);
-					transform->addChild(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->shape);
+          transform->copyFieldValues(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->root);
+          transform->addChild(static_cast< rl::sg::so::Shape* >(this->model->model->getBody(i)->getShape(j))->shape);
 					frame->addChild(transform);
 				}
 				
@@ -957,6 +1000,11 @@ void Viewer::resetBoxes()
   boxesGroup->removeAllChildren();
 }
 
+void Viewer::resetCylinders()
+{
+  cylindersGroup->removeAllChildren();
+}
+
 void
 Viewer::resetEdges()
 {
@@ -996,6 +1044,7 @@ Viewer::resetVertices()
 
 void Viewer::resetFrames()
 {
+  name_to_frame_.clear();
   work->removeAllChildren();
 }
 

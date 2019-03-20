@@ -1,7 +1,7 @@
 #include "tabletop_scene.h"
 
-TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::string& kinematics_file)
-  : UsecaseScene(scene_graph_file, kinematics_file)
+TabletopScene::TabletopScene(const std::string& scene_graph_file, const std::string& kinematics_file, bool mdl_format)
+  : UsecaseScene(scene_graph_file, kinematics_file, mdl_format)
 {
   auto index = findModelIndexByName("tabletop");
   if (!index)
@@ -20,6 +20,6 @@ void TabletopScene::moveTable(const rl::math::Transform& table_pose)
     scene.getModel(table_model_index_)->getBody(0)->setFrame(table_pose);
   };
 
-  findAndMoveIfco(*bullet_scene_);
+  findAndMoveIfco(*scene_and_model_.first);
   emit applyFunctionToScene(findAndMoveIfco);
 }

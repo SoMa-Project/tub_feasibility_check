@@ -10,7 +10,7 @@
 #include <rl/plan/UniformSampler.h>
 #include "Viewer.h"
 #include "collision_specification.h"
-#include "workspace_checkers.h"
+#include "manifold.h"
 #include "utilities.h"
 #include <unordered_map>
 
@@ -51,6 +51,9 @@ public:
 
     /* The trajectory steps from start to termination. */
     std::vector<rl::math::Vector> trajectory;
+
+    /* The final transform of the end effector. */
+    rl::math::Transform final_transform;
 
     /* A map of outcomes.
      * It contains either only one positive outcome: REACHED or TERMINATING_COLLISION,
@@ -107,8 +110,7 @@ public:
    * cycles.
    * @param viewer A viewer that will be used to draw every step of moveSingleParticle.
    */
-  JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta, unsigned maximum_steps,
+  JacobianController(rl::plan::NoisyModel* noisy_model, double delta, unsigned maximum_steps,
                      boost::optional<Viewer*> viewer = boost::none);
 
   /* Move from initial configuration to target pose using jacobian control and obeying collision constraints.
@@ -122,7 +124,7 @@ public:
    */
   SingleResult moveSingleParticle(const rl::math::Vector& initial_configuration, const rl::math::Transform& target_pose,
                                   const CollisionSpecification& collision_specification,
-                                  boost::optional<const WorkspaceChecker&> goal_manifold_checker = boost::none);
+                                  boost::optional<const Manifold&> goal_manifold = boost::none);
 
   /* Create a belief in initial configuration and propagate it to the target pose using jacobian control and obeying
    * collision constraints. Done in two phases: first, a single particle is moved without noise to target pose.
@@ -171,9 +173,7 @@ private:
   std::string getPartName(const std::string& address) const;
   bool isSensorized(const std::string& part_name) const;
 
-  std::shared_ptr<rl::kin::Kinematics> kinematics_;
-  std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
-  rl::plan::NoisyModel noisy_model_;
+  rl::plan::NoisyModel* noisy_model_;
   double delta_;
   unsigned maximum_steps_;
 
