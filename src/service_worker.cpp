@@ -401,13 +401,23 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
   auto initial_surface_grasp_result =
       trySurfaceGrasp(jacobian_controller, *shared_parameters, *specific_parameters,
                       shared_parameters->poses.at("pregrasp_goal"), shared_parameters->poses.at("go_down_goal"));
+  auto prepareSuccessResponse = [](tub_feasibility_check::CheckSurfaceGrasp::Response& response,
+                                   const SurfaceGraspResult& surface_grasp_result) {
+    response.final_configuration = utilities::eigenToStd(surface_grasp_result.go_down_result->trajectory.back());
+    auto combined_trajectory = surface_grasp_result.combinedTrajectory();
+    auto dof = response.final_configuration.size();
+    response.trajectory = utilities::concatanateEigneToStd(combined_trajectory, dof);
+    response.pregrasp_trajectory =
+        utilities::concatanateEigneToStd(surface_grasp_result.pregrasp_result.trajectory, dof);
+    response.go_down_trajectory =
+        utilities::concatanateEigneToStd(surface_grasp_result.go_down_result->trajectory, dof);
+    ROS_INFO_STREAM("Trajectory size: " << response.trajectory.size());
+  };
+
   if (initial_surface_grasp_result)
   {
     res.status = res.REACHED_INITIAL;
-    res.final_configuration = utilities::eigenToStd(initial_surface_grasp_result.go_down_result->trajectory.back());
-    auto combined_trajectory = initial_surface_grasp_result.combinedTrajectory();
-    res.trajectory = utilities::concatanateEigneToStd(combined_trajectory, res.final_configuration.size());
-    ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
+    prepareSuccessResponse(res, initial_surface_grasp_result);
     return true;
   }
 
@@ -447,10 +457,7 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     if (sampled_surface_grasp_result)
     {
       res.status = res.REACHED_SAMPLED;
-      res.final_configuration = utilities::eigenToStd(sampled_surface_grasp_result.go_down_result->trajectory.back());
-      auto combined_trajectory = sampled_surface_grasp_result.combinedTrajectory();
-      res.trajectory = utilities::concatanateEigneToStd(combined_trajectory, res.final_configuration.size());
-      ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
+      prepareSuccessResponse(res, sampled_surface_grasp_result);
       return true;
     }
   }
@@ -490,6 +497,17 @@ bool ServiceWorker::checkWallGraspQuery(tub_feasibility_check::CheckWallGrasp::R
 
   JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
                                          maximum_steps_, ifco_scene->getViewer());
+  auto prepareSuccessResponse = [](tub_feasibility_check::CheckWallGrasp::Response& response,
+                                   const WallGraspResult& wall_grasp_result) {
+    response.final_configuration = utilities::eigenToStd(wall_grasp_result.slide_result->trajectory.back());
+    auto combined_trajectory = wall_grasp_result.combinedTrajectory();
+    auto dof = response.final_configuration.size();
+    response.trajectory = utilities::concatanateEigneToStd(combined_trajectory, dof);
+    response.pregrasp_trajectory = utilities::concatanateEigneToStd(wall_grasp_result.pregrasp_result.trajectory, dof);
+    response.go_down_trajectory = utilities::concatanateEigneToStd(wall_grasp_result.go_down_result->trajectory, dof);
+    response.slide_trajectory = utilities::concatanateEigneToStd(wall_grasp_result.slide_result->trajectory, dof);
+    ROS_INFO_STREAM("Trajectory size: " << response.trajectory.size());
+  };
 
   ROS_INFO("Trying initial grasp");
   auto initial_wall_grasp_result =
@@ -498,10 +516,7 @@ bool ServiceWorker::checkWallGraspQuery(tub_feasibility_check::CheckWallGrasp::R
   if (initial_wall_grasp_result)
   {
     res.status = res.REACHED_INITIAL;
-    res.final_configuration = utilities::eigenToStd(initial_wall_grasp_result.slide_result->trajectory.back());
-    auto combined_trajectory = initial_wall_grasp_result.combinedTrajectory();
-    res.trajectory = utilities::concatanateEigneToStd(combined_trajectory, res.final_configuration.size());
-    ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
+    prepareSuccessResponse(res, initial_wall_grasp_result);
     return true;
   }
 
@@ -541,10 +556,7 @@ bool ServiceWorker::checkWallGraspQuery(tub_feasibility_check::CheckWallGrasp::R
     if (sampled_surface_grasp_result)
     {
       res.status = res.REACHED_SAMPLED;
-      res.final_configuration = utilities::eigenToStd(sampled_surface_grasp_result.go_down_result->trajectory.back());
-      auto combined_trajectory = sampled_surface_grasp_result.combinedTrajectory();
-      res.trajectory = utilities::concatanateEigneToStd(combined_trajectory, res.final_configuration.size());
-      ROS_INFO_STREAM("Trajectory size: " << res.trajectory.size());
+      prepareSuccessResponse(res, sampled_surface_grasp_result);
       return true;
     }
   }

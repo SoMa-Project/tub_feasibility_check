@@ -46,5 +46,14 @@ uint8 status
 # The final joint configuration of the robot at the end of the trajectory.
 float64[] final_configuration
 
+# The pregrasp trajectory.
+float64[] pregrasp_trajectory
+
+# The goal down trajectory.
+float64[] go_down_trajectory
+
+# The slide trajectory.
+float64[] slide_trajectory
+
 # The configuration space trajectory.
 float64[] trajectory
