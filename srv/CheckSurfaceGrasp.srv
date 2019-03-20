@@ -1,3 +1,30 @@
+# -----------------------------------------------------------------------------
+# Combined surface grasp service call.
+# -----------------------------------------------------------------------------
+# The user provides targets for pregrasp and goal down.
+# The service call tests those targets for feasibility.
+
+# If they are infeasible, pregrasp poses will be sampled
+# from the pregrasp manifold, combined with an adjusted
+# go down goal pose, and tested for feasibility.
+
+# The go down goal pose is adjusted in the following way.
+# The difference in translation between the original pregrasp
+# goal pose and the sampled pregrasp goal pose is applied to
+# the original go down goal pose.
+
+# This way, the difference in translation between original
+# pregrasp and go down goal poses and between sampled pregrasp
+# goal poses and adjusted go down goal poses is the same.
+
+# The orientation in the adjusted go down goal pose is the
+# same as the orientation in the sampled pregrasp pose.
+# This way, there is no change in orientation when executing
+# the go down movement.
+
+# -----------------------------------------------------------------------------
+# Parameters
+# -----------------------------------------------------------------------------
 # Random seed, used for sampling functions. If 0, unix time will be used.
 uint32 seed
 
@@ -21,7 +48,7 @@ BoundingBoxWithPose[] bounding_boxes_with_poses
 # The definition of the pregrasp manifold.
 SurfaceGraspPregraspManifold pregrasp_manifold
 
-# An array of allowed collisions in go down phase. Check AllowedCollision.msg for more details.
+# An array of allowed collisions in go down phase.
 # A collision that is not listed here will trigger a failure.
 # Every collision in pregrasp phase is a failure.
 AllowedCollision[] go_down_allowed_collisions
@@ -36,6 +63,8 @@ uint8 REACHED_SAMPLED=2
 
 # FAILED, INITIAL_REACHED or SAMPLED_REACHED
 uint8 status
+
+# The following fields are only set when a solution was found.
 
 # The final joint configuration of the robot at the end of the trajectory.
 float64[] final_configuration
