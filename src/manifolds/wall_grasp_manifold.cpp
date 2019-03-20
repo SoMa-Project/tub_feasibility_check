@@ -26,7 +26,8 @@ bool WallGraspManifold::contains(const rl::math::Transform& transform_to_check) 
 
 rl::math::Transform WallGraspManifold::generate(Manifold::SampleRandom01 sample_random_01) const
 {
-  Eigen::Vector3d sampled_translation = (sample_random_01() - 0.5) * description_.width * Eigen::Vector3d::UnitX();
+  Eigen::Vector3d sampled_translation = (sample_random_01() - 0.5) * description_.width * Eigen::Vector3d::UnitX() +
+      (sample_random_01() - 0.5) * description_.length * Eigen::Vector3d::UnitY();
 
   rl::math::Transform sampled_frame = description_.position_frame;
   sampled_frame.translate(sampled_translation);
@@ -57,7 +58,7 @@ SoNode* WallGraspManifold::visualization() const
   shape->appearance = appearance_;
 
   auto box = new SoVRMLBox;
-  box->size.setValue(description_.width, visualization_box_zero_correction_, visualization_box_zero_correction_);
+  box->size.setValue(description_.width, description_.length, visualization_box_zero_correction_);
 
   shape->geometry = box;
   vrml_transform->addChild(shape);
