@@ -140,7 +140,8 @@ boost::optional<CheckSurfaceGraspParameters> processCheckSurfaceGraspParameters(
     {
       CircularManifold::Description circular_description;
       assignSharedManifoldParameters(req, circular_description);
-      circular_description.radius = req.pregrasp_manifold.radius;
+      circular_description.min_radius = req.pregrasp_manifold.min_radius;
+      circular_description.max_radius = req.pregrasp_manifold.max_radius;
 
       params.pregrasp_manifold = std::make_shared<CircularManifold>(circular_description);
       break;

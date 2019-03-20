@@ -24,7 +24,9 @@ CircularManifold::~CircularManifold()
 
 rl::math::Transform CircularManifold::generate(Manifold::SampleRandom01 sample_random_01) const
 {
-  double sampled_radius = std::sqrt(sample_random_01()) * description_.radius;
+  double sampled_radius = std::sqrt(description_.min_radius / description_.max_radius +
+                                    sample_random_01() * (1 - description_.min_radius / description_.max_radius)) *
+                          description_.max_radius;
   double sampled_phi = sample_random_01() * M_PI * 2;
   double sampled_orientation_delta = (sample_random_01() - 0.5) * description_.orientation_delta;
 
@@ -77,7 +79,7 @@ SoNode* CircularManifold::visualization() const
   shape->appearance = appearance_;
 
   auto cylinder = new SoVRMLCylinder();
-  cylinder->radius.setValue(description_.radius);
+  cylinder->radius.setValue(description_.max_radius);
   cylinder->height.setValue(visualization_cylinder_height_);
 
   shape->geometry = cylinder;

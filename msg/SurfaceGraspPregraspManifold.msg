@@ -13,7 +13,8 @@ bool orient_outward
 
 # Parameters specific to the circular manifold.
 
-float32 radius
+float32 min_radius
+float32 max_radius
 
 # Parameters specific to the elongated manifold.
 float32 stripe_width

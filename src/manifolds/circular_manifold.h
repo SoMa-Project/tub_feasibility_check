@@ -18,7 +18,8 @@ public:
     Eigen::Affine3d surface_frame;
 
     double orientation_delta;
-    double radius;
+    double min_radius;
+    double max_radius;
     bool orient_outward;
   };
 

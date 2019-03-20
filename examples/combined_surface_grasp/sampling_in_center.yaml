@@ -14,7 +14,8 @@ pregrasp_manifold:
     orientation: {x: 0, y: 0.997551, z: 0, w: 0.0699428}
   orientation: {x: 0, y: 0.997551, z: 0, w: 0.0699428}
   object_centroid: {x: 0.49, y: -0.02, z: -0.096}
-  radius: 0.08
+  min_radius: 0.04
+  max_radius: 0.08
   orientation_delta: 0.15
   orient_outward: true
 bounding_boxes_with_poses:
