@@ -1,35 +1,46 @@
 # tub_feasibility_check
 
 ## Changes in this branch
-### Combined surface grasp call
-This branch introduces a combined surface grasp call. Inputs to that call are pregrasp goal pose and a go down goal pose. The combined service call will try to execute initial grasp defined by those poses. 
+### Surface grasp call and wall grasp call
+This branch introduces a combined surface grasp call and a combined wall grasp call and pregrasp manifolds for those grasps.
+They are documented in the ROS .srv and .msg definitions:
 
-If that fails, pregrasp poses will be sampled from a manifold. Then a trajectory will be tried that first goes to sampled pose, and from there downward to a modified go down pose preserving the orientation of the sampled pregrasp pose.
+- [combined surface grasp call](srv/CheckSurfaceGrasp.srv)
+- [pregrasp manifolds for surface grasp](msg/SurfaceGraspPregraspManifold.msg)
+- [combined wall grasp call](srv/CheckWallGrasp.srv)
+- [pregrasp manifold for wall grasp](msg/WallGraspPregraspManifold.msg)
 
-### A pregrasp manifold for surface grasping circular objects
-A new type of manifold is also introduced. It is designed for circular objects.
-In the following, initial pregrasp goal pose is referred to as initial frame. 
-The sampled frame origin is sampled in the plane defined by the X and Y axes of the initial frame. It is sampled uniformly from a circle lying in that plane around the goal frame position with a certain radius. The sampled frame orientation is rotated such that the X axis of the frame points towards the origin of the initial frame.
+### Currently only for the IFCO scene
+The combined calls currently only work for the IFCO scene. Extending them to work for the tabletop scene would be straightforward.
 
-Check the [jupyter notebook](notebooks/surface-grasp-circular.ipynb) for visualizations and example code. 
-
-### A pregrasp manifold for surface grasping elongated objects
-The sampled frame origin is sampled in the plane defined by the X and Y axes of the initial frame. It is sampled uniformly from two stripes aligned with the X axis of the initial frame. The placement and sizes of stripes can be controlled via their width, height and offset. The sampled frame orientation is rotated such that the X axis of the frame is perpendicular to the X and Z axes of the initial frame and goes in the direction of the initial frame.
-
-Check the [jupyter notebook](notebooks/surface-grasp-elongated.ipynb) for visualizations and example code. 
-
-### Wall grasp pregrasp manifold
-[Jupyter notebook](notebooks/wall-grasp-manifold.ipynb).
+### Notebooks for prototyping the manifolds
+There is a notebook for every pregrasp manifold type: [circular manifold for surface grasp](notebooks/surface-grasp-circular.ipynb),
+[elongated manifold for surface grasp](notebooks/surface-grasp-elongated.ipynb) and [wall grasp manifold](notebooks/wall-grasp-manifold.ipynb). However, they have not been updated, and there are some differences in the text description to what is currently implemented. The up-to-date description resides in the .srv and .msg files. Still, they can be used to visualize what is going on or test ideas.
 
 ### Examples
-The following [video](https://drive.google.com/open?id=1rifkSblYNoxWirS3yiKDp53Ti947qAfm) demonstrates how the new combined call works. To try examples used to produced this video yourself, first start the feasibility checker and then call the `/check_surface_grasp` service using the provided example yaml files:
-
+There is a number of examples demonstrating how the combined calls work. They can be found in [examples/combined_surface_grasp](examples/combined_surface_grasp) and [examples/combined_wall_grasp](examples/combined_wall_grasp). To run an example, you need to start the feasibility checker for the IFCO scene.
 ```bash
 roslaunch tub_feasibility_check tub_feasibility_check.launch
-rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/success_without_sampling.yaml`"
-rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/sampling_near_wall.yaml`"
-rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/sampling_in_center.yaml`"
 ```
+
+And then pipe the provided YAML file to the `rosservice` call:
+```bash
+rosservice call /check_surface_grasp "`cat examples/combined_surface_grasp/success_without_sampling.yaml`"
+```
+
+### Visualization
+The pregrasp manifolds are visualized with grey boxes. 
+
+**Note that** for the circular manifold, the visualization always shows a circle, but the positions are actually sampled on a ring defined by `min_radius` and `max_radius`.
+
+### How do I modify existing manifolds?
+If you only wish to change how a specific manifold works, you only need to edit the `generate` method of the respective manifold. For example, if you wish to tweak the logic for the circular manifold, you would edit `CircularManifold::generate` in [src/manifolds/circular_manifold.cpp](src/manifolds/circular_manifold.cpp).
+
+If your modification does not require passing new parameters, that is it. If it does, then you need to:
+
+- add the parameters to the .msg file that defines the manifold
+- add a field to the corresponding `Description` struct of the manifold, for example `CircularManifold::Description` in [src/manifolds/circular_manifold.h](src/manifolds/circular_manifold.h)
+- parse the ROS message field and write it into the `Description` struct in `processCheckSurfaceGraspParameters` or `processCheckWallGraspParameters` in [src/check_kinematics_parameters.cpp](src/check_kinematics_parameters.cpp)
 
 ## Installation:
 ### Requirements
