@@ -37,8 +37,15 @@ rl::math::Transform CircularManifold::generate(Manifold::SampleRandom01 sample_r
   sampled_transform.translation() = description_.position_frame * sampled_point_on_circle;
   sampled_transform.linear() = description_.orientation.matrix();
 
-  auto rotation_towards_centroid = rotationTowardsCentroidOnSurfaceZ(
-      description_.orientation, sampled_transform, description_.object_centroid, description_.surface_frame);
+  AlignDirectionOnPlaneTask align_task;
+  align_task.surface_frame = description_.surface_frame;
+  align_task.object_centroid = description_.object_centroid;
+  align_task.initial_orientation = description_.orientation;
+  align_task.frame_position = sampled_transform;
+  align_task.direction_to_align = Eigen::Vector3d::UnitX();
+  align_task.cancel_x_out = false;
+
+  auto rotation_towards_centroid = alignDirectionOnSurface(align_task);
   rotation_towards_centroid.angle() += sampled_orientation_delta;
   if (description_.orient_outward)
     rotation_towards_centroid.angle() += M_PI;

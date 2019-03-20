@@ -14,7 +14,6 @@ public:
     Eigen::Vector3d object_centroid;
     Eigen::Quaterniond orientation;
     double width;
-    bool orient_outward;
   };
 
   WallGraspManifold(Description description);

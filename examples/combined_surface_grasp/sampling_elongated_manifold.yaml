@@ -19,7 +19,7 @@ pregrasp_manifold:
   stripe_width: 0.3
   stripe_height: 0.1
   stripe_offset: 0.05
-  orient_outward: true
+  orient_outward: false
 bounding_boxes_with_poses:
 - box:
     type: 0

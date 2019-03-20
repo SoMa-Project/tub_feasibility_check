@@ -15,7 +15,6 @@ pregrasp_manifold:
   object_centroid: {x: 0.5, y: -0.02, z: -0.311}
   orientation: [ 0.6830127, 0.6830127, -0.1830127, 0.1830127 ]
   width: 0.25
-  orient_outward: true
 bounding_boxes_with_poses:
 - box:
     type: 0

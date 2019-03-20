@@ -10,18 +10,15 @@ rl::math::Vector3 samplePositionInSymmetricBox(const rl::math::Transform& box_fr
 {
 }
 
-Eigen::AngleAxisd rotationTowardsCentroidOnSurfaceZ(const Eigen::Quaterniond& initial_orientation,
-                                                    const Eigen::Affine3d& frame,
-                                                    const Eigen::Vector3d& object_centroid,
-                                                    const Eigen::Affine3d& surface_frame, bool cancel_x_out)
+Eigen::AngleAxisd alignDirectionOnSurface(const AlignDirectionOnPlaneTask& task)
 {
   Eigen::Vector3d towards_centroid_in_surface_frame =
-      surface_frame.rotation().inverse() * (object_centroid - frame.translation());
+      task.surface_frame.rotation().inverse() * (task.object_centroid - task.frame_position.translation());
   Eigen::Vector3d original_x_in_surface_frame =
-      surface_frame.rotation().inverse() * initial_orientation * Eigen::Vector3d::UnitX();
+      task.surface_frame.rotation().inverse() * task.initial_orientation * task.direction_to_align;
   Eigen::Vector3d rotation_vector_in_sampled_frame =
-      frame.linear().inverse() * surface_frame.linear() * Eigen::Vector3d::UnitZ();
-  if (cancel_x_out)
+      task.frame_position.linear().inverse() * task.surface_frame.linear() * Eigen::Vector3d::UnitZ();
+  if (task.cancel_x_out)
     towards_centroid_in_surface_frame.x() = 0;
 
   double rotation = std::atan2(towards_centroid_in_surface_frame.y(), towards_centroid_in_surface_frame.x()) -

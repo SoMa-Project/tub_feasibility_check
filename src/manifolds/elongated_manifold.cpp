@@ -32,9 +32,16 @@ rl::math::Transform ElongatedManifold::generate(SampleRandom01 sample_random_01)
   rl::math::Transform sampled_transform;
   sampled_transform.translation() = description_.position_frame * sampled_position_in_plane;
   sampled_transform.linear() = description_.orientation.matrix();
-  auto rotate_towards_centerline =
-      rotationTowardsCentroidOnSurfaceZ(description_.orientation, sampled_transform,
-                                        description_.object_centroid, description_.surface_frame, true);
+
+  AlignDirectionOnPlaneTask align_task;
+  align_task.surface_frame = description_.surface_frame;
+  align_task.object_centroid = description_.object_centroid;
+  align_task.initial_orientation = description_.orientation;
+  align_task.frame_position = sampled_transform;
+  align_task.direction_to_align = Eigen::Vector3d::UnitX();
+  align_task.cancel_x_out = true;
+
+  auto rotate_towards_centerline = alignDirectionOnSurface(align_task);
   rotate_towards_centerline.angle() += sampled_orientation_delta;
   if (description_.orient_outward)
     rotate_towards_centerline.angle() += M_PI;

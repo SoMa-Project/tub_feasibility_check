@@ -116,7 +116,6 @@ boost::optional<CheckWallGraspParameters> processCheckWallGraspParameters(
 
   description.surface_frame = Eigen::Affine3d::Identity();
   description.width = req.pregrasp_manifold.width;
-  description.orient_outward = req.pregrasp_manifold.orient_outward;
 
   params.pregrasp_manifold = std::make_shared<WallGraspManifold>(description);
   params.object_centroid = description.object_centroid;

@@ -32,10 +32,15 @@ rl::math::Transform WallGraspManifold::generate(Manifold::SampleRandom01 sample_
   sampled_frame.translate(sampled_translation);
   sampled_frame.linear() = description_.orientation.matrix();
 
-  auto rotation_towards_centroid = rotationTowardsCentroidOnSurfaceZ(
-      description_.orientation, sampled_frame, description_.object_centroid, description_.surface_frame);
-  if (description_.orient_outward)
-    rotation_towards_centroid.angle() += M_PI;
+  AlignDirectionOnPlaneTask align_task;
+  align_task.surface_frame = description_.surface_frame;
+  align_task.object_centroid = description_.object_centroid;
+  align_task.initial_orientation = description_.orientation;
+  align_task.frame_position = sampled_frame;
+  align_task.direction_to_align = Eigen::Vector3d::UnitZ();
+  align_task.cancel_x_out = false;
+
+  auto rotation_towards_centroid = alignDirectionOnSurface(align_task);
 
   return sampled_frame.rotate(rotation_towards_centroid);
 }
