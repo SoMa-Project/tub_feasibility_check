@@ -437,7 +437,7 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     // the translation is corrected so the go down frame is underneath the sampled pregrasp frame
     sampled_go_down_pose.translation() = shared_parameters->poses.at("go_down_goal").translation() +
                                          sampled_pregrasp_pose.translation() -
-                                         specific_parameters->pregrasp_manifold->initialFrame().translation();
+                                         shared_parameters->poses.at("pregrasp_goal").translation();
 
     ROS_INFO_STREAM("Trying sampled grasp number " << i);
     emit resetPoints();
@@ -531,7 +531,7 @@ bool ServiceWorker::checkWallGraspQuery(tub_feasibility_check::CheckWallGrasp::R
     // the translation is corrected so the go down frame is underneath the sampled pregrasp frame
     sampled_go_down_pose.translation() = shared_parameters->poses.at("go_down_goal").translation() +
                                          sampled_pregrasp_pose.translation() -
-                                         specific_parameters->pregrasp_manifold->initialFrame().translation();
+                                         shared_parameters->poses.at("pregrasp_goal").translation();
 
     ROS_INFO_STREAM("Trying sampled grasp number " << i);
     emit resetPoints();
