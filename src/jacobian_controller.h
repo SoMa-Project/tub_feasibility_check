@@ -110,8 +110,7 @@ public:
    * cycles.
    * @param viewer A viewer that will be used to draw every step of moveSingleParticle.
    */
-  JacobianController(std::shared_ptr<rl::kin::Kinematics> kinematics,
-                     std::shared_ptr<rl::sg::bullet::Scene> bullet_scene, double delta, unsigned maximum_steps,
+  JacobianController(rl::plan::NoisyModel* noisy_model, double delta, unsigned maximum_steps,
                      boost::optional<Viewer*> viewer = boost::none);
 
   /* Move from initial configuration to target pose using jacobian control and obeying collision constraints.
@@ -174,9 +173,7 @@ private:
   std::string getPartName(const std::string& address) const;
   bool isSensorized(const std::string& part_name) const;
 
-  std::shared_ptr<rl::kin::Kinematics> kinematics_;
-  std::shared_ptr<rl::sg::bullet::Scene> bullet_scene_;
-  rl::plan::NoisyModel noisy_model_;
+  rl::plan::NoisyModel* noisy_model_;
   double delta_;
   unsigned maximum_steps_;
 

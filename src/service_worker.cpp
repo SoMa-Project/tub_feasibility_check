@@ -215,7 +215,7 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
+  JacobianController jacobian_controller(ifco_scene->getModel(), delta_,
                                          maximum_steps_, ifco_scene->getViewer());
   auto result = jacobian_controller.moveSingleParticle(
       shared_parameters->initial_configuration, shared_parameters->poses["goal"],
@@ -394,8 +394,7 @@ bool ServiceWorker::checkSurfaceGraspQuery(tub_feasibility_check::CheckSurfaceGr
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
   }
 
-  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
-                                         maximum_steps_, ifco_scene->getViewer());
+  JacobianController jacobian_controller(ifco_scene->getModel(), delta_, maximum_steps_, ifco_scene->getViewer());
 
   ROS_INFO("Trying initial grasp");
   auto initial_surface_grasp_result =
@@ -495,8 +494,7 @@ bool ServiceWorker::checkWallGraspQuery(tub_feasibility_check::CheckWallGrasp::R
     emit drawNamedFrame(name_and_box.second.center_transform, name_and_box.first);
   }
 
-  JacobianController jacobian_controller(ifco_scene->getKinematics(), ifco_scene->getBulletScene(), delta_,
-                                         maximum_steps_, ifco_scene->getViewer());
+  JacobianController jacobian_controller(ifco_scene->getModel(), delta_, maximum_steps_, ifco_scene->getViewer());
   auto prepareSuccessResponse = [](tub_feasibility_check::CheckWallGrasp::Response& response,
                                    const WallGraspResult& wall_grasp_result) {
     response.final_configuration = utilities::eigenToStd(wall_grasp_result.slide_result->trajectory.back());
@@ -594,7 +592,7 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   }
 
   ROS_INFO("Trying to plan to the goal frame");
-  JacobianController jacobian_controller(tabletop_scene->getKinematics(), tabletop_scene->getBulletScene(), delta_,
+  JacobianController jacobian_controller(tabletop_scene->getModel(), delta_,
                                          maximum_steps_, tabletop_scene->getViewer());
   auto result = jacobian_controller.moveSingleParticle(
       shared_parameters->initial_configuration, shared_parameters->poses["goal"],

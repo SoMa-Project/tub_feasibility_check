@@ -21,7 +21,7 @@
 class IfcoScene : public UsecaseScene
 {
 public:
-  IfcoScene(const std::string& scene_graph_file_, const std::string& kinematics_file_);
+  IfcoScene(const std::string& scene_graph_file_, const std::string& kinematics_file_, bool mdl_format);
 
   void moveIfco(const rl::math::Transform& ifco_pose);
 

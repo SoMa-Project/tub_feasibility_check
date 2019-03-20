@@ -6,7 +6,7 @@
 class TabletopScene : public UsecaseScene
 {
 public:
-  TabletopScene(const std::string& scene_graph_file, const std::string& kinematics_file);
+  TabletopScene(const std::string& scene_graph_file, const std::string& kinematics_file, bool mdl_format);
 
   void moveTable(const rl::math::Transform& table_pose);
 

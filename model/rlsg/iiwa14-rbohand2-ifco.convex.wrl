@@ -1,0 +1,18 @@
+#VRML V2.0 utf8
+# adopted from soma-kuka.convex.wrl from Can Erdogan
+Transform {
+	children [
+		DEF kuka-lbr-iiwa-14-r820 Transform {
+			translation -0.625 0 0
+			children [
+				Inline {
+					url "kuka-lbr-iiwa-14-r820.convex/kuka-lbr-iiwa-14-r820-rbohand2.wrl"
+				}
+		DEF ifco Inline {
+			url "ifco.wrl"
+		}
+			]
+		}
+	]
+}
+
