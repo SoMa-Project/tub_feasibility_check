@@ -84,9 +84,4 @@ SoNode* CircularManifold::visualization() const
   vrml_transform->addChild(shape);
   return vrml_transform;
 }
-
-const Eigen::Affine3d& CircularManifold::initialFrame() const
-{
-  return description_.position_frame;
-}
 }

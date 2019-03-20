@@ -64,8 +64,3 @@ SoNode* WallGraspManifold::visualization() const
 
   return vrml_transform;
 }
-
-const Eigen::Affine3d& WallGraspManifold::initialFrame() const
-{
-  return description_.position_frame;
-}

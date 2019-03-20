@@ -89,9 +89,4 @@ SoNode* ElongatedManifold::visualization() const
 
   return group;
 }
-
-const Eigen::Affine3d& ElongatedManifold::initialFrame() const
-{
-  return description_.position_frame;
-}
 }

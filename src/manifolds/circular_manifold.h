@@ -28,7 +28,6 @@ public:
   rl::math::Transform generate(SampleRandom01 sample_random_01) const override;
   bool contains(const rl::math::Transform& transform_to_check) const override;
   SoNode* visualization() const override;
-  const Eigen::Affine3d& initialFrame() const override;
 
 private:
   const double angle_comparison_epsilon_ = 1e-3;

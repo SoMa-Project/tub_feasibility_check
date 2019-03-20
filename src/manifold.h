@@ -18,7 +18,6 @@ public:
   virtual bool contains(const rl::math::Transform& transform_to_check) const = 0;
   virtual rl::math::Transform generate(SampleRandom01 sample_random_01) const = 0;
   virtual SoNode* visualization() const = 0;
-  virtual const Eigen::Affine3d& initialFrame() const = 0;
 };
 
 #endif  // MANIFOLD_H

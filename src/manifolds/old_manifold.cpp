@@ -135,8 +135,3 @@ SoNode* OldManifold::visualization() const
 
   return vrml_transform;
 }
-
-const Eigen::Affine3d& OldManifold::initialFrame() const
-{
-  return description_.frame;
-}

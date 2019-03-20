@@ -30,7 +30,6 @@ public:
   bool contains(const rl::math::Transform& transform_to_check) const override;
   rl::math::Transform generate(SampleRandom01 sample_random_01) const override;
   SoNode* visualization() const override;
-  const Eigen::Affine3d& initialFrame() const override;
 
 private:
   Description description_;
