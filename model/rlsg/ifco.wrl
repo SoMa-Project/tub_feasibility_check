@@ -53,7 +53,7 @@ Transform
 		{
 		material Material
 		  {
-		  diffuseColor 0 1 0.50000000
+		  diffuseColor 1 0 0
 		  }
 		}
 	      geometry Box
@@ -72,7 +72,7 @@ Transform
 		{
 		material Material
 		  {
-		  diffuseColor 0 1 0.50000000
+		  diffuseColor 0 1 0
 		  }
 		}
 	      geometry Box
@@ -91,7 +91,7 @@ Transform
 		{
 		material Material
 		  {
-		  diffuseColor 0 1 0.50000000
+		  diffuseColor 0 0 1
 		  }
 		}
 	      geometry Box
