@@ -474,6 +474,36 @@ Transform {
 				}
 
 			}
+Transform
+      {
+      rotation -0.70710682 1.79999994e-6 0.70710682 3.14159631
+      translation 0 0 0.10999999
+      children 
+	Inline
+	  {
+	  url "rbohand2_kinematics_check.wrl"
+	  }
+      }
+    Transform
+      {
+      rotation 1 0 0 1.597
+      translation 0 0 0.05
+      children 
+	Shape
+	  {
+	  appearance Appearance
+	    {
+	    material Material
+	      {
+	      }
+	    }
+	  geometry Cylinder
+	    {
+	    height 0.10000000
+	    radius 3.99999991e-2
+	    }
+	  }
+      }
 
 		]
 
