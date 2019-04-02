@@ -66,7 +66,7 @@ Transform
         Transform
 	  {
 	  rotation -0.99996191 2.27708849e-4 -8.72653536e-3 3.19376659
-	  translation -6.76405429e-3 -7.41978660e-2 1.29660712e-2
+	  translation -6.76405429e-3 -9.91978660e-2 1.29660712e-2
 	  children 
             DEF sensor_Finger_Ring Shape
 	      {
@@ -80,14 +80,14 @@ Transform
 		}
 	      geometry Box
 		{
-		size 1.99999995e-2 8.35999995e-2 1.99999995e-2
+		size 1.99999995e-2 13.35999995e-2 1.99999995e-2
 		}
 	      }
 	  }
         Transform
 	  {
 	  rotation -0.99756240 1.83306180e-3 6.97563514e-2 3.08917665
-	  translation -8.81301239e-3 -7.41511583e-2 -1.45649630e-2
+	  translation -8.81301239e-3 -9.91511583e-2 -1.45649630e-2
 	  children 
             DEF sensor_Finger_Middle Shape
 	      {
@@ -101,14 +101,14 @@ Transform
 		}
 	      geometry Box
 		{
-		size 1.99999995e-2 8.09999927e-2 1.99999995e-2
+		size 1.99999995e-2 13.09999927e-2 1.99999995e-2
 		}
 	      }
 	  }
         Transform
 	  {
 	  rotation -0.98762911 1.09527800e-2 0.15642507 3.00350618
-	  translation -1.32024642e-2 -6.92324712e-2 -4.11055050e-2
+	  translation -1.32024642e-2 -9.32324712e-2 -4.11055050e-2
 	  children 
             DEF sensor_Finger_Index Shape
 	      {
@@ -122,7 +122,7 @@ Transform
 		}
 	      geometry Box
 		{
-		size 1.99999995e-2 8.09999927e-2 1.99999995e-2
+		size 1.99999995e-2 13.09999927e-2 1.99999995e-2
 		}
 	      }
 	  }

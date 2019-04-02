@@ -308,14 +308,14 @@
 				<b idref="frame8"/>
 			</frame>
 			<rotation>
-				<x>-0.091</x>
+				<x>-0.102</x>
 				<y>-26.929</y>
-				<z>180</z>
+				<z>-180</z>
 			</rotation>
 			<translation>
 				<x>-0.02</x>
 				<y>0.02</y>
-				<z>0.23</z>
+				<z>0.185</z>
 			</translation>
 		</fixed>
 		<home>
