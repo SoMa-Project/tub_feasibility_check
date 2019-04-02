@@ -60,7 +60,7 @@ Transform {
 			translation 0 0 1.306
 			children [
 				Inline {
-					url "link7_rbohand2.wrl"
+					url "mediaflange_link7_rbohand2.wrl"
 				}
 			]
 		}

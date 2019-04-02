@@ -7,7 +7,7 @@ NavigationInfo {
 
 Transform {
 	scale 1 1 1
-	translation 0 0 0
+	translation 0 0 -0.05
 	children [
 		Shape {
 			geometry IndexedFaceSet {
@@ -477,7 +477,7 @@ Transform {
 Transform
       {
       rotation -0.70710682 1.79999994e-6 0.70710682 3.14159631
-      translation 0 0 0.10999999
+      translation 0 0 0.16
       children 
 	Inline
 	  {
@@ -487,7 +487,7 @@ Transform
     Transform
       {
       rotation 1 0 0 1.597
-      translation 0 0 0.05
+      translation 0 0 0.1
       children 
 	Shape
 	  {
@@ -500,7 +500,7 @@ Transform
 	  geometry Cylinder
 	    {
 	    height 0.10000000
-	    radius 3.99999991e-2
+	    radius 4.99999991e-2
 	    }
 	  }
       }

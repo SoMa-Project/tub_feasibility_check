@@ -1742,7 +1742,7 @@ Transform
 	  geometry Cylinder
 	    {
 	    height 0.10000000
-	    radius 3.99999991e-2
+	    radius 5.e-2
 	    }
 	  }
       }
