@@ -36,7 +36,10 @@ DEF link6 Transform
       }
     Transform
       {
-      translation 0 0 0.11
+      # rotation 0 1 0 -0.3491 <-- 2019-04-17
+      # rotation 0 1 0 0.15 <-- 2019-04-20
+      rotation 0 1 0 0.03
+      translation 0.074 0 0.175
       children 
 	Inline
 	  {

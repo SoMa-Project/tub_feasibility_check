@@ -49,6 +49,8 @@ public:
   bool cerrtExampleQuery(tub_feasibility_check::CerrtExample::Request& req,
                          tub_feasibility_check::CerrtExample::Response& res);
 
+  void reloadKinematics(std::string kinematics_file);
+
   void start(unsigned rate);
 
 public slots:

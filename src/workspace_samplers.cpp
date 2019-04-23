@@ -57,10 +57,15 @@ rl::math::Quaternion DeltaXYZOrientation::operator()(std::function<double()> sam
   for (unsigned i = 0; i < 3; ++i)
     angles[i] = min_XYZ_deltas_[i] + (max_XYZ_deltas_[i] - min_XYZ_deltas_[i]) * sample_random_01();
 
+  // we want to use both sides of the manifold
+  bool flip_0 = 0; // this could flip us upside-down
+  bool flip_1 = 0; // this could flip us upside-down
+  bool flip_2 = 0; // disable this for the moment // sample_random_01() > 0.5 ? 1 : 0;
+
   rl::math::Quaternion sampled_diff =
-      rl::math::AngleAxis(angles[2], rl::math::Vector3::UnitZ()) *
-      rl::math::AngleAxis(angles[1], rl::math::Vector3::UnitY()) *
-      rl::math::AngleAxis(angles[0], rl::math::Vector3::UnitX());
+      rl::math::AngleAxis(angles[2] + M_PI*flip_2, rl::math::Vector3::UnitZ()) *
+      rl::math::AngleAxis(angles[1] + M_PI*flip_1, rl::math::Vector3::UnitY()) *
+      rl::math::AngleAxis(angles[0] + M_PI*flip_0, rl::math::Vector3::UnitX());
 
   return sampled_diff * initial_orientation_;
 }

@@ -15,6 +15,11 @@ find_package(catkin REQUIRED COMPONENTS
     tf
     tf_conversions
     eigen_conversions
+    dynamic_reconfigure
+)
+
+generate_dynamic_reconfigure_options(
+        cfg/KinematicsCheck.cfg
 )
 
 message(${PROJECT_SOURCE_DIR})
@@ -157,6 +162,6 @@ qt4_wrap_ui(UI_HEADERS src/mainwindow.ui)
         ${COIN_LIBRARIES}
     )
 
-add_dependencies(tub_feasibility_check tub_feasibility_check_generate_messages_cpp)
+add_dependencies(tub_feasibility_check tub_feasibility_check_generate_messages_cpp tub_feasibility_check_gencfg)
 
 endif(QT_FOUND AND SOQT_FOUND AND BULLET_FOUND)

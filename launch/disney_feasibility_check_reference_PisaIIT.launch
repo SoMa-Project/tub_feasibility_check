@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <rosparam param="/feasibility_check/sample_count">200</rosparam>
+    <rosparam param="/feasibility_check/sample_count">100</rosparam>
     <!--<rosparam param="/feasibility_check/table_dimensions">[0.3, 0.3, 0.181]</rosparam>-->
     <!-- TODO: table_dimensions reduced in z because of flipped z-axis https://github.com/SoMa-Project/tub_feasibility_check/issues/15 -->
     <!-- TODO: table_dimensions reduced in x and y to give the feasibility checker a higher chance of not colliding with the table -->
@@ -8,7 +8,8 @@
     <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check" output="screen">
  	    <param name="ifco_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/prob-rbohand2-ifco.convex.xml" />
         <param name="tabletop_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/prob-pisaiit-tabletop.convex.xml" />
-        <param name="kinematics_file" value="$(find tub_feasibility_check)/model/rlkin/prob-pisaiit.xml"/>
+        <param name="kinematics_file_fingertips" value="$(find tub_feasibility_check)/model/rlkin/prob-pisaiit-fingertips.xml"/>
+        <param name="kinematics_file_palm" value="$(find tub_feasibility_check)/model/rlkin/prob-pisaiit-palm.xml"/>
         <param name="hide_window" type="bool" value="false" /> 
     </node>
 </launch>

@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rlkin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="rlkin.xsd">
+	<kinematics>
+		<manufacturer>F and P</manufacturer>
+		<name>Prob2 + RBOHand2</name>
+		<world id="world">
+			<rotation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</rotation>
+			<translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
+		</world>
+		<transform id="base">
+			<frame>
+				<a idref="world"/>
+				<b idref="link0"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</rotation>
+			<translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
+		</transform>
+
+		<link id="link0">
+			<ignore/>
+			<ignore idref="link1"/>
+		</link>
+
+		<revolute id="joint0">
+			<frame>
+				<a idref="link0"/>
+				<b idref="link1"/>
+			</frame>
+			<dh>
+				<d>0.3625</d>
+				<theta>0</theta>
+				<a>0</a>
+				<alpha>-90</alpha>
+			</dh>
+			<max>169</max>
+			<min>-169</min>
+		</revolute>
+
+		<link id="link1">
+			<ignore idref="link0"/>
+  		<ignore idref="link2"/>
+		</link>
+
+		<revolute id="joint1">
+			<frame>
+				<a idref="link1"/>
+				<b idref="link2"/>
+			</frame>
+			<dh>
+				<d>0.0</d>
+				<theta>-90</theta>
+				<a>0.29</a>
+				<alpha>0</alpha>
+			</dh>
+			<max>109</max>
+			<min>-109</min>
+		</revolute>
+
+		<link id="link2">
+			<ignore idref="link1"/>
+			<ignore idref="link3"/>
+		</link>
+
+		<revolute id="joint2">
+			<frame>
+				<a idref="link2"/>
+				<b idref="link3"/>
+			</frame>
+			<dh>
+				<d>0.</d>
+				<theta>90</theta>
+				<a>0.0</a>
+				<alpha>90</alpha>
+			</dh>
+			<max>114</max>
+			<min>-114</min>
+		</revolute>
+
+		<link id="link3">
+			<ignore idref="link1"/>
+			<ignore idref="link2"/>
+			<ignore idref="link4"/>
+		</link>
+
+		<revolute id="joint3">
+			<frame>
+				<a idref="link3"/>
+				<b idref="link4"/>
+			</frame>
+			<dh>
+				<d>0.31</d>
+				<theta>180</theta>
+				<a>0</a>
+				<alpha>90</alpha>
+			</dh>
+			<max>169</max>
+			<min>-169</min>
+		</revolute>
+		<link id="link4">
+			<ignore idref="link3"/>
+			<ignore idref="link5"/>
+			<ignore idref="link6"/>
+		</link>
+
+		<revolute id="joint4">
+			<frame>
+				<a idref="link4"/>
+				<b idref="link5"/>
+			</frame>
+			<dh>
+				<d>0.0</d>
+				<theta>0</theta>
+				<a>0</a>
+				<alpha>-90</alpha>
+			</dh>
+			<max>114</max>
+			<min>-114</min>
+<!--			<max>169</max>-->
+<!--			<min>-169</min>-->
+		</revolute>
+		<link id="link5">
+			<ignore idref="link4"/>
+			<ignore idref="link6"/>
+		</link>
+		<revolute id="joint5">
+			<frame>
+				<a idref="link5"/>
+				<b idref="link6"/>
+			</frame>
+			<dh>
+				<d>0.129</d>
+				<theta>180</theta>
+				<a>0</a>
+				<alpha>0</alpha>
+			</dh>
+			<max>169</max>
+			<min>-169</min>
+		</revolute>
+		<link id="link6">
+			<ignore idref="link5"/>
+		</link>
+		<transform id="tool_pre_rotate">
+			<frame>
+				<a idref="link6"/>
+				<b idref="tcp_pre_rotate"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>-90</y>
+				<z>180</z>
+			</rotation>
+			<translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
+		</transform>
+		<frame id="tcp_pre_rotate"/>
+		<transform id="tool_translate">
+			<frame>
+				<a idref="tcp_pre_rotate"/>
+				<b idref="tcp_translate"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</rotation>
+			<translation>
+				<x> 0.267</x>
+				<y>-0.004</y>
+				<z>0.075</z>
+			</translation>
+		</transform>
+		<frame id="tcp_translate"/>
+		<transform id="tool_rotate_z">
+			<frame>
+				<a idref="tcp_translate"/>
+				<b idref="tcp_rotate_z"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>20</y>
+				<z>0</z>
+			</rotation>
+			<translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
+		</transform>
+		<frame id="tcp_rotate_z"/>
+		<transform id="tool">
+			<frame>
+				<a idref="tcp_rotate_z"/>
+				<b idref="tcp"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</rotation>
+			<translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
+		</transform>
+		<frame id="tcp"/>
+	</kinematics>
+</rlkin>

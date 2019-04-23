@@ -115,6 +115,10 @@ void ServiceWorker::start(unsigned rate)
   loop_timer.start();
 }
 
+void ServiceWorker::reloadKinematics(std::string kinematics_file) {
+    tabletop_scene->resetKinematics(rl::kin::Kinematics::create(kinematics_file));
+}
+
 ServiceWorker::ServiceWorker(std::unique_ptr<IfcoScene> ifco_scene, std::unique_ptr<TabletopScene> tabletop_scene)
   : QObject(nullptr), ifco_scene(std::move(ifco_scene)), tabletop_scene(std::move(tabletop_scene))
 {

@@ -34,6 +34,10 @@ public:
     return kinematics_->getDof();
   }
 
+  void resetKinematics(rl::kin::Kinematics * kinematics) {
+      kinematics_.reset(kinematics);
+  }
+
 protected:
   // TODO this might be available in coin somewhere
   boost::optional<std::size_t> findModelIndexByName(const std::string& name) const;
