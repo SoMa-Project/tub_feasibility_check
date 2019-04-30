@@ -233,6 +233,18 @@ bool ServiceWorker::checkKinematicsIfcoQuery(tub_feasibility_check::CheckKinemat
   return true;
 }
 
+// check if {testx, testy} is within polygon defined by *vertx, *verty
+int pnpoly(int nvert, double *vertx, double *verty, double testx, double testy)
+{
+    int i, j, c = 0;
+    for (i = 0, j = nvert-1; i < nvert; j = i++) {
+        if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+             (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+            c = !c;
+    }
+    return c;
+}
+
 bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKinematicsTabletop::Request& req,
                                                  tub_feasibility_check::CheckKinematicsTabletop::Response& res)
 {
@@ -276,6 +288,38 @@ bool ServiceWorker::checkKinematicsTabletopQuery(tub_feasibility_check::CheckKin
   {
     ROS_INFO("Construction a fixed table");
     tabletop_scene->createFixedTable(parameters->container_pose);
+  }
+
+  // make sure objects is within table bounds
+  if (!req.table_from_edges) {
+      float table_dim_x = tabletop_scene->getFixedTableDimensions().at(0);
+      float table_dim_y = tabletop_scene->getFixedTableDimensions().at(1);
+
+      Eigen::Vector3d c0 = {-table_dim_x/2., -table_dim_y/2., 1};
+      Eigen::Vector3d c1 = {table_dim_x/2., -table_dim_y/2., 1};
+      Eigen::Vector3d c2 = {table_dim_x/2., table_dim_y/2., 1};
+      Eigen::Vector3d c3 = {-table_dim_x/2., table_dim_y/2., 1};
+
+      Eigen::Matrix3d table2d = Eigen::Matrix3d::Identity();
+      table2d.block<2, 2>(0, 0) = parameters->container_pose.matrix().block<2, 2>(0, 0);
+      table2d.block<2, 1>(0, 2) = parameters->container_pose.matrix().block<2, 1>(0, 3);
+
+      c0 = table2d * c0;
+      c1 = table2d * c1;
+      c2 = table2d * c2;
+      c3 = table2d * c3;
+
+      for (auto name_and_box : parameters->name_to_object_bounding_box)
+      {
+          Eigen::Vector2d pos = name_and_box.second.center_transform.matrix().block<2, 1>(0, 3);
+
+          double vertx[4] = {c0(0), c1(0), c2(0), c3(0)};
+          double verty[4] = {c0(1), c1(1), c2(1), c3(1)};
+          if(not pnpoly(4, vertx, verty, pos(0), pos(1))) {
+              ROS_ERROR("Not all of the objects lie within the bounds of the table!");
+              return false;
+          }
+      }
   }
 
   ROS_INFO("Trying to plan to the goal frame");

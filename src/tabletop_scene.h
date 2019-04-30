@@ -14,6 +14,10 @@ public:
   void createFixedTable(const rl::math::Transform& table_pose);
   void createTableFromEdges(const TableDescription& table_description);
 
+  std::array<double, 3> getFixedTableDimensions() {
+      return fixed_table_dimensions_;
+  }
+
 private:
   std::array<double, 3> fixed_table_dimensions_;
   const bool normal_points_downwards_ = true;

@@ -60,7 +60,7 @@ rl::math::Quaternion DeltaXYZOrientation::operator()(std::function<double()> sam
   // we want to use both sides of the manifold
   bool flip_0 = 0; // this could flip us upside-down
   bool flip_1 = 0; // this could flip us upside-down
-  bool flip_2 = 0; // disable this for the moment // sample_random_01() > 0.5 ? 1 : 0;
+  bool flip_2 = sample_random_01() > 0.5 ? 1 : 0;
 
   rl::math::Quaternion sampled_diff =
       rl::math::AngleAxis(angles[2] + M_PI*flip_2, rl::math::Vector3::UnitZ()) *
