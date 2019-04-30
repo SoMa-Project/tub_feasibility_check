@@ -43,7 +43,7 @@ DEF link6 Transform
       children 
 	Inline
 	  {
-	  url "pisa_iit.wrl"
+	  url "pisa_iit_relaxed_thumb.wrl"
 	  }
       }
     ]

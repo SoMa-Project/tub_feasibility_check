@@ -7,9 +7,9 @@
     <rosparam param="/feasibility_check/table_dimensions">[0.225, 0.225, 0.181]</rosparam>
     <node name="feasibility_check" pkg="tub_feasibility_check" type="tub_feasibility_check" output="screen">
  	    <param name="ifco_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/prob-rbohand2-ifco.convex.xml" />
-        <param name="tabletop_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/prob-pisaiit-tabletop.convex.xml" />
-        <param name="kinematics_file_fingertips" value="$(find tub_feasibility_check)/model/rlkin/prob-pisaiit-fingertips.xml"/>
-        <param name="kinematics_file_palm" value="$(find tub_feasibility_check)/model/rlkin/prob-pisaiit-palm.xml"/>
+        <param name="tabletop_scene_graph_file" value="$(find tub_feasibility_check)/model/rlsg/prob-rbohand2-tabletop.convex.xml" />
+        <param name="kinematics_file_fingertips" value="$(find tub_feasibility_check)/model/rlkin/prob-rbohand2-heel.xml"/>
+        <param name="kinematics_file_palm" value="$(find tub_feasibility_check)/model/rlkin/prob-rbohand2-palm.xml"/>
         <param name="hide_window" type="bool" value="false" /> 
     </node>
 </launch>

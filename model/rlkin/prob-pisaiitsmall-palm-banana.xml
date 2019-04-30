@@ -31,12 +31,12 @@
 				<z>0</z>
 			</translation>
 		</transform>
-		
+
 		<link id="link0">
 			<ignore/>
 			<ignore idref="link1"/>
 		</link>
-		
+
 		<revolute id="joint0">
 			<frame>
 				<a idref="link0"/>
@@ -51,12 +51,12 @@
 			<max>169</max>
 			<min>-169</min>
 		</revolute>
-		
+
 		<link id="link1">
 			<ignore idref="link0"/>
   		<ignore idref="link2"/>
 		</link>
-		
+
 		<revolute id="joint1">
 			<frame>
 				<a idref="link1"/>
@@ -71,12 +71,12 @@
 			<max>109</max>
 			<min>-109</min>
 		</revolute>
-		
+
 		<link id="link2">
 			<ignore idref="link1"/>
 			<ignore idref="link3"/>
 		</link>
-		
+
 		<revolute id="joint2">
 			<frame>
 				<a idref="link2"/>
@@ -91,13 +91,13 @@
 			<max>114</max>
 			<min>-114</min>
 		</revolute>
-		
+
 		<link id="link3">
 			<ignore idref="link1"/>
 			<ignore idref="link2"/>
 			<ignore idref="link4"/>
 		</link>
-		
+
 		<revolute id="joint3">
 			<frame>
 				<a idref="link3"/>
@@ -117,7 +117,7 @@
 			<ignore idref="link5"/>
 			<ignore idref="link6"/>
 		</link>
-		
+
 		<revolute id="joint4">
 			<frame>
 				<a idref="link4"/>
@@ -131,6 +131,8 @@
 			</dh>
 			<max>114</max>
 			<min>-114</min>
+<!--			<max>169</max>-->
+<!--			<min>-169</min>-->
 		</revolute>
 		<link id="link5">
 			<ignore idref="link4"/>
@@ -151,23 +153,78 @@
 			<min>-169</min>
 		</revolute>
 		<link id="link6">
-			<ignore idref="link5"/>			
-		</link>		
-		<transform id="tool">
+			<ignore idref="link5"/>
+		</link>
+		<transform id="tool_pre_rotate">
 			<frame>
 				<a idref="link6"/>
+				<b idref="tcp_pre_rotate"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>-90</y>
+				<z>180</z>
+			</rotation>
+			<translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
+		</transform>
+		<frame id="tcp_pre_rotate"/>
+		<transform id="tool_translate">
+			<frame>
+				<a idref="tcp_pre_rotate"/>
+				<b idref="tcp_translate"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</rotation>
+			<translation>
+				<x> 0.247</x>
+<!--				0.01 was good for new pisa hand and small apple-->
+<!--				<y>0.01</y>-->
+				<y>-0.02</y>
+				<z>0.075</z>
+			</translation>
+		</transform>
+		<frame id="tcp_translate"/>
+		<transform id="tool_rotate_z">
+			<frame>
+				<a idref="tcp_translate"/>
+				<b idref="tcp_rotate_z"/>
+			</frame>
+			<rotation>
+				<x>0</x>
+				<y>20</y>
+				<z>0</z>
+			</rotation>
+			<translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
+		</transform>
+		<frame id="tcp_rotate_z"/>
+		<transform id="tool">
+			<frame>
+				<a idref="tcp_rotate_z"/>
 				<b idref="tcp"/>
 			</frame>
 			<rotation>
 				<x>0</x>
 				<y>0</y>
-				<z>-180</z>			
+<!--				<z>0</z>-->
+<!--				30 for banana-->
+				<z>35</z>
 			</rotation>
 			<translation>
-        <x>0.03</x>
-        <y>0</y>
-        <z>0.13</z>
-                        </translation>
+				<x>0</x>
+				<y>0</y>
+				<z>0</z>
+			</translation>
 		</transform>
 		<frame id="tcp"/>
 	</kinematics>
