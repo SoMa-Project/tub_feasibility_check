@@ -6,7 +6,7 @@
         <param name="kinematics_file" value="$(find tub_feasibility_check)/model/rlmdl/kuka-lbr-iiwa-14-r820.xml"/>
         <param name="mdl" value="true" />
         <param name="hide_window" type="bool" value="false" /> 
-        <param name="sample_count" value="20" /> 
+        <param name="sample_count" value="50" /> 
     </node>
 </launch>
 
