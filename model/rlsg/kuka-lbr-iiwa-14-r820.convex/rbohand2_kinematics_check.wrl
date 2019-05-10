@@ -45,7 +45,7 @@ Transform
         Transform
 	  {
 	  rotation -0.99603402 -1.28259547e-2 -8.80441963e-2 3.24267220
-	  translation -7.72042572e-3 -7.17090293e-2 3.82037460e-2
+	  translation -7.72042572e-3 -9.17090293e-2 3.82037460e-2
 	  children 
             DEF sensor_Finger_Pinky Shape
 	      {
@@ -59,7 +59,7 @@ Transform
 		}
 	      geometry Box
 		{
-		size 1.99999995e-2 8.35999995e-2 1.99999995e-2
+		size 1.99999995e-2 13.09999927e-2 1.99999995e-2
 		}
 	      }
 	  }
