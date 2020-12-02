@@ -22,6 +22,10 @@ git submodule update
 catkin build tub_feasibility_check
 ```
 
+### Troubleshooting
+If there are issues building tub_feasibility_check, these steps might help:
+* grep -rl 'dSINGLE' ./ | xargs sed -i 's/dSINGLE/dDOUBLE/g'
+* Qt4 + CGAL - Parse error at “BOOST_JOIN”: edit the files usr/include/boost/type_traits/detail/has_binary_operator.hp and has_prefix_operator.hp: add `#ifndef Q_MOC_RUN` and `#endif` around the BOOST_JOIN namespace implementation
 
 ## Usage:
 To start the ros service you can call ``` roslaunch tub_feasibility_check tub_feasibility_check.launch ``` or use the convenenience script clean_start.sh from soma_utils (https://github.com/SoMa-Project/soma_utils/blob/master/scripts/clean_start.sh)

@@ -1,5 +1,6 @@
 #include <cmath>
 #include "workspace_checkers.h"
+#include <iostream>
 
 using namespace rl::math;
 
