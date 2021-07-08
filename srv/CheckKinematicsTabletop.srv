@@ -20,8 +20,17 @@ float64[] initial_configuration
 # The goal pose of the end effector in the robot base frame.
 geometry_msgs/Pose goal_pose
 
-# The pose of the IFCO container in the robot base frame.
-geometry_msgs/Pose table_pose
+# The position part is the centroid of the table surface. The Z axis
+# of the frame points downward from the table surface.
+# This pose is only used when table_from_edges is set to false.
+geometry_msgs/Pose table_surface_pose
+
+# Whether to use predefined table model or construct table from edge_frames
+bool table_from_edges
+
+# EdgeGrasp frames that are used to construct a table. Only used when
+# table_from_edges is set to true.
+geometry_msgs/Pose[] edge_frames
 
 # An array of bounding boxes with poses. Check BoundingBoxWithPose.msg
 # for more details. The box_id in allowed_collisions is the same as position

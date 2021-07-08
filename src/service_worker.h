@@ -83,6 +83,8 @@ private:
 
   QMutex keep_running_mutex;
   bool keep_running = true;
+
+  double loose_ends_extension_length_;
 };
 
 #endif  // KINEMATICS_CHECK_H

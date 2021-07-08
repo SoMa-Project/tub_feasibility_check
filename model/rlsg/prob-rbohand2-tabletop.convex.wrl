@@ -8,9 +8,12 @@ Transform {
 				}
 			]
 		}
-		DEF tabletop Inline {
-			url "tabletop.wrl"
-		}
+		# This is needed so the corresponding xml file is processed right
+		# This empty shape will be removed during the tabletop
+		# service calls and a new shape will be created
+    DEF tabletop Shape
+    {
+    }
 	]
 }
 
